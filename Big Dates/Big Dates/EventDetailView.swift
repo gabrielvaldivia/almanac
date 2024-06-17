@@ -19,6 +19,7 @@ struct EventDetailView: View {
                 DatePicker("Event Date", selection: $event.date, displayedComponents: .date)
                 Button("Delete", role: .destructive) {
                     onDelete()
+                    dismiss()
                 }
                 Button("Save") {
                     dismiss()

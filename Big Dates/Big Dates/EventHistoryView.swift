@@ -25,6 +25,9 @@ struct EventHistoryView: View {
                                     EventRow(event: events[index])
                                 }
                             )
+                            .onTapGesture {
+                                print("Event tapped: \(events[index].title)")
+                            }
                         }
                     }
                 }
