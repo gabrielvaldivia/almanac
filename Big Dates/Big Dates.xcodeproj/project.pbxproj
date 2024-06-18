@@ -11,6 +11,8 @@
 		4039528E2C20C43000726251 /* AddEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4039528D2C20C43000726251 /* AddEventView.swift */; };
 		406E9DD72C20F02300CABD3A /* EventHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406E9DD62C20F02300CABD3A /* EventHistoryView.swift */; };
 		406E9DD92C2104B200CABD3A /* EventManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406E9DD82C2104B200CABD3A /* EventManager.swift */; };
+		408677232C21154000E54452 /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408677222C21154000E54452 /* EventRow.swift */; };
+		408677252C2115AE00E54452 /* EventListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408677242C2115AE00E54452 /* EventListView.swift */; };
 		4091A2332C20A0F400804EBD /* Big_DatesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4091A2322C20A0F400804EBD /* Big_DatesApp.swift */; };
 		4091A2352C20A0F400804EBD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4091A2342C20A0F400804EBD /* ContentView.swift */; };
 		4091A2372C20A0F500804EBD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4091A2362C20A0F500804EBD /* Assets.xcassets */; };
@@ -43,6 +45,8 @@
 		4039528D2C20C43000726251 /* AddEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventView.swift; sourceTree = "<group>"; };
 		406E9DD62C20F02300CABD3A /* EventHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventHistoryView.swift; sourceTree = "<group>"; };
 		406E9DD82C2104B200CABD3A /* EventManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventManager.swift; sourceTree = "<group>"; };
+		408677222C21154000E54452 /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
+		408677242C2115AE00E54452 /* EventListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventListView.swift; sourceTree = "<group>"; };
 		4091A22F2C20A0F400804EBD /* Big Dates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Big Dates.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4091A2322C20A0F400804EBD /* Big_DatesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Big_DatesApp.swift; sourceTree = "<group>"; };
 		4091A2342C20A0F400804EBD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -106,6 +110,8 @@
 			children = (
 				4091A2322C20A0F400804EBD /* Big_DatesApp.swift */,
 				4091A2342C20A0F400804EBD /* ContentView.swift */,
+				408677242C2115AE00E54452 /* EventListView.swift */,
+				408677222C21154000E54452 /* EventRow.swift */,
 				406E9DD82C2104B200CABD3A /* EventManager.swift */,
 				406E9DD62C20F02300CABD3A /* EventHistoryView.swift */,
 				4039528D2C20C43000726251 /* AddEventView.swift */,
@@ -273,8 +279,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				406E9DD92C2104B200CABD3A /* EventManager.swift in Sources */,
+				408677252C2115AE00E54452 /* EventListView.swift in Sources */,
 				4039528E2C20C43000726251 /* AddEventView.swift in Sources */,
 				4039528C2C20AD8E00726251 /* EventDetailView.swift in Sources */,
+				408677232C21154000E54452 /* EventRow.swift in Sources */,
 				4091A2352C20A0F400804EBD /* ContentView.swift in Sources */,
 				4091A25D2C20A79600804EBD /* Event.swift in Sources */,
 				406E9DD72C20F02300CABD3A /* EventHistoryView.swift in Sources */,

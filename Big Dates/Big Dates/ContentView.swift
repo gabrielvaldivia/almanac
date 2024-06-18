@@ -94,36 +94,7 @@ struct ContentView: View {
     }
 }
 
-struct EventListView: View {
-    var events: [Event]
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(events.indices.filter { isEventDateTodayOrLater(events[$0].date) }, id: \.self) { index in
-                    NavigationLink(value: events[index]) {
-                        EventRow(event: events[index])
-                    }
-                }
-            }
-        }
-    }
-}
 
-struct EventRow: View {
-    var event: Event
-
-    var body: some View {
-        HStack {
-            Text(event.title)
-                .foregroundColor(.black)
-            Spacer()
-            Text(ContentView.dateFormatter.string(from: event.date))
-                .foregroundColor(.gray)
-        }
-        .padding()
-    }
-    
-}
 
 #Preview {
     ContentView()
