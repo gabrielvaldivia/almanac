@@ -37,6 +37,7 @@ struct AddEventView: View {
     private func saveEvent() {
         let newEvent = Event(title: title, date: date)
         events.append(newEvent)
+        events.sort(by: { $0.date < $1.date })
         dismiss()
     }
 }

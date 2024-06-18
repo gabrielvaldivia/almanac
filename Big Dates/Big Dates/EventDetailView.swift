@@ -8,9 +8,11 @@
 import SwiftUI
 
 struct EventDetailView: View {
-    @Binding var event: Event
+    @ObservedObject var event: Event
     var onDelete: () -> Void
     @Environment(\.dismiss) var dismiss  
+    private let eventManager = EventManager()
+    var onSave: () -> Void
 
     var body: some View {
         NavigationView {
@@ -22,6 +24,8 @@ struct EventDetailView: View {
                     dismiss()
                 }
                 Button("Save") {
+                    onSave()
+                    eventManager.saveEvents([event])
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
