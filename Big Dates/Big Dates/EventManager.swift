@@ -20,9 +20,13 @@ class EventManager {
     func loadEvents() -> [Event] {
         if let savedEvents = defaults.object(forKey: eventsKey) as? Data {
             if let loadedEvents = try? JSONDecoder().decode([Event].self, from: savedEvents) {
-                return loadedEvents.sorted(by: { $0.date < $1.date })
+                return loadedEvents
             }
         }
         return []
+    }
+
+    func sortEvents(_ events: [Event]) -> [Event] {
+        return events.sorted(by: { $0.date < $1.date })
     }
 }

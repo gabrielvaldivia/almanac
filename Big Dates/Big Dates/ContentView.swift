@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var events: [Event] = []
+    @State var events: [Event] = []
     @State private var showingAddEvent = false  // Added this line
     private let eventManager = EventManager()
-
-    init() {
-        _events = State(initialValue: eventManager.loadEvents())
-    }
 
     // Create a static date formatter
     static let dateFormatter: DateFormatter = {
@@ -28,12 +24,20 @@ struct ContentView: View {
             mainContent
         }
         .onAppear {
-            events = eventManager.loadEvents()
+            loadEvents()
         }
-        .onChange(of: events) { newValue, oldValue in
-            events.sort(by: { $0.date < $1.date })
-            eventManager.saveEvents(events)
+        .onChange(of: events) { _ in
+            sortAndSaveEvents()
         }
+    }
+
+    private func loadEvents() {
+        events = eventManager.loadEvents()
+    }
+
+    private func sortAndSaveEvents() {
+        events = eventManager.sortEvents(events)
+        eventManager.saveEvents(events)
     }
 
     private var mainContent: some View {
@@ -56,7 +60,9 @@ struct ContentView: View {
         .navigationDestination(for: Event.self) { event in
             if let index = events.firstIndex(where: { $0.id == event.id }) {
                 EventDetailView(event: events[index], onDelete: {
-                    events.remove(at: index)
+                    var updatedEvents = events
+                    updatedEvents.remove(at: index)
+                    events = updatedEvents
                     eventManager.saveEvents(events)
                 }, onSave: {
                     eventManager.saveEvents(events)
@@ -84,7 +90,9 @@ struct ContentView: View {
     }
 
     func removeEvents(at offsets: IndexSet) {
-        events.remove(atOffsets: offsets)
+        var updatedEvents = events
+        updatedEvents.remove(atOffsets: offsets)
+        events = updatedEvents
     }
 
     private func isEventDateTodayOrLater(_ date: Date) -> Bool {
