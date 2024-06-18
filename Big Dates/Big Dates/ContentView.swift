@@ -8,14 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var events: [Event] = []
+    @State private var events: [Event] = []
     @State private var showingAddEvent = false  // Added this line
     private let eventManager = EventManager()
+
+    init() {
+        _events = State(initialValue: eventManager.loadEvents())
+    }
 
     // Create a static date formatter
     static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM dd"  // Updated date format
+        formatter.dateFormat = "MMM dd"
         return formatter
     }()
 
@@ -24,20 +28,12 @@ struct ContentView: View {
             mainContent
         }
         .onAppear {
-            loadEvents()
+            events = eventManager.loadEvents()
         }
-        .onChange(of: events) { _ in
-            sortAndSaveEvents()
+        .onChange(of: events) { newValue, oldValue in
+            events.sort(by: { $0.date < $1.date })
+            eventManager.saveEvents(events)
         }
-    }
-
-    private func loadEvents() {
-        events = eventManager.loadEvents()
-    }
-
-    private func sortAndSaveEvents() {
-        events = eventManager.sortEvents(events)
-        eventManager.saveEvents(events)
     }
 
     private var mainContent: some View {
@@ -60,9 +56,7 @@ struct ContentView: View {
         .navigationDestination(for: Event.self) { event in
             if let index = events.firstIndex(where: { $0.id == event.id }) {
                 EventDetailView(event: events[index], onDelete: {
-                    var updatedEvents = events
-                    updatedEvents.remove(at: index)
-                    events = updatedEvents
+                    events.remove(at: index)
                     eventManager.saveEvents(events)
                 }, onSave: {
                     eventManager.saveEvents(events)
@@ -90,9 +84,7 @@ struct ContentView: View {
     }
 
     func removeEvents(at offsets: IndexSet) {
-        var updatedEvents = events
-        updatedEvents.remove(atOffsets: offsets)
-        events = updatedEvents
+        events.remove(atOffsets: offsets)
     }
 
     private func isEventDateTodayOrLater(_ date: Date) -> Bool {
@@ -102,7 +94,36 @@ struct ContentView: View {
     }
 }
 
+struct EventListView: View {
+    var events: [Event]
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(events.indices.filter { isEventDateTodayOrLater(events[$0].date) }, id: \.self) { index in
+                    NavigationLink(value: events[index]) {
+                        EventRow(event: events[index])
+                    }
+                }
+            }
+        }
+    }
+}
 
+struct EventRow: View {
+    var event: Event
+
+    var body: some View {
+        HStack {
+            Text(event.title)
+                .foregroundColor(.black)
+            Spacer()
+            Text(ContentView.dateFormatter.string(from: event.date))
+                .foregroundColor(.gray)
+        }
+        .padding()
+    }
+    
+}
 
 #Preview {
     ContentView()
