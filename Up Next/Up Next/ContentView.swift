@@ -9,7 +9,7 @@ import SwiftUI
 import Foundation
 
 struct Event: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var title: String
     var date: Date
 }
@@ -22,7 +22,6 @@ struct ContentView: View {
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
     @State private var selectedSegment: String = "Upcoming" // Default selection
-    @FocusState private var newEventTitleFocus: Bool
 
     private let segments = ["Past", "Upcoming"]
 
@@ -45,7 +44,7 @@ struct ContentView: View {
                                     HStack(alignment: .top) {
                                         VStack (alignment: .leading) {
                                             Text(event.title)
-                                            Text(event.date, style: .date)
+                                            Text(event.date, formatter: itemDateFormatter) // Use custom formatter
                                                 .font(.subheadline)
                                                 .foregroundColor(.gray)
                                         }
@@ -78,7 +77,6 @@ struct ContentView: View {
                     self.newEventTitle = ""
                     self.newEventDate = Date()
                     self.showAddEventSheet = true
-                    self.newEventTitleFocus = true
                 }) {
                     Image(systemName: "plus")
                         .font(.title)
@@ -94,13 +92,10 @@ struct ContentView: View {
         }
 
         // Add Event Sheet
-        .sheet(isPresented: $showAddEventSheet, onDismiss: {
-            newEventTitleFocus = false
-        }) {
+        .sheet(isPresented: $showAddEventSheet) {
             NavigationView {
                 Form {
                     TextField("Event Title", text: $newEventTitle)
-                        .focused($newEventTitleFocus)
                     DatePicker("Event Date", selection: $newEventDate, displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
                 }
@@ -112,24 +107,17 @@ struct ContentView: View {
                             addNewEvent()
                             showAddEventSheet = false
                         }
+                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
                     }
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.async {
-                    self.newEventTitleFocus = true
                 }
             }
         }
 
         // Edit Event Sheet
-        .sheet(isPresented: $showEditSheet, onDismiss: {
-            newEventTitleFocus = false
-        }) {
+        .sheet(isPresented: $showEditSheet) {
             NavigationView {
                 Form {
                     TextField("Edit Event Title", text: $newEventTitle)
-                        .focused($newEventTitleFocus)
                     DatePicker("Edit Event Date", selection: $newEventDate, displayedComponents: .date)
                         .datePickerStyle(GraphicalDatePickerStyle())
                 }
@@ -142,11 +130,6 @@ struct ContentView: View {
                             showEditSheet = false
                         }
                     }
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.async {
-                    self.newEventTitleFocus = true
                 }
             }
         }
@@ -178,7 +161,7 @@ struct ContentView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
 
-        var grouped = Dictionary(grouping: sortedEvents) { event -> String in
+        let grouped = Dictionary(grouping: sortedEvents) { event -> String in
             return formatter.string(from: event.date)
         }
 
@@ -226,6 +209,12 @@ struct ContentView: View {
 }
 
 extension ContentView {
+    var itemDateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d" // Format without the year
+        return formatter
+    }
+    
     func loadEvents() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601  // Match the encoding strategy
