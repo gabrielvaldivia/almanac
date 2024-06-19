@@ -243,7 +243,13 @@ extension Event {
         
         return [
             Event(id: UUID(), title: "Old Event", date: formatter.date(from: "May 1, 2024")!),
-            Event(id: UUID(), title: "Upcoming Event", date: formatter.date(from: "July 1, 2024")!)
+            Event(id: UUID(), title: "Test event", date: Date()),
+            Event(id: UUID(), title: "Config", date: formatter.date(from: "June 26, 2024")!),
+            Event(id: UUID(), title: "The Bear S3", date: formatter.date(from: "June 27, 2024")!),
+            Event(id: UUID(), title: "Deadpool and Wolverine", date: formatter.date(from: "July 25, 2024")!),
+            Event(id: UUID(), title: "Ben Schwartz and Friends", date: formatter.date(from: "September 14, 2024")!),
+            Event(id: UUID(), title: "RY X", date: formatter.date(from: "October 28, 2024")!),
+            Event(id: UUID(), title: "Tora", date: formatter.date(from: "November 7, 2024")!)
         ]
     }
 }
@@ -252,5 +258,6 @@ extension Event {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView(events: .constant(Event.sampleData))
+        .preferredColorScheme(.dark)  // Preview in dark mode
     }
 }
