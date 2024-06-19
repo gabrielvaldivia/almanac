@@ -49,7 +49,7 @@ struct ContentView: View {
                                                 .font(.subheadline)
                                                 .foregroundColor(.gray)
                                         }
-                                        
+                                        Spacer()
                                         Text("\(event.date.relativeDate())")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
@@ -229,6 +229,9 @@ extension ContentView {
         if let data = UserDefaults.standard.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             events = decoded
+            print("Loaded events: \(events)")
+        } else {
+            print("No events found in UserDefaults.")
         }
     }
 
@@ -237,6 +240,9 @@ extension ContentView {
         encoder.dateEncodingStrategy = .iso8601  // Or another appropriate format
         if let encoded = try? encoder.encode(events) {
             UserDefaults.standard.set(encoded, forKey: "events")
+            print("Saved events: \(events)")
+        } else {
+            print("Failed to encode events.")
         }
     }
 }
