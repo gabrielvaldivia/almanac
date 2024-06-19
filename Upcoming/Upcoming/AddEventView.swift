@@ -23,6 +23,7 @@ struct AddEventView: View {
                 DatePicker("Date", selection: $date, displayedComponents: .date)
             }
             .navigationTitle("Add Event")
+                .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(leading: Button("Cancel") {
                 dismiss()
             }, trailing: Button("Save") {

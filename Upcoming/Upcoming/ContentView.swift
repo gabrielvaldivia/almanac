@@ -13,19 +13,36 @@ struct ContentView: View {
     @State private var selectedEvent: Event?
     @State private var showingPastEvents = false
     
+    let monthYearFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy" // Matches the format used to create the keys
+        return formatter
+    }()
+    
     var body: some View {
         NavigationView {
             List {
-                ForEach($events) { $event in
-                    if Calendar.current.isDate(event.date, inSameDayAs: Date()) || event.date > Date() {
-                        EventRow(event: $event, onTap: {
-                            selectedEvent = event
-                        })
+                ForEach(groupedEvents.keys.sorted(by: { (key1, key2) -> Bool in
+                    guard let date1 = monthYearFormatter.date(from: key1),
+                          let date2 = monthYearFormatter.date(from: key2) else {
+                        return false
+                    }
+                    return date1 < date2
+                }), id: \.self) { key in
+                    Section(header: Text(key)) {
+                        ForEach(groupedEvents[key]?.filter { $0.date >= Date().midnight } ?? [], id: \.id) { event in
+                            EventRow(event: .constant(event), onTap: {
+                                selectedEvent = event
+                            })
+                        }
+                        .onDelete { offsets in
+                            removeEvents(at: offsets, from: key)
+                        }
                     }
                 }
-                .onDelete(perform: removeEvents)
             }
             .navigationTitle("Upcoming")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(leading: Button(action: {
                 showingPastEvents = true
             }) {
@@ -42,13 +59,18 @@ struct ContentView: View {
                 EditEventView(event: .constant(event))
             }
             .sheet(isPresented: $showingPastEvents) {
-                PastEventsView(events: $events)
+                NavigationView {
+                    PastEventsView(events: $events)
+                }
             }
         }
     }
     
-    func removeEvents(at offsets: IndexSet) {
-        events.remove(atOffsets: offsets)
+    func removeEvents(at offsets: IndexSet, from monthYearKey: String) {
+        guard var eventsForMonth = groupedEvents[monthYearKey] else { return }
+        eventsForMonth.remove(atOffsets: offsets)
+        events = events.filter { monthYear(from: $0.date) != monthYearKey }
+        events.append(contentsOf: eventsForMonth)
         saveEvents()
     }
     
@@ -63,6 +85,20 @@ struct ContentView: View {
             if let decodedEvents = try? JSONDecoder().decode([Event].self, from: savedEvents) {
                 events = decodedEvents
             }
+        }
+    }
+    
+    func monthYear(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy" // e.g., January 2023
+        return formatter.string(from: date)
+    }
+    
+    var groupedEvents: [String: [Event]] {
+        let allGroupedEvents = Dictionary(grouping: events, by: { monthYear(from: $0.date) })
+        let now = Date().midnight
+        return allGroupedEvents.filter { key, events in
+            events.contains { $0.date >= now }
         }
     }
     

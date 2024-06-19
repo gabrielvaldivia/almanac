@@ -18,6 +18,7 @@
 		408E9B022C221A3E00E1EF92 /* AddEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408E9B012C221A3E00E1EF92 /* AddEventView.swift */; };
 		408E9B042C221FB400E1EF92 /* EditEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408E9B032C221FB400E1EF92 /* EditEventView.swift */; };
 		408E9B062C22582700E1EF92 /* PastEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408E9B052C22582700E1EF92 /* PastEventsView.swift */; };
+		408E9B082C22647F00E1EF92 /* DateExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408E9B072C22647F00E1EF92 /* DateExtensions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,7 @@
 		408E9B012C221A3E00E1EF92 /* AddEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventView.swift; sourceTree = "<group>"; };
 		408E9B032C221FB400E1EF92 /* EditEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditEventView.swift; sourceTree = "<group>"; };
 		408E9B052C22582700E1EF92 /* PastEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastEventsView.swift; sourceTree = "<group>"; };
+		408E9B072C22647F00E1EF92 /* DateExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateExtensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 		408E9AD42C2219B400E1EF92 /* Upcoming */ = {
 			isa = PBXGroup;
 			children = (
+				408E9B072C22647F00E1EF92 /* DateExtensions.swift */,
 				408E9B052C22582700E1EF92 /* PastEventsView.swift */,
 				408E9B032C221FB400E1EF92 /* EditEventView.swift */,
 				408E9AD52C2219B400E1EF92 /* UpcomingApp.swift */,
@@ -269,6 +272,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				408E9B082C22647F00E1EF92 /* DateExtensions.swift in Sources */,
 				408E9AD82C2219B400E1EF92 /* ContentView.swift in Sources */,
 				408E9B062C22582700E1EF92 /* PastEventsView.swift in Sources */,
 				408E9B002C221A1400E1EF92 /* Event.swift in Sources */,
