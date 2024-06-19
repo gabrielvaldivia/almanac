@@ -39,27 +39,32 @@ struct ContentView: View {
                     .padding(.horizontal)
 
                     List {
-                        ForEach(filteredEvents()) { event in
-                            HStack(alignment: .top) {
-                                VStack (alignment: .leading) {
-                                    Text(event.title)
-                                    Text(event.date, style: .date)
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
+                        ForEach(monthlyGroupedEvents(), id: \.key) { month, events in
+                            Section(header: CustomSectionHeader(title: month)) {
+                                ForEach(events, id: \.id) { event in
+                                    HStack(alignment: .top) {
+                                        VStack (alignment: .leading) {
+                                            Text(event.title)
+                                            Text(event.date, style: .date)
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        }
+                                        Spacer()
+                                        Text("\(event.date.relativeDate())")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .onTapGesture {
+                                        self.selectedEvent = event
+                                        self.newEventTitle = event.title
+                                        self.newEventDate = event.date
+                                        self.showEditSheet = true
+                                    }
+                                    .listRowSeparator(.hidden) // Hides the divider
                                 }
-                                Spacer()
-                                Text("\(event.date.relativeDate())")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                            }
-                            .onTapGesture {
-                                self.selectedEvent = event
-                                self.newEventTitle = event.title
-                                self.newEventDate = event.date
-                                self.showEditSheet = true
+                                .onDelete(perform: deleteEvent)
                             }
                         }
-                        .onDelete(perform: deleteEvent)
                     }
                     .listStyle(PlainListStyle())  // Use PlainListStyle to minimize padding
                 }
@@ -165,6 +170,31 @@ struct ContentView: View {
         return filtered
     }
 
+    func monthlyGroupedEvents() -> [(key: String, value: [Event])] {
+        let sortedEvents = filteredEvents()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+
+        var grouped = Dictionary(grouping: sortedEvents) { event -> String in
+            return formatter.string(from: event.date)
+        }
+
+        let sortedGroupedEvents = grouped.map { (key: String, value: [Event]) -> (key: String, value: [Event]) in
+            (key, value)
+        }
+        .sorted { first, second in
+            guard let firstDate = formatter.date(from: first.key), let secondDate = formatter.date(from: second.key) else {
+                return false
+            }
+            if selectedSegment == "Past" {
+                return firstDate > secondDate // Reverse chronological order for "Past"
+            } else {
+                return firstDate < secondDate // Chronological order for "Upcoming"
+            }
+        }
+        return sortedGroupedEvents
+    }
+
     func deleteEvent(at offsets: IndexSet) {
         events.remove(atOffsets: offsets)
     }
@@ -187,6 +217,18 @@ struct ContentView: View {
 
     func sortEvents() {
         events.sort { $0.date < $1.date }
+    }
+}
+// Custom Section Header
+struct CustomSectionHeader: View {
+    var title: String
+
+    var body: some View {
+        Text(title)
+            .border(Color.clear, width: 0) // Removes bottom border by setting a clear border with zero width
+            .font(.title3)
+            .background(Color(UIColor.systemBackground))
+            .textCase(nil)  // Ensures text is not automatically capitalized
     }
 }
 
