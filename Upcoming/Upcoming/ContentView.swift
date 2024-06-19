@@ -54,11 +54,33 @@ struct ContentView: View {
                 showingPastEvents = true
             }) {
                 Image(systemName: "clock.arrow.circlepath") // Icon for past events
-            }, trailing: Button(action: {
-                showingAddEvent = true
-            }) {
-                Image(systemName: "plus") // Icon for add event
             })
+            .toolbar {
+                // Toolbar items here if needed
+            }
+
+            // Floating Action Button for adding new events
+            .overlay(
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showingAddEvent = true
+                        }) {
+                            Image(systemName: "plus")
+                                .foregroundColor(.white)
+                                .font(.title)
+                                .padding(15)
+                                .background(Color.blue)
+                                .clipShape(Circle())
+                                .shadow(radius: 10)
+                        }
+                        .padding()
+                        Spacer()
+                    }
+                }
+            )
 
             // Add event sheet
             .sheet(isPresented: $showingAddEvent) {
