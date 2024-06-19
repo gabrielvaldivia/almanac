@@ -35,7 +35,6 @@ struct AddEventView: View {
             }, trailing: Button("Save") {
                 let newEvent = Event(title: title, date: date)
                 events.append(newEvent)
-                events.sort()
                 onSave()  // Call the onSave closure
                 dismiss()
             })
