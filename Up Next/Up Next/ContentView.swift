@@ -70,6 +70,9 @@ struct ContentView: View {
                 }
                 .navigationTitle("Events")
                 .navigationBarTitleDisplayMode(.inline)
+                .onAppear {
+                    loadEvents()  // Load events when the view appears
+                }
 
                 Button(action: {
                     self.newEventTitle = ""
@@ -254,8 +257,7 @@ struct CustomSectionHeader: View {
     var body: some View {
         Text(title)
             .border(Color.clear, width: 0) // Removes bottom border by setting a clear border with zero width
-            .font(.title3)
-            .background(Color(UIColor.systemBackground))
+            .font(.headline)
             .textCase(nil)  // Ensures text is not automatically capitalized
     }
 }
