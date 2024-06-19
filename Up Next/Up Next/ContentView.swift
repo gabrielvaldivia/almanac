@@ -8,7 +8,7 @@
 import SwiftUI
 import Foundation
 
-struct Event: Identifiable {
+struct Event: Identifiable, Codable {
     let id = UUID()
     var title: String
     var date: Date
@@ -49,7 +49,7 @@ struct ContentView: View {
                                                 .font(.subheadline)
                                                 .foregroundColor(.gray)
                                         }
-                                        Spacer()
+                                        
                                         Text("\(event.date.relativeDate())")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
@@ -197,11 +197,13 @@ struct ContentView: View {
 
     func deleteEvent(at offsets: IndexSet) {
         events.remove(atOffsets: offsets)
+        saveEvents()  // Save after deleting
     }
 
     func addNewEvent() {
         let newEvent = Event(title: newEventTitle, date: newEventDate)
         events.append(newEvent)
+        saveEvents()  // Save after adding
         sortEvents()
         newEventTitle = ""
         newEventDate = Date()
@@ -211,7 +213,7 @@ struct ContentView: View {
         if let selectedEvent = selectedEvent, let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
             events[index].title = newEventTitle
             events[index].date = newEventDate
-            sortEvents()
+            saveEvents()  // Save after editing
         }
     }
 
@@ -219,6 +221,26 @@ struct ContentView: View {
         events.sort { $0.date < $1.date }
     }
 }
+
+extension ContentView {
+    func loadEvents() {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601  // Match the encoding strategy
+        if let data = UserDefaults.standard.data(forKey: "events"),
+           let decoded = try? decoder.decode([Event].self, from: data) {
+            events = decoded
+        }
+    }
+
+    func saveEvents() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601  // Or another appropriate format
+        if let encoded = try? encoder.encode(events) {
+            UserDefaults.standard.set(encoded, forKey: "events")
+        }
+    }
+}
+
 // Custom Section Header
 struct CustomSectionHeader: View {
     var title: String
