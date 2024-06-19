@@ -66,6 +66,8 @@ struct ContentView: View {
                         }
                     }
                     .listStyle(PlainListStyle())  // Use PlainListStyle to minimize padding
+                    .clipped(antialiased: false)
+                    .padding(.bottom, 80)
                 }
                 .navigationTitle("Events")
                 .navigationBarTitleDisplayMode(.inline)
