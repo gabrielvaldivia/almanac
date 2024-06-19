@@ -171,27 +171,58 @@ struct ContentView: View {
 }
 
 struct EventRow: View {
-    @Binding var event: Event // Binding to the event
-    var onTap: () -> Void // Function to handle the tap event
-    
+    @Binding var event: Event
+    var onTap: () -> Void
+
     var body: some View {
         Button(action: onTap) {
-            HStack {
-                Text(event.title)
-                Spacer()
-                Text(event.date, formatter: monthDayFormatter) // Use the custom formatter
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(event.title)
+                        .font(.body) // Standard body font for the title
+                    Spacer()
+                    Text(relativeDateString(for: event.date)) // Relative date to the right
+                        .font(.subheadline) // Slightly smaller than body, for relative date
+                        .foregroundColor(.gray)
+                }
+                Text(eventDateFormatted(event.date)) // Actual date below the title
+                    .font(.subheadline) // Smaller font size for the actual date
                     .foregroundColor(.gray)
             }
         }
-        .buttonStyle(PlainButtonStyle()) // Use PlainButtonStyle to keep the default list row look
+        .buttonStyle(PlainButtonStyle())
     }
-    
-    // DateFormatter to format the date without the year
-    private let monthDayFormatter: DateFormatter = {
+
+    private func relativeDateString(for futureDate: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.day], from: now, to: futureDate)
+
+        guard let days = components.day else {
+            return "Date error"
+        }
+
+        switch days {
+        case 0:
+            return "Today"
+        case 1:
+            return "Tomorrow"
+        case let x where x > 1:
+            return "In \(x) days"
+        case -1:
+            return "Yesterday"
+        case let x where x < -1:
+            return "\(abs(x)) days ago"
+        default:
+            return "Date error"
+        }
+    }
+
+    private func eventDateFormatted(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d" // Format to show month and day without the year
-        return formatter
-    }()
+        formatter.dateFormat = "MMMM d" // Format like "June 21"
+        return formatter.string(from: date)
+    }
 }
 
 #Preview {

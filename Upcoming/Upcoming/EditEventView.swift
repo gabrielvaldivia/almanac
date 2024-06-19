@@ -15,20 +15,26 @@ struct EditEventView: View {
     @FocusState private var isTitleFocused: Bool  // Declare a FocusState to manage focus
 
     var body: some View {
-
-        // Form
-        Form {
-            TextField("Event Title", text: $event.title)
-                .focused($isTitleFocused)  // Bind the focus state to the TextField
-            DatePicker("Date", selection: $event.date, displayedComponents: .date)
-            Button("Save") {
-                onSave(event)
-                dismiss()
+        NavigationView {
+            Form {
+                TextField("Event Title", text: $event.title)
+                    .focused($isTitleFocused)  // Bind the focus state to the TextField
+                DatePicker("Date", selection: $event.date, displayedComponents: .date)
+                    .datePickerStyle(GraphicalDatePickerStyle())
             }
-        }
-
-        .onAppear {
-            isTitleFocused = true  // Automatically focus the title text field when the view appears
+            .navigationBarTitle("Edit Event", displayMode: .inline)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                },
+                trailing: Button("Save") {
+                    onSave(event)
+                    dismiss()
+                }
+            )
+            .onAppear {
+                isTitleFocused = true  // Automatically focus the title text field when the view appears
+            }
         }
     }
 }
