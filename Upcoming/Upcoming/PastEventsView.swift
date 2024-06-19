@@ -45,7 +45,10 @@ struct PastEventsView: View {
         .navigationTitle("Past Events")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedEvent) { event in
-            EditEventView(event: .constant(event))
+            EditEventView(event: .constant(event)) {_ in 
+                // Here you would normally handle the event saving logic
+                print("Event saved")
+            }
         }
     }
 
