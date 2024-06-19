@@ -21,16 +21,26 @@ struct ContentView: View {
     @State private var showAddEventSheet: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
-    
+    @State private var selectedSegment: String = "Upcoming" // Default selection
     @FocusState private var newEventTitleFocus: Bool
+
+    private let segments = ["Past", "Upcoming"]
 
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottom) {
-                List {
-                    ForEach(events) { event in
-                        HStack(alignment: .top) {
-                            HStack {
+                VStack {
+                    Picker("Filter", selection: $selectedSegment) {
+                        ForEach(segments, id: \.self) { segment in
+                            Text(segment)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+
+                    List {
+                        ForEach(filteredEvents()) { event in
+                            HStack(alignment: .top) {
                                 VStack (alignment: .leading) {
                                     Text(event.title)
                                     Text(event.date, style: .date)
@@ -38,21 +48,20 @@ struct ContentView: View {
                                         .foregroundColor(.gray)
                                 }
                                 Spacer()
+                                Text("\(event.date.relativeDate())")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
                             }
-
-                            Text("\(event.date.relativeDate())")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            
+                            .onTapGesture {
+                                self.selectedEvent = event
+                                self.newEventTitle = event.title
+                                self.newEventDate = event.date
+                                self.showEditSheet = true
+                            }
                         }
-                        .onTapGesture {
-                            self.selectedEvent = event
-                            self.newEventTitle = event.title
-                            self.newEventDate = event.date
-                            self.showEditSheet = true
-                        }
+                        .onDelete(perform: deleteEvent)
                     }
-                    .onDelete(perform: deleteEvent)
+                    .listStyle(PlainListStyle())  // Use PlainListStyle to minimize padding
                 }
                 .navigationTitle("Events")
                 .navigationBarTitleDisplayMode(.inline)
@@ -133,6 +142,27 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    func filteredEvents() -> [Event] {
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        var filtered = events.filter { event in
+            let startOfEvent = Calendar.current.startOfDay(for: event.date)
+            if selectedSegment == "Past" {
+                return startOfEvent < startOfToday
+            } else { // "Upcoming"
+                return startOfEvent >= startOfToday
+            }
+        }
+        
+        if selectedSegment == "Past" {
+            filtered.sort { $0.date > $1.date } // Reverse chronological order
+        } else {
+            filtered.sort { $0.date < $1.date } // Chronological order
+        }
+        
+        return filtered
     }
 
     func deleteEvent(at offsets: IndexSet) {
