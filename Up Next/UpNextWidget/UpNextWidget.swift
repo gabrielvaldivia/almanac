@@ -37,41 +37,21 @@ struct SimpleEntry: TimelineEntry {
     let configuration: ConfigurationAppIntent
 }
 
-struct DateLabelView: View {
-    var actualDateText: String
-    var relativeDateText: String
-    var labelText: String
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Text(actualDateText)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .frame(width: .infinity, alignment: .leading)
-                Text(relativeDateText)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            } .padding(.bottom, -10)
-            Text(labelText)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        }
-    } 
-}
-
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Up Next")
-                .font(.callout)
-                .fontWeight(.semibold)
-                .padding(.bottom, 4)
-            Spacer()
-            DateLabelView(actualDateText: "6/26", relativeDateText: "(In 2 days)", labelText: "Config '24")
-            DateLabelView(actualDateText: "7/3", relativeDateText: "(In 16 days)", labelText: "Kiara's birthday")
+            Text("In 2 days")
+                .font(.subheadline)
+                .foregroundColor(.red)
+                Spacer()
+
+            Text("Event title")
+                .font(.title)
+            Text("June 27")
+                .foregroundColor(.gray)
+
         }
     }
 }
