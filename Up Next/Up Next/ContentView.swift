@@ -219,21 +219,23 @@ extension ContentView {
     
     func loadEvents() {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601  // Match the encoding strategy
-        if let data = UserDefaults.standard.data(forKey: "events"),
+        decoder.dateDecodingStrategy = .iso8601
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             events = decoded
             print("Loaded events: \(events)")
         } else {
-            print("No events found in UserDefaults.")
+            print("No events found in shared UserDefaults.")
         }
     }
 
     func saveEvents() {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601  // Or another appropriate format
-        if let encoded = try? encoder.encode(events) {
-            UserDefaults.standard.set(encoded, forKey: "events")
+        encoder.dateEncodingStrategy = .iso8601
+        if let encoded = try? encoder.encode(events),
+           let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
+            sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")

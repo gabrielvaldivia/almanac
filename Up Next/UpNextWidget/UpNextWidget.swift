@@ -37,21 +37,37 @@ struct SimpleEntry: TimelineEntry {
     let configuration: ConfigurationAppIntent
 }
 
+struct RelativeDate: View {
+    var body: some View {
+        Text("In 2 days")
+            .font(.subheadline)
+            .foregroundColor(.red)
+    }
+}
+
+struct EventTitle: View {
+    var body: some View {
+        Text("Event title")
+            .font(.title)
+    }
+}
+
+struct ActualDate: View {
+    var body: some View {
+        Text("June 27")
+            .foregroundColor(.gray)
+    }
+}
+
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("In 2 days")
-                .font(.subheadline)
-                .foregroundColor(.red)
-                Spacer()
-
-            Text("Event title")
-                .font(.title)
-            Text("June 27")
-                .foregroundColor(.gray)
-
+            RelativeDate()
+            Spacer()
+            EventTitle()
+            ActualDate()
         }
     }
 }
