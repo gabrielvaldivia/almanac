@@ -12,16 +12,19 @@ struct Event: Identifiable, Codable {
     var id = UUID()
     var title: String
     var date: Date
+    var endDate: Date? // Optional end date
 }
 
 struct ContentView: View {
     @State private var events: [Event] = []
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
+    @State private var newEventEndDate: Date = Date()
     @State private var showAddEventSheet: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
     @State private var selectedSegment: String = "Upcoming" // Default selection
+    @State private var showEndDate: Bool = false
 
     private let segments = ["Past", "Upcoming"]
 
@@ -44,9 +47,16 @@ struct ContentView: View {
                                     HStack(alignment: .top) {
                                         VStack (alignment: .leading) {
                                             Text(event.title)
-                                            Text(event.date, formatter: itemDateFormatter) // Use custom formatter
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
+                                            // Conditionally display date or date range
+                                            if let endDate = event.endDate {
+                                                Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter)")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                            } else {
+                                                Text(event.date, formatter: itemDateFormatter)
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                            }
                                         }
                                         Spacer()
                                         Text("\(event.date.relativeDate())")
@@ -57,6 +67,8 @@ struct ContentView: View {
                                         self.selectedEvent = event
                                         self.newEventTitle = event.title
                                         self.newEventDate = event.date
+                                        self.newEventEndDate = event.endDate ?? Date()
+                                        self.showEndDate = event.endDate != nil
                                         self.showEditSheet = true
                                     }
                                     .listRowSeparator(.hidden) // Hides the divider
@@ -78,6 +90,8 @@ struct ContentView: View {
                 Button(action: {
                     self.newEventTitle = ""
                     self.newEventDate = Date()
+                    self.newEventEndDate = Date()
+                    self.showEndDate = false
                     self.showAddEventSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -99,7 +113,13 @@ struct ContentView: View {
                 Form {
                     TextField("Event Title", text: $newEventTitle)
                     DatePicker("Event Date", selection: $newEventDate, displayedComponents: .date)
-                        .datePickerStyle(GraphicalDatePickerStyle())
+                    Section(header: Text("Optional")) {
+                        Toggle("Multi-Day Event", isOn: $showEndDate)
+                        if showEndDate {
+                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                                .datePickerStyle(CompactDatePickerStyle()) // Correct placement
+                        }
+                    }
                 }
                 .navigationTitle("Add Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -121,7 +141,13 @@ struct ContentView: View {
                 Form {
                     TextField("Edit Event Title", text: $newEventTitle)
                     DatePicker("Edit Event Date", selection: $newEventDate, displayedComponents: .date)
-                        .datePickerStyle(GraphicalDatePickerStyle())
+                    Section(header: Text("End Date Options")) {
+                        Toggle("Multi-Day Event", isOn: $showEndDate)
+                        if showEndDate {
+                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                                .datePickerStyle(CompactDatePickerStyle()) // Correct placement
+                        }
+                    }
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -189,19 +215,22 @@ struct ContentView: View {
     }
 
     func addNewEvent() {
-        let newEvent = Event(title: newEventTitle, date: newEventDate)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: showEndDate ? newEventEndDate : nil)
         events.append(newEvent)
-        saveEvents()  // Save after adding
+        saveEvents()
         sortEvents()
         newEventTitle = ""
         newEventDate = Date()
+        newEventEndDate = Date()
+        showEndDate = false
     }
 
     func saveChanges() {
         if let selectedEvent = selectedEvent, let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
             events[index].title = newEventTitle
             events[index].date = newEventDate
-            saveEvents()  // Save after editing
+            events[index].endDate = showEndDate ? newEventEndDate : nil
+            saveEvents()
         }
     }
 
