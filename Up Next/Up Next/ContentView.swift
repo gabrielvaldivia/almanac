@@ -61,7 +61,7 @@ struct ContentView: View {
                                             .font(.footnote)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 8)
-                                            .background(self.selectedCategoryFilter == category.name ? Color.blue : Color.clear) // No background color when not selected
+                                            .background(self.selectedCategoryFilter == category.name ? category.color : Color.clear) // Change background color based on selection
                                             .foregroundColor(self.selectedCategoryFilter == category.name ? .white : .black)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 20)
@@ -122,11 +122,13 @@ struct ContentView: View {
                         self.showPastEventsSheet = true
                     }) {
                         Image(systemName: "clock.arrow.circlepath") // Icon for past events
+                            .bold() // Make the icon thicker
                     },
                     trailing: Button(action: {
                         self.showCategoryManagementView = true
                     }) {
                         Image(systemName: "slider.horizontal.3")
+                            .bold() // Make the icon thicker
                     }
                 )
                 .onAppear {
@@ -143,6 +145,7 @@ struct ContentView: View {
                 }) {
                     Image(systemName: "plus")
                         .font(.title)
+                        .bold() // Make the icon thicker
                         .foregroundColor(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 16)
