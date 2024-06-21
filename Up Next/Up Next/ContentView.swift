@@ -80,23 +80,28 @@ struct ContentView: View {
                             return date1 < date2
                         }
                         ForEach(sortedKeys, id: \.self) { key in
-                            Section(header: Text(key).font(.headline)) {
-                                ForEach(groupedEvents[key]!, id: \.id) { event in
-                                    EventRow(event: event, formatter: itemDateFormatter,
-                                             selectedEvent: $selectedEvent,
-                                             newEventTitle: $newEventTitle,
-                                             newEventDate: $newEventDate,
-                                             newEventEndDate: $newEventEndDate,
-                                             showEndDate: $showEndDate,
-                                             showEditSheet: $showEditSheet,
-                                             showRelativeDate: true)
-                                    .listRowSeparator(.hidden) // Hide dividers
+                            HStack(alignment: .top) {
+                                Text(key)
+                                    .font(.headline)
+                                    .frame(width: 100, alignment: .leading) // Adjust width as needed
+                                VStack(alignment: .leading) {
+                                    ForEach(groupedEvents[key]!, id: \.id) { event in
+                                        EventRow(event: event, formatter: itemDateFormatter,
+                                                 selectedEvent: $selectedEvent,
+                                                 newEventTitle: $newEventTitle,
+                                                 newEventDate: $newEventDate,
+                                                 newEventEndDate: $newEventEndDate,
+                                                 showEndDate: $showEndDate,
+                                                 showEditSheet: $showEditSheet)
+                                        .listRowSeparator(.hidden) // Hide dividers
+                                    }
                                 }
-                                .onDelete(perform: deleteEvent)
                             }
+                            .listRowSeparator(.hidden) // Hide dividers for each group
                         }
                     }
                     .listStyle(PlainListStyle())
+                    .listRowSeparator(.hidden) // Ensure all dividers are hidden globally in the list
                 }
 
                 // Navigation Bar
@@ -307,8 +312,7 @@ struct ContentView: View {
                                  newEventDate: $newEventDate,
                                  newEventEndDate: $newEventEndDate,
                                  showEndDate: $showEndDate,
-                                 showEditSheet: $showEditSheet,
-                                 showRelativeDate: true) // Pass true to show the relative date
+                                 showEditSheet: $showEditSheet)
                     }
                     .onDelete(perform: deletePastEvent)
                 }
@@ -321,7 +325,7 @@ struct ContentView: View {
             }
         }
 
-        // Sheet for managing categories
+        // 
         .sheet(isPresented: $showCategoryManagementView) {
             NavigationView {
                 List {
@@ -569,19 +573,9 @@ struct EventRow: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var showEditSheet: Bool
-    var showRelativeDate: Bool // New parameter to control display of relative date
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
-            if showRelativeDate {
-                Text(event.date.relativeDate())
-                    .font(.system(.caption, design: .monospaced))
-                    .font(.system(.body, design: .monospaced))
-                    .textCase(.uppercase)
-                    .frame(width: 80, alignment: .leading)
-                    .foregroundColor(.gray)
-                    .padding(.top, 4)
-            }
             VStack(alignment: .leading) {
                 HStack {
                     Text(event.title)
@@ -621,12 +615,6 @@ struct EventRow: View {
                 colorFromString(event.color).opacity(0.1) // Set background color with 10% opacity
             )
             .cornerRadius(10) // Apply rounded corners
-            .background(
-                Rectangle()
-                    .fill(colorFromString(event.color)) // Use event's color for the border
-                    .frame(width: 4),
-                alignment: .leading
-            )
         }
         .onTapGesture {
             self.selectedEvent = event
