@@ -37,6 +37,9 @@ struct ContentView: View {
         ("Music", .purple)
     ] // Dynamic categories list
     @State private var showCategoryManagementView: Bool = false // State to show category management view
+    @State private var newCategoryColor: Color = .gray // Default color for new category
+    @State private var newCategoryName: String = "" // State for new category name
+    @State private var showAddCategoryView: Bool = false // State to show add category view
 
     var body: some View {
          NavigationView {
@@ -299,31 +302,40 @@ struct ContentView: View {
             NavigationView {
                 List {
                     ForEach(categories.indices, id: \.self) { index in
-                        TextField("Category Name", text: Binding(
-                            get: { categories[index].name },
-                            set: { categories[index].name = $0 }
-                        ))
+                        HStack {
+                            TextField("Category Name", text: Binding(
+                                get: { categories[index].name },
+                                set: { categories[index].name = $0 }
+                            ))
+                            Spacer()
+                            ColorPicker("", selection: Binding(
+                                get: { categories[index].color },
+                                set: { categories[index].color = $0 }
+                            ))
+                            .labelsHidden() // Hide the label of the ColorPicker
+                            .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
+                            .padding(.trailing, 10)
+                        }
                     }
                     .onDelete(perform: removeCategory)
                     .onMove(perform: moveCategory)
-                    
-                    Button(action: {
-                        addCategory(("New Category", .gray)) // Default new category color
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Category")
-                        }
-                    }
-                    .foregroundColor(.blue)
                 }
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        EditButton()
-                    }
-                }
-                .navigationBarTitle("Categories", displayMode: .inline)
+                .listStyle(GroupedListStyle())
+                .navigationBarTitle("Manage Categories", displayMode: .inline)
+                .navigationBarItems(leading: EditButton(), trailing: Button(action: {
+                    self.showAddCategoryView = true
+                }) {
+                    Image(systemName: "plus")
+                })
             }
+            .sheet(isPresented: $showAddCategoryView) {
+                addCategoryView()
+            }
+        }
+
+        // Add Category Sheet
+        .sheet(isPresented: $showAddCategoryView) {
+            addCategoryView()
         }
     }
 
@@ -463,6 +475,27 @@ struct ContentView: View {
             return days
         default:
             return 0
+        }
+    }
+    
+    func addCategoryView() -> some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Add New Category")) {
+                    TextField("Category Name", text: $newCategoryName)
+                    ColorPicker("Select Color", selection: $newCategoryColor)
+                }
+            }
+            .navigationBarTitle("New Category", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Save") {
+                if !newCategoryName.isEmpty {
+                    addCategory((newCategoryName, newCategoryColor))
+                    newCategoryName = ""
+                    newCategoryColor = .gray
+                    showAddCategoryView = false // Close the modal after adding
+                }
+            }
+            .disabled(newCategoryName.isEmpty)) // Disable the button if the category name is empty
         }
     }
 }
