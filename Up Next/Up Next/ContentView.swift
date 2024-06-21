@@ -45,10 +45,11 @@ struct ContentView: View {
                             HStack(alignment: .top) {
                                 VStack (alignment: .leading) {
                                     Text(event.title)
-                                    // Conditionally display date or date range with total days
+                                    // Updated to display "X of Y days left"
                                     if let endDate = event.endDate {
-                                        let totalDays = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1 // Calculate total days
-                                        Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(totalDays) days)")
+                                        let totalDays = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
+                                        let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
+                                        Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(daysLeft) of \(totalDays) days left)")
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     } else {
