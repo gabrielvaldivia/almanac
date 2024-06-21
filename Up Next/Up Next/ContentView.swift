@@ -12,7 +12,8 @@ struct Event: Identifiable, Codable {
     var id = UUID()
     var title: String
     var date: Date
-    var endDate: Date? // Optional end date
+    var endDate: Date?
+    var color: String // Store color as a String
 }
 
 struct ContentView: View {
@@ -25,6 +26,7 @@ struct ContentView: View {
     @State private var selectedEvent: Event?
     @State private var showEndDate: Bool = false
     @State private var showPastEventsSheet: Bool = false // State for showing past events
+    @State private var selectedColor: String = "Black" // Default color set to Black
 
     var body: some View {
         NavigationView {
@@ -98,6 +100,26 @@ struct ContentView: View {
                             showEndDate = true
                         }
                     }
+                    HStack {
+                        Text("Event Color")
+                        Spacer()
+                        Menu {
+                            Picker("Select Color", selection: $selectedColor) {
+                                Text("Black").tag("Black")
+                                Text("Red").tag("Red")
+                                Text("Blue").tag("Blue")
+                                Text("Green").tag("Green")
+                                Text("Purple").tag("Purple")
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedColor)
+                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
                 }
                 .navigationTitle("Add Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -131,6 +153,26 @@ struct ContentView: View {
                                 showEndDate = true
                             }
                         }
+                    HStack {
+                        Text("Event Color")
+                        Spacer()
+                        Menu {
+                            Picker("Select Color", selection: $selectedColor) {
+                                Text("Black").tag("Black")
+                                Text("Red").tag("Red")
+                                Text("Blue").tag("Blue")
+                                Text("Green").tag("Green")
+                                Text("Purple").tag("Purple")
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedColor)
+                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -211,7 +253,7 @@ struct ContentView: View {
     }
 
     func addNewEvent() {
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: showEndDate ? newEventEndDate : nil)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: showEndDate ? newEventEndDate : nil, color: selectedColor)
         events.append(newEvent)
         saveEvents()
         sortEvents()
@@ -219,6 +261,7 @@ struct ContentView: View {
         newEventDate = Date()
         newEventEndDate = Date()
         showEndDate = false
+        selectedColor = "Black" // Reset to default color
     }
 
     func saveChanges() {
@@ -226,6 +269,7 @@ struct ContentView: View {
             events[index].title = newEventTitle
             events[index].date = newEventDate
             events[index].endDate = showEndDate ? newEventEndDate : nil
+            events[index].color = selectedColor
             saveEvents()
         }
     }
@@ -362,6 +406,7 @@ struct EventRow: View {
                 HStack {
                     Text(event.title)
                         .font(.headline)
+                        .foregroundColor(colorFromString(event.color)) // Convert string to Color
                     Spacer()
                     if showRelativeDate {
                         Text(event.date.relativeDate())
@@ -399,6 +444,18 @@ struct EventRow: View {
             self.showEditSheet = true
         }
     }
+
+    // Helper function to convert color name to Color
+    func colorFromString(_ colorName: String) -> Color {
+        switch colorName {
+        case "Red": return .red
+        case "Blue": return .blue
+        case "Green": return .green
+        case "Black": return .black // Added Black
+        case "Purple": return .purple
+        default: return .black // Default color if none is matched
+        }
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {
@@ -406,4 +463,3 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
-
