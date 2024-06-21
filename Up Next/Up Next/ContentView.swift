@@ -14,6 +14,7 @@ struct Event: Identifiable, Codable {
     var date: Date
     var endDate: Date?
     var color: String // Store color as a String
+    var category: String // New property for category
 }
 
 struct ContentView: View {
@@ -27,11 +28,44 @@ struct ContentView: View {
     @State private var showEndDate: Bool = false
     @State private var showPastEventsSheet: Bool = false // State for showing past events
     @State private var selectedColor: String = "Black" // Default color set to Black
+    @State private var selectedCategory: String = "Work" // Default category set to Work
+    @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
 
     var body: some View {
-        NavigationView {
+         NavigationView {
             ZStack(alignment: .bottom) {
                 VStack {
+                    // Category Pills
+                    let categoriesWithEvents = ["Work", "Movies", "Social", "Music"].filter { category in
+                        events.contains { $0.category == category }
+                    }
+                    
+                    if categoriesWithEvents.count >= 2 {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(categoriesWithEvents, id: \.self) { category in
+                                    Button(action: {
+                                        self.selectedCategoryFilter = self.selectedCategoryFilter == category ? nil : category
+                                    }) {
+                                        Text(category)
+                                            .font(.footnote)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 8)
+                                            .background(self.selectedCategoryFilter == category ? Color.blue : Color.clear) // No background color when not selected
+                                            .foregroundColor(self.selectedCategoryFilter == category ? .white : .black)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 20)
+                                                    .stroke(Color.gray, lineWidth: 1) // Gray border for all
+                                            )
+                                            .cornerRadius(20)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                        .padding(.top)
+                    }
+
                     List {
                         ForEach(filteredEvents().sorted(by: { $0.date < $1.date }), id: \.id) { event in
                             EventRow(event: event, formatter: itemDateFormatter,
@@ -41,11 +75,11 @@ struct ContentView: View {
                                      newEventEndDate: $newEventEndDate,
                                      showEndDate: $showEndDate,
                                      showEditSheet: $showEditSheet,
-                                     showRelativeDate: true) // Pass true to show the relative date
+                                     showRelativeDate: true)
                         }
                         .onDelete(perform: deleteEvent)
                     }
-                    .listStyle(PlainListStyle()) // Apply PlainListStyle to the main event list
+                    .listStyle(PlainListStyle())
                 }
                 .navigationTitle("Events")
                 .navigationBarItems(leading: Button(action: {
@@ -81,38 +115,64 @@ struct ContentView: View {
         .sheet(isPresented: $showAddEventSheet) {
             NavigationView {
                 Form {
-                    TextField("Event Title", text: $newEventTitle)
-                    DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
-                    if showEndDate {
-                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                            .datePickerStyle(CompactDatePickerStyle())
-                        Button("Remove End Date") {
-                            showEndDate = false
-                            newEventEndDate = Date() // Reset end date to default
-                        }
-                    } else {
-                        Button("Add End Date") {
-                            showEndDate = true
-                            newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
+                    Section() {
+                        TextField("Event Title", text: $newEventTitle)
+                        
+                    }
+                    Section() {
+                        DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                        if showEndDate {
+                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                                .datePickerStyle(CompactDatePickerStyle())
+                            Button("Remove End Date") {
+                                showEndDate = false
+                                newEventEndDate = Date() // Reset end date to default
+                            }
+                        } else {
+                            Button("Add End Date") {
+                                showEndDate = true
+                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
+                            }
                         }
                     }
-                    HStack {
-                        Text("Event Color")
-                        Spacer()
-                        Menu {
-                            Picker("Select Color", selection: $selectedColor) {
-                                Text("Black").tag("Black")
-                                Text("Red").tag("Red")
-                                Text("Blue").tag("Blue")
-                                Text("Green").tag("Green")
-                                Text("Purple").tag("Purple")
+                    Section() {
+                        HStack {
+                            Text("Event Color")
+                            Spacer()
+                            Menu {
+                                Picker("Select Color", selection: $selectedColor) {
+                                    Text("Black").tag("Black")
+                                    Text("Red").tag("Red")
+                                    Text("Blue").tag("Blue")
+                                    Text("Green").tag("Green")
+                                    Text("Purple").tag("Purple")
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedColor)
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                }
                             }
-                        } label: {
-                            HStack {
-                                Text(selectedColor)
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
+                        }
+                        HStack {
+                            Text("Event Category")
+                            Spacer()
+                            Menu {
+                                Picker("Select Category", selection: $selectedCategory) {
+                                    Text("Work").tag("Work")
+                                    Text("Movies").tag("Movies")
+                                    Text("Social").tag("Social")
+                                    Text("Music").tag("Music")
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedCategory)
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                }
                             }
                         }
                     }
@@ -135,9 +195,10 @@ struct ContentView: View {
         .sheet(isPresented: $showEditSheet) {
             NavigationView {
                 Form {
-                    TextField("Event Title", text: $newEventTitle)
-                    DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
-                    if showEndDate {
+                    Section(header: Text("Event Details")) {
+                        TextField("Event Title", text: $newEventTitle)
+                        DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                        if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
                                 .datePickerStyle(CompactDatePickerStyle())
                             Button("Remove End Date") {
@@ -150,23 +211,45 @@ struct ContentView: View {
                                 newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
                             }
                         }
-                    HStack {
-                        Text("Event Color")
-                        Spacer()
-                        Menu {
-                            Picker("Select Color", selection: $selectedColor) {
-                                Text("Black").tag("Black")
-                                Text("Red").tag("Red")
-                                Text("Blue").tag("Blue")
-                                Text("Green").tag("Green")
-                                Text("Purple").tag("Purple")
+                    }
+                    Section(header: Text("Event Appearance")) {
+                        HStack {
+                            Text("Event Color")
+                            Spacer()
+                            Menu {
+                                Picker("Select Color", selection: $selectedColor) {
+                                    Text("Black").tag("Black")
+                                    Text("Red").tag("Red")
+                                    Text("Blue").tag("Blue")
+                                    Text("Green").tag("Green")
+                                    Text("Purple").tag("Purple")
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedColor)
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                }
                             }
-                        } label: {
-                            HStack {
-                                Text(selectedColor)
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
+                        }
+                        HStack {
+                            Text("Event Category")
+                            Spacer()
+                            Menu {
+                                Picker("Select Category", selection: $selectedCategory) {
+                                    Text("Work").tag("Work")
+                                    Text("Movies").tag("Movies")
+                                    Text("Social").tag("Social")
+                                    Text("Music").tag("Music")
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedCategory)
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                }
                             }
                         }
                     }
@@ -215,16 +298,18 @@ struct ContentView: View {
         var allEvents = [Event]()
 
         for event in events {
-            // Include events that start today or later, or are ongoing (started before today and end after or on today)
-            if event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday) {
-                allEvents.append(event)
+            if let filter = selectedCategoryFilter {
+                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday)) {
+                    allEvents.append(event)
+                }
+            } else {
+                if event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday) {
+                    allEvents.append(event)
+                }
             }
         }
 
-        // Sort events by start date
-        allEvents.sort { $0.date < $1.date }
-
-        return allEvents
+        return allEvents.sorted { $0.date < $1.date }
     }
 
     func deleteEvent(at offsets: IndexSet) {
@@ -244,7 +329,7 @@ struct ContentView: View {
 
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil // Only set end date if showEndDate is true
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory)
         events.append(newEvent)
         saveEvents()
         sortEvents()
@@ -253,14 +338,16 @@ struct ContentView: View {
         newEventEndDate = Date()
         showEndDate = false
         selectedColor = "Black" // Reset to default color
+        selectedCategory = "Work" // Reset to default category
     }
 
     func saveChanges() {
         if let selectedEvent = selectedEvent, let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
             events[index].title = newEventTitle
             events[index].date = newEventDate
-            events[index].endDate = showEndDate ? newEventEndDate : Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) // Use default end date if not set
+            events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].color = selectedColor
+            events[index].category = selectedCategory
             saveEvents()
         }
     }
@@ -398,6 +485,9 @@ struct EventRow: View {
                         .font(.headline)
                         .foregroundColor(colorFromString(event.color)) // Convert string to Color
                     Spacer()
+                    Text(event.category)
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
                 if let endDate = event.endDate {
                     let today = Date()
@@ -448,3 +538,4 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
