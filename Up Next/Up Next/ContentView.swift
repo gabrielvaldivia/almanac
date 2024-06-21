@@ -149,22 +149,20 @@ struct ContentView: View {
         .sheet(isPresented: $showEditSheet) {
             NavigationView {
                 Form {
-                    TextField("Edit Event Title", text: $newEventTitle)
-                    DatePicker(showEndDate ? "Start Date" : "Edit Event Date", selection: $newEventDate, displayedComponents: .date)
-                    Section(header: Text("End Date Options")) {
-                        if showEndDate {
+                    TextField("Event Title", text: $newEventTitle)
+                    DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                    if showEndDate {
+                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                                .datePickerStyle(CompactDatePickerStyle())
                             Button("Remove End Date") {
                                 showEndDate = false
                                 newEventEndDate = Date() // Reset end date to default
                             }
-                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle())
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
                             }
                         }
-                    }
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
