@@ -177,7 +177,20 @@ struct ContentView: View {
         if selectedSegment == "Past" {
             filtered.sort { ($0.endDate ?? $0.date) > ($1.endDate ?? $1.date) } // Reverse chronological order based on end date
         } else {
-            filtered.sort { ($0.endDate ?? $0.date) < ($1.endDate ?? $1.date) } // Chronological order based on end date
+            // Sort "Upcoming" events by relative date, prioritizing "Today" and "Tomorrow"
+            filtered.sort { event1, event2 in
+                let relativeDate1 = event1.date.relativeDate(to: event1.endDate)
+                let relativeDate2 = event2.date.relativeDate(to: event2.endDate)
+                if relativeDate1 == "Today" && relativeDate2 != "Today" {
+                    return true
+                } else if relativeDate1 == "Tomorrow" && relativeDate2 != "Tomorrow" && relativeDate2 != "Today" {
+                    return true
+                } else if relativeDate1 == relativeDate2 {
+                    return (event1.endDate ?? event1.date) < (event2.endDate ?? event2.date)
+                } else {
+                    return false
+                }
+            }
         }
         
         return filtered
@@ -266,9 +279,8 @@ extension Date {
         let startOfSelf = calendar.startOfDay(for: self)
 
         if let endDate = endDate, startOfSelf <= startOfNow, calendar.startOfDay(for: endDate) >= startOfNow {
-            let componentsToEnd = calendar.dateComponents([.day], from: startOfNow, to: calendar.startOfDay(for: endDate))
-            guard let daysToEnd = componentsToEnd.day else { return "Error" }
-            return daysToEnd == 0 ? "Ends today" : "\(daysToEnd) days left"
+            // Changed to always return "Today" for ongoing events with an end date
+            return "Today"
         } else {
             let components = calendar.dateComponents([.day], from: startOfNow, to: startOfSelf)
             guard let dayCount = components.day else { return "Error" }
