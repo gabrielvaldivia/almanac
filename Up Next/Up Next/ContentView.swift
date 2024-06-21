@@ -117,12 +117,17 @@ struct ContentView: View {
             NavigationView {
                 Form {
                     TextField("Event Title", text: $newEventTitle)
-                    DatePicker("Event Date", selection: $newEventDate, displayedComponents: .date)
-                    Section(header: Text("Optional")) {
-                        Toggle("Multi-Day Event", isOn: $showEndDate)
-                        if showEndDate {
-                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle()) // Correct placement
+                    DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                    if showEndDate {
+                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                            .datePickerStyle(CompactDatePickerStyle())
+                        Button("Remove End Date") {
+                            showEndDate = false
+                            newEventEndDate = Date() // Reset end date to default
+                        }
+                    } else {
+                        Button("Add End Date") {
+                            showEndDate = true
                         }
                     }
                 }
@@ -145,12 +150,19 @@ struct ContentView: View {
             NavigationView {
                 Form {
                     TextField("Edit Event Title", text: $newEventTitle)
-                    DatePicker("Edit Event Date", selection: $newEventDate, displayedComponents: .date)
+                    DatePicker(showEndDate ? "Start Date" : "Edit Event Date", selection: $newEventDate, displayedComponents: .date)
                     Section(header: Text("End Date Options")) {
-                        Toggle("Multi-Day Event", isOn: $showEndDate)
                         if showEndDate {
+                            Button("Remove End Date") {
+                                showEndDate = false
+                                newEventEndDate = Date() // Reset end date to default
+                            }
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle()) // Correct placement
+                                .datePickerStyle(CompactDatePickerStyle())
+                        } else {
+                            Button("Add End Date") {
+                                showEndDate = true
+                            }
                         }
                     }
                 }
