@@ -30,7 +30,12 @@ struct ContentView: View {
     @State private var selectedColor: String = "Black" // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
-    @State private var categories: [String] = ["Work", "Movies", "Social", "Music"] // Dynamic categories list
+    @State private var categories: [(name: String, color: Color)] = [
+        ("Work", .blue), 
+        ("Movies", .red), 
+        ("Social", .green), 
+        ("Music", .purple)
+    ] // Dynamic categories list
     @State private var showCategoryManagementView: Bool = false // State to show category management view
 
     var body: some View {
@@ -40,21 +45,21 @@ struct ContentView: View {
                     
                     // Category Pills
                     let categoriesWithEvents = categories.filter { category in
-                        events.contains { $0.category == category }
+                        events.contains { $0.category == category.name }
                     }
                     if categoriesWithEvents.count >= 2 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
-                                ForEach(categoriesWithEvents, id: \.self) { category in
+                                ForEach(categoriesWithEvents, id: \.name) { category in
                                     Button(action: {
-                                        self.selectedCategoryFilter = self.selectedCategoryFilter == category ? nil : category
+                                        self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
                                     }) {
-                                        Text(category)
+                                        Text(category.name)
                                             .font(.footnote)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 8)
-                                            .background(self.selectedCategoryFilter == category ? Color.blue : Color.clear) // No background color when not selected
-                                            .foregroundColor(self.selectedCategoryFilter == category ? .white : .black)
+                                            .background(self.selectedCategoryFilter == category.name ? Color.blue : Color.clear) // No background color when not selected
+                                            .foregroundColor(self.selectedCategoryFilter == category.name ? .white : .black)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 20)
                                                     .stroke(Color.gray, lineWidth: 1) // Gray border for all
@@ -81,8 +86,9 @@ struct ContentView: View {
                         }
                         ForEach(sortedKeys, id: \.self) { key in
                             HStack(alignment: .top) {
-                                Text(key)
-                                    .font(.headline)
+                                Text(key.uppercased())
+                                    .font(.system(.footnote, design: .monospaced)) // Set font to monospaced
+                                    .foregroundColor(.gray) // Set color to gray
                                     .frame(width: 100, alignment: .leading) // Adjust width as needed
                                 VStack(alignment: .leading) {
                                     ForEach(groupedEvents[key]!, id: \.id) { event in
@@ -92,7 +98,8 @@ struct ContentView: View {
                                                  newEventDate: $newEventDate,
                                                  newEventEndDate: $newEventEndDate,
                                                  showEndDate: $showEndDate,
-                                                 showEditSheet: $showEditSheet)
+                                                 showEditSheet: $showEditSheet,
+                                                 categories: categories)
                                         .listRowSeparator(.hidden) // Hide dividers
                                     }
                                 }
@@ -127,6 +134,7 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
+                    self.selectedCategory = self.categories.first?.name // Set the default category to the first in the list
                     self.showAddEventSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -169,32 +177,12 @@ struct ContentView: View {
                     }
                     Section() {
                         HStack {
-                            Text("Color")
-                            Spacer()
-                            Menu {
-                                Picker("Select Color", selection: $selectedColor) {
-                                    Text("Black").tag("Black")
-                                    Text("Red").tag("Red")
-                                    Text("Blue").tag("Blue")
-                                    Text("Green").tag("Green")
-                                    Text("Purple").tag("Purple")
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedColor)
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                        }
-                        HStack {
                             Text("Category")
                             Spacer()
                             Menu {
                                 Picker("Select Category", selection: $selectedCategory) {
-                                    ForEach(categories, id: \.self) { category in
-                                        Text(category).tag(category as String?)
+                                    ForEach(categories, id: \.name) { category in
+                                        Text(category.name).tag(category.name as String?)
                                     }
                                 }
                             } label: {
@@ -248,32 +236,12 @@ struct ContentView: View {
                     }
                     Section() {
                         HStack {
-                            Text("Color")
-                            Spacer()
-                            Menu {
-                                Picker("Select Color", selection: $selectedColor) {
-                                    Text("Black").tag("Black")
-                                    Text("Red").tag("Red")
-                                    Text("Blue").tag("Blue")
-                                    Text("Green").tag("Green")
-                                    Text("Purple").tag("Purple")
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedColor)
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                        }
-                        HStack {
                             Text("Category")
                             Spacer()
                             Menu {
                                 Picker("Select Category", selection: $selectedCategory) {
-                                    ForEach(categories, id: \.self) { category in
-                                        Text(category).tag(category as String?)
+                                    ForEach(categories, id: \.name) { category in
+                                        Text(category.name).tag(category.name as String?)
                                     }
                                 }
                             } label: {
@@ -312,7 +280,8 @@ struct ContentView: View {
                                  newEventDate: $newEventDate,
                                  newEventEndDate: $newEventEndDate,
                                  showEndDate: $showEndDate,
-                                 showEditSheet: $showEditSheet)
+                                 showEditSheet: $showEditSheet,
+                                 categories: categories)
                     }
                     .onDelete(perform: deletePastEvent)
                 }
@@ -331,15 +300,15 @@ struct ContentView: View {
                 List {
                     ForEach(categories.indices, id: \.self) { index in
                         TextField("Category Name", text: Binding(
-                            get: { categories[index] },
-                            set: { categories[index] = $0 }
+                            get: { categories[index].name },
+                            set: { categories[index].name = $0 }
                         ))
                     }
                     .onDelete(perform: removeCategory)
                     .onMove(perform: moveCategory)
                     
                     Button(action: {
-                        addCategory("New Category")
+                        addCategory(("New Category", .gray)) // Default new category color
                     }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
@@ -458,7 +427,7 @@ struct ContentView: View {
     }
 
     // Function to add a new category
-    func addCategory(_ category: String) {
+    func addCategory(_ category: (name: String, color: Color)) {
         categories.append(category)
     }
 
@@ -474,7 +443,7 @@ struct ContentView: View {
 
     // Function to edit a category
     func editCategory(index: Int, newCategory: String) {
-        categories[index] = newCategory
+        categories[index].name = newCategory
     }
 
     // Helper function to convert relative date string to TimeInterval
@@ -573,6 +542,7 @@ struct EventRow: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var showEditSheet: Bool
+    var categories: [(name: String, color: Color)]
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
@@ -580,14 +550,8 @@ struct EventRow: View {
                 HStack {
                     Text(event.title)
                         .font(.headline)
-                        .foregroundColor(colorFromString(event.color)) // Convert string to Color
+                        .foregroundColor(colorForCategory(event.category)) // Use category color
                     Spacer()
-                    // Conditionally display the category if it exists
-                    if let category = event.category, !category.isEmpty {
-                        Text(category)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
                 }
                 if let endDate = event.endDate {
                     let today = Date()
@@ -610,9 +574,9 @@ struct EventRow: View {
                 }
             }
             .padding(.vertical, 10)
-            .padding(.leading, 20)
+            .padding(.leading, 10)
             .background(
-                colorFromString(event.color).opacity(0.1) // Set background color with 10% opacity
+                colorForCategory(event.category).opacity(0.05) // Set background color with 10% opacity
             )
             .cornerRadius(10) // Apply rounded corners
         }
@@ -626,16 +590,10 @@ struct EventRow: View {
         }
     }
 
-    // Helper function to convert color name to Color
-    func colorFromString(_ colorName: String) -> Color {
-        switch colorName {
-        case "Red": return .red
-        case "Blue": return .blue
-        case "Green": return .green
-        case "Black": return .black // Added Black
-        case "Purple": return .purple
-        default: return .black // Default color if none is matched
-        }
+    // Function to determine color based on category
+    func colorForCategory(_ category: String?) -> Color {
+        guard let category = category else { return .gray } // Default color if no category
+        return categories.first(where: { $0.name == category })?.color ?? .gray
     }
 }
 
