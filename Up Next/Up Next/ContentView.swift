@@ -45,10 +45,9 @@ struct ContentView: View {
                         }
                         .onDelete(perform: deleteEvent)
                     }
-                    .listStyle(GroupedListStyle())
+                    .listStyle(PlainListStyle()) // Apply PlainListStyle to the main event list
                 }
                 .navigationTitle("Events")
-                .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(leading: Button(action: {
                     self.showPastEventsSheet = true
                 }) {
@@ -201,9 +200,8 @@ struct ContentView: View {
                     }
                     .onDelete(perform: deletePastEvent)
                 }
-                .listStyle(GroupedListStyle()) // Apply grouped list style
+                .listStyle(PlainListStyle()) // Apply PlainListStyle to the past events list
                 .navigationTitle("Past Events")
-                .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(trailing: Button("Done") {
                     self.showPastEventsSheet = false
                 })
@@ -245,7 +243,7 @@ struct ContentView: View {
     }
 
     func addNewEvent() {
-        let defaultEndDate = showEndDate ? newEventEndDate : Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) // Use default end date if not set
+        let defaultEndDate = showEndDate ? newEventEndDate : nil // Only set end date if showEndDate is true
         let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor)
         events.append(newEvent)
         saveEvents()
@@ -339,17 +337,6 @@ extension ContentView {
     }
 }
 
-// Custom Section Header
-struct CustomSectionHeader: View {
-    var title: String
-
-    var body: some View {
-        Text(title)
-            .border(Color.clear, width: 0) // Removes bottom border by setting a clear border with zero width
-            .font(.headline)
-            .textCase(nil)  // Ensures text is not automatically capitalized
-    }
-}
 
 extension Date {
     func relativeDate(to endDate: Date? = nil) -> String {
@@ -382,6 +369,7 @@ extension Date {
     }
 }
 
+// EVENT ROW
 struct EventRow: View {
     var event: Event
     var formatter: DateFormatter
@@ -394,18 +382,22 @@ struct EventRow: View {
     var showRelativeDate: Bool // New parameter to control display of relative date
 
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 20) {
+            if showRelativeDate {
+                Text(event.date.relativeDate())
+                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(.body, design: .monospaced))
+                    .textCase(.uppercase)
+                    .frame(width: 100, alignment: .leading)
+                    .foregroundColor(.gray)
+                    .padding(.top, 4)
+            }
             VStack(alignment: .leading) {
                 HStack {
                     Text(event.title)
                         .font(.headline)
                         .foregroundColor(colorFromString(event.color)) // Convert string to Color
                     Spacer()
-                    if showRelativeDate {
-                        Text(event.date.relativeDate())
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
                 }
                 if let endDate = event.endDate {
                     let today = Date()
@@ -427,7 +419,7 @@ struct EventRow: View {
                         .foregroundColor(.gray)
                 }
             }
-        }
+        } .padding(.vertical, 10)
         .onTapGesture {
             self.selectedEvent = event
             self.newEventTitle = event.title
