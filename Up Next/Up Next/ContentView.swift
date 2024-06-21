@@ -33,21 +33,17 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 VStack {
                     List {
-                        ForEach(Array(filteredEvents().keys.sorted()), id: \.self) { key in
-                            Section(header: Text(key)) {
-                                ForEach(filteredEvents()[key]!, id: \.id) { event in
-                                    EventRow(event: event, formatter: itemDateFormatter,
-                                             selectedEvent: $selectedEvent,
-                                             newEventTitle: $newEventTitle,
-                                             newEventDate: $newEventDate,
-                                             newEventEndDate: $newEventEndDate,
-                                             showEndDate: $showEndDate,
-                                             showEditSheet: $showEditSheet,
-                                             showRelativeDate: false) // Pass false here if you don't want to show relative dates in the main list
-                                }
-                                .onDelete(perform: deleteEvent)
-                            }
+                        ForEach(filteredEvents().sorted(by: { $0.date < $1.date }), id: \.id) { event in
+                            EventRow(event: event, formatter: itemDateFormatter,
+                                     selectedEvent: $selectedEvent,
+                                     newEventTitle: $newEventTitle,
+                                     newEventDate: $newEventDate,
+                                     newEventEndDate: $newEventEndDate,
+                                     showEndDate: $showEndDate,
+                                     showEditSheet: $showEditSheet,
+                                     showRelativeDate: true) // Pass true to show the relative date
                         }
+                        .onDelete(perform: deleteEvent)
                     }
                     .listStyle(GroupedListStyle())
                 }
@@ -98,6 +94,7 @@ struct ContentView: View {
                     } else {
                         Button("Add End Date") {
                             showEndDate = true
+                            newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
                         }
                     }
                     HStack {
@@ -151,6 +148,7 @@ struct ContentView: View {
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
+                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
                             }
                         }
                     HStack {
@@ -213,33 +211,27 @@ struct ContentView: View {
         }
     }
 
-    func filteredEvents() -> [String: [Event]] {
+    func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
-        var groupedEvents = [String: [Event]]()
+        var allEvents = [Event]()
 
         for event in events {
-            let relativeDate = event.date.relativeDate(to: event.endDate)
             // Include events that start today or later, or are ongoing (started before today and end after or on today)
             if event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday) {
-                if groupedEvents[relativeDate] == nil {
-                    groupedEvents[relativeDate] = []
-                }
-                groupedEvents[relativeDate]?.append(event)
+                allEvents.append(event)
             }
         }
 
-        // Sort events in the "Today" section by start date
-        if let todayEvents = groupedEvents["Today"] {
-            groupedEvents["Today"] = todayEvents.sorted { $0.date < $1.date }
-        }
+        // Sort events by start date
+        allEvents.sort { $0.date < $1.date }
 
-        return groupedEvents
+        return allEvents
     }
 
     func deleteEvent(at offsets: IndexSet) {
         // First, reconstruct the list as it appears in the UI
-        let allEvents = Array(filteredEvents().values).flatMap { $0 }
+        let allEvents = filteredEvents()
         
         // Convert the offsets to actual event IDs
         let idsToDelete = offsets.map { allEvents[$0].id }
@@ -253,7 +245,8 @@ struct ContentView: View {
     }
 
     func addNewEvent() {
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: showEndDate ? newEventEndDate : nil, color: selectedColor)
+        let defaultEndDate = showEndDate ? newEventEndDate : Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) // Use default end date if not set
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor)
         events.append(newEvent)
         saveEvents()
         sortEvents()
@@ -268,7 +261,7 @@ struct ContentView: View {
         if let selectedEvent = selectedEvent, let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
             events[index].title = newEventTitle
             events[index].date = newEventDate
-            events[index].endDate = showEndDate ? newEventEndDate : nil
+            events[index].endDate = showEndDate ? newEventEndDate : Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) // Use default end date if not set
             events[index].color = selectedColor
             saveEvents()
         }
