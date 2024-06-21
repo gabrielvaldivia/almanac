@@ -45,13 +45,20 @@ struct ContentView: View {
                             HStack(alignment: .top) {
                                 VStack (alignment: .leading) {
                                     Text(event.title)
-                                    // Updated to display "X of Y days left"
                                     if let endDate = event.endDate {
                                         let totalDays = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
                                         let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
-                                        Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(daysLeft) of \(totalDays) days left)")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
+                                        let isEventToday = Calendar.current.isDateInToday(event.date) || (event.date...endDate).contains(Date())
+                                        
+                                        if isEventToday {
+                                            Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(daysLeft) of \(totalDays) days left)")
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        } else {
+                                            Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(totalDays) days)")
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        }
                                     } else {
                                         Text(event.date, formatter: itemDateFormatter)
                                             .font(.subheadline)
