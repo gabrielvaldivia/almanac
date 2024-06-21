@@ -162,7 +162,7 @@ struct ContentView: View {
                         
                     }
                     Section() {
-                        DatePicker("Date", selection: $newEventDate, displayedComponents: .date)
+                        DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
                             .datePickerStyle(DefaultDatePickerStyle())
                         if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
@@ -171,6 +171,7 @@ struct ContentView: View {
                                 showEndDate = false
                                 newEventEndDate = Date() 
                             }
+                            .foregroundColor(.red) // Set button text color to red
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
@@ -221,7 +222,7 @@ struct ContentView: View {
                         TextField("Title", text: $newEventTitle)
                     }
                     Section() {
-                        DatePicker("Start Date", selection: $newEventDate, displayedComponents: .date)
+                        DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
                             .datePickerStyle(DefaultDatePickerStyle()) // Set to WheelDatePickerStyle for expanded view
                         if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
@@ -230,6 +231,7 @@ struct ContentView: View {
                                 showEndDate = false
                                 newEventEndDate = Date() // Reset end date to default
                             }
+                            .foregroundColor(.red) // Set button text color to red
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
@@ -268,6 +270,15 @@ struct ContentView: View {
                         }
                         .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
                     }
+                    ToolbarItem(placement: .bottomBar) { // Add this ToolbarItem for delete button
+                        Button("Delete Event") {
+                            if let event = selectedEvent {
+                                deleteEvent(event)
+                            }
+                            showEditSheet = false // Dismiss the sheet
+                        }
+                        .foregroundColor(.red)
+                    }
                 }
             }
         }
@@ -285,6 +296,7 @@ struct ContentView: View {
                                  showEndDate: $showEndDate,
                                  showEditSheet: $showEditSheet,
                                  categories: categories)
+                        .listRowSeparator(.hidden) // Hide dividers
                     }
                     .onDelete(perform: deletePastEvent)
                 }
@@ -498,6 +510,14 @@ struct ContentView: View {
             .disabled(newCategoryName.isEmpty)) // Disable the button if the category name is empty
         }
     }
+
+    // Function to delete an event
+    func deleteEvent(_ event: Event) {
+        if let index = events.firstIndex(where: { $0.id == event.id }) {
+            events.remove(at: index)
+            saveEvents() // Save changes after deletion
+        }
+    }
 }
 
 extension ContentView {
@@ -594,16 +614,16 @@ struct EventRow: View {
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(daysLeftText))")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                     } else {
                         Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(duration) days)")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                     }
                 } else {
                     Text(event.date, formatter: formatter)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                 }
             }
             .padding(.vertical, 10)
