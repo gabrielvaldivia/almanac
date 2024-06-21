@@ -14,7 +14,7 @@ struct Event: Identifiable, Codable {
     var date: Date
     var endDate: Date?
     var color: String // Store color as a String
-    var category: String // New property for category
+    var category: String? // New property for category, now optional
 }
 
 struct ContentView: View {
@@ -28,18 +28,20 @@ struct ContentView: View {
     @State private var showEndDate: Bool = false
     @State private var showPastEventsSheet: Bool = false // State for showing past events
     @State private var selectedColor: String = "Black" // Default color set to Black
-    @State private var selectedCategory: String = "Work" // Default category set to Work
+    @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
+    @State private var categories: [String] = ["Work", "Movies", "Social", "Music"] // Dynamic categories list
+    @State private var showCategoryManagementView: Bool = false // State to show category management view
 
     var body: some View {
          NavigationView {
             ZStack(alignment: .bottom) {
                 VStack {
+                    
                     // Category Pills
-                    let categoriesWithEvents = ["Work", "Movies", "Social", "Music"].filter { category in
+                    let categoriesWithEvents = categories.filter { category in
                         events.contains { $0.category == category }
                     }
-                    
                     if categoriesWithEvents.count >= 2 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
@@ -65,28 +67,52 @@ struct ContentView: View {
                         }
                         .padding(.top)
                     }
-
+                    
+                    // List of events
                     List {
-                        ForEach(filteredEvents().sorted(by: { $0.date < $1.date }), id: \.id) { event in
-                            EventRow(event: event, formatter: itemDateFormatter,
-                                     selectedEvent: $selectedEvent,
-                                     newEventTitle: $newEventTitle,
-                                     newEventDate: $newEventDate,
-                                     newEventEndDate: $newEventEndDate,
-                                     showEndDate: $showEndDate,
-                                     showEditSheet: $showEditSheet,
-                                     showRelativeDate: true)
+                        // Group events by relative date
+                        let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
+                        // Sort keys chronologically
+                        let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
+                            // Convert keys back to dates for comparison
+                            let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                            let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                            return date1 < date2
                         }
-                        .onDelete(perform: deleteEvent)
+                        ForEach(sortedKeys, id: \.self) { key in
+                            Section(header: Text(key).font(.headline)) {
+                                ForEach(groupedEvents[key]!, id: \.id) { event in
+                                    EventRow(event: event, formatter: itemDateFormatter,
+                                             selectedEvent: $selectedEvent,
+                                             newEventTitle: $newEventTitle,
+                                             newEventDate: $newEventDate,
+                                             newEventEndDate: $newEventEndDate,
+                                             showEndDate: $showEndDate,
+                                             showEditSheet: $showEditSheet,
+                                             showRelativeDate: true)
+                                    .listRowSeparator(.hidden) // Hide dividers
+                                }
+                                .onDelete(perform: deleteEvent)
+                            }
+                        }
                     }
                     .listStyle(PlainListStyle())
                 }
+
+                // Navigation Bar
                 .navigationTitle("Events")
-                .navigationBarItems(leading: Button(action: {
-                    self.showPastEventsSheet = true
-                }) {
-                    Image(systemName: "clock.arrow.circlepath") // Icon for past events
-                })
+                .navigationBarItems(
+                    leading: Button(action: {
+                        self.showPastEventsSheet = true
+                    }) {
+                        Image(systemName: "clock.arrow.circlepath") // Icon for past events
+                    },
+                    trailing: Button(action: {
+                        self.showCategoryManagementView = true
+                    }) {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                )
                 .onAppear {
                     loadEvents()
                 }
@@ -116,17 +142,18 @@ struct ContentView: View {
             NavigationView {
                 Form {
                     Section() {
-                        TextField("Event Title", text: $newEventTitle)
+                        TextField("Title", text: $newEventTitle)
                         
                     }
                     Section() {
-                        DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                        DatePicker("Date", selection: $newEventDate, displayedComponents: .date)
+                            .datePickerStyle(DefaultDatePickerStyle())
                         if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle())
+                                .datePickerStyle(DefaultDatePickerStyle()) 
                             Button("Remove End Date") {
                                 showEndDate = false
-                                newEventEndDate = Date() // Reset end date to default
+                                newEventEndDate = Date() 
                             }
                         } else {
                             Button("Add End Date") {
@@ -137,7 +164,7 @@ struct ContentView: View {
                     }
                     Section() {
                         HStack {
-                            Text("Event Color")
+                            Text("Color")
                             Spacer()
                             Menu {
                                 Picker("Select Color", selection: $selectedColor) {
@@ -157,18 +184,17 @@ struct ContentView: View {
                             }
                         }
                         HStack {
-                            Text("Event Category")
+                            Text("Category")
                             Spacer()
                             Menu {
                                 Picker("Select Category", selection: $selectedCategory) {
-                                    Text("Work").tag("Work")
-                                    Text("Movies").tag("Movies")
-                                    Text("Social").tag("Social")
-                                    Text("Music").tag("Music")
+                                    ForEach(categories, id: \.self) { category in
+                                        Text(category).tag(category as String?)
+                                    }
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory)
+                                    Text(selectedCategory ?? "Select")
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -195,12 +221,15 @@ struct ContentView: View {
         .sheet(isPresented: $showEditSheet) {
             NavigationView {
                 Form {
-                    Section(header: Text("Event Details")) {
-                        TextField("Event Title", text: $newEventTitle)
-                        DatePicker(showEndDate ? "Start Date" : "Event Date", selection: $newEventDate, displayedComponents: .date)
+                    Section() {
+                        TextField("Title", text: $newEventTitle)
+                    }
+                    Section() {
+                        DatePicker("Start Date", selection: $newEventDate, displayedComponents: .date)
+                            .datePickerStyle(DefaultDatePickerStyle()) // Set to WheelDatePickerStyle for expanded view
                         if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle())
+                                .datePickerStyle(DefaultDatePickerStyle()) // Set to WheelDatePickerStyle for expanded view
                             Button("Remove End Date") {
                                 showEndDate = false
                                 newEventEndDate = Date() // Reset end date to default
@@ -212,9 +241,9 @@ struct ContentView: View {
                             }
                         }
                     }
-                    Section(header: Text("Event Appearance")) {
+                    Section() {
                         HStack {
-                            Text("Event Color")
+                            Text("Color")
                             Spacer()
                             Menu {
                                 Picker("Select Color", selection: $selectedColor) {
@@ -234,18 +263,17 @@ struct ContentView: View {
                             }
                         }
                         HStack {
-                            Text("Event Category")
+                            Text("Category")
                             Spacer()
                             Menu {
                                 Picker("Select Category", selection: $selectedCategory) {
-                                    Text("Work").tag("Work")
-                                    Text("Movies").tag("Movies")
-                                    Text("Social").tag("Social")
-                                    Text("Music").tag("Music")
+                                    ForEach(categories, id: \.self) { category in
+                                        Text(category).tag(category as String?)
+                                    }
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory)
+                                    Text(selectedCategory ?? "Select")
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -262,6 +290,7 @@ struct ContentView: View {
                             saveChanges()
                             showEditSheet = false
                         }
+                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
                     }
                 }
             }
@@ -285,9 +314,42 @@ struct ContentView: View {
                 }
                 .listStyle(PlainListStyle()) // Apply PlainListStyle to the past events list
                 .navigationTitle("Past Events")
+                .navigationBarTitleDisplayMode(.inline) // Set title display mode to inline
                 .navigationBarItems(trailing: Button("Done") {
                     self.showPastEventsSheet = false
                 })
+            }
+        }
+
+        // Sheet for managing categories
+        .sheet(isPresented: $showCategoryManagementView) {
+            NavigationView {
+                List {
+                    ForEach(categories.indices, id: \.self) { index in
+                        TextField("Category Name", text: Binding(
+                            get: { categories[index] },
+                            set: { categories[index] = $0 }
+                        ))
+                    }
+                    .onDelete(perform: removeCategory)
+                    .onMove(perform: moveCategory)
+                    
+                    Button(action: {
+                        addCategory("New Category")
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add Category")
+                        }
+                    }
+                    .foregroundColor(.blue)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        EditButton()
+                    }
+                }
+                .navigationBarTitle("Categories", displayMode: .inline)
             }
         }
     }
@@ -329,7 +391,7 @@ struct ContentView: View {
 
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil // Only set end date if showEndDate is true
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory) // Handle nil category
         events.append(newEvent)
         saveEvents()
         sortEvents()
@@ -338,7 +400,7 @@ struct ContentView: View {
         newEventEndDate = Date()
         showEndDate = false
         selectedColor = "Black" // Reset to default color
-        selectedCategory = "Work" // Reset to default category
+        selectedCategory = nil // Reset to no category
     }
 
     func saveChanges() {
@@ -347,7 +409,7 @@ struct ContentView: View {
             events[index].date = newEventDate
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].color = selectedColor
-            events[index].category = selectedCategory
+            events[index].category = selectedCategory // Handle nil category
             saveEvents()
         }
     }
@@ -359,11 +421,12 @@ struct ContentView: View {
     // Function to filter and sort past events
     func pastEvents() -> [Event] {
         let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
         return events.filter { event in
             if let endDate = event.endDate {
-                return endDate < now
+                return endDate < startOfToday
             } else {
-                return event.date < now
+                return event.date < startOfToday
             }
         }
         .sorted { (event1, event2) -> Bool in
@@ -388,6 +451,46 @@ struct ContentView: View {
             }
         }
         saveEvents()  // Save changes after deletion
+    }
+
+    // Function to add a new category
+    func addCategory(_ category: String) {
+        categories.append(category)
+    }
+
+    // Function to remove a category
+    func removeCategory(at offsets: IndexSet) {
+        categories.remove(atOffsets: offsets)
+    }
+
+    // Function to move a category
+    func moveCategory(from source: IndexSet, to destination: Int) {
+        categories.move(fromOffsets: source, toOffset: destination)
+    }
+
+    // Function to edit a category
+    func editCategory(index: Int, newCategory: String) {
+        categories[index] = newCategory
+    }
+
+    // Helper function to convert relative date string to TimeInterval
+    func daysFromRelativeDate(_ relativeDate: String) -> Int {
+        switch relativeDate {
+        case "Today":
+            return 0
+        case "Tomorrow":
+            return 1
+        case let otherDay where otherDay.contains("days ago"):
+            let days = Int(otherDay.replacingOccurrences(of: " days ago", with: "")) ?? 0
+            return -days
+        case let otherDay where otherDay.contains("day ago"):
+            return -1
+        case let otherDay where otherDay.starts(with: "in ") && otherDay.hasSuffix(" days"):
+            let days = Int(otherDay.replacingOccurrences(of: "in ", with: "").replacingOccurrences(of: " days", with: "")) ?? 0
+            return days
+        default:
+            return 0
+        }
     }
 }
 
@@ -475,7 +578,7 @@ struct EventRow: View {
                     .font(.system(.caption, design: .monospaced))
                     .font(.system(.body, design: .monospaced))
                     .textCase(.uppercase)
-                    .frame(width: 100, alignment: .leading)
+                    .frame(width: 80, alignment: .leading)
                     .foregroundColor(.gray)
                     .padding(.top, 4)
             }
@@ -485,9 +588,12 @@ struct EventRow: View {
                         .font(.headline)
                         .foregroundColor(colorFromString(event.color)) // Convert string to Color
                     Spacer()
-                    Text(event.category)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    // Conditionally display the category if it exists
+                    if let category = event.category, !category.isEmpty {
+                        Text(category)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
                 if let endDate = event.endDate {
                     let today = Date()
@@ -509,7 +615,19 @@ struct EventRow: View {
                         .foregroundColor(.gray)
                 }
             }
-        } .padding(.vertical, 10)
+            .padding(.vertical, 10)
+            .padding(.leading, 20)
+            .background(
+                colorFromString(event.color).opacity(0.1) // Set background color with 10% opacity
+            )
+            .cornerRadius(10) // Apply rounded corners
+            .background(
+                Rectangle()
+                    .fill(colorFromString(event.color)) // Use event's color for the border
+                    .frame(width: 4),
+                alignment: .leading
+            )
+        }
         .onTapGesture {
             self.selectedEvent = event
             self.newEventTitle = event.title
