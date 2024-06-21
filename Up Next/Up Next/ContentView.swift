@@ -41,41 +41,38 @@ struct ContentView: View {
                     .padding(.horizontal)
 
                     List {
-                        ForEach(monthlyGroupedEvents(), id: \.key) { month, events in
-                            Section(header: CustomSectionHeader(title: month)) {
-                                ForEach(events, id: \.id) { event in
-                                    HStack(alignment: .top) {
-                                        VStack (alignment: .leading) {
-                                            Text(event.title)
-                                            // Conditionally display date or date range
-                                            if let endDate = event.endDate {
-                                                Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter)")
-                                                    .font(.subheadline)
-                                                    .foregroundColor(.gray)
-                                            } else {
-                                                Text(event.date, formatter: itemDateFormatter)
-                                                    .font(.subheadline)
-                                                    .foregroundColor(.gray)
-                                            }
-                                        }
-                                        Spacer()
-                                        Text("\(event.date.relativeDate())")
+                        ForEach(filteredEvents(), id: \.id) { event in
+                            HStack(alignment: .top) {
+                                VStack (alignment: .leading) {
+                                    Text(event.title)
+                                    // Conditionally display date or date range with total days
+                                    if let endDate = event.endDate {
+                                        let totalDays = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1 // Calculate total days
+                                        Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(totalDays) days)")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    } else {
+                                        Text(event.date, formatter: itemDateFormatter)
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     }
-                                    .onTapGesture {
-                                        self.selectedEvent = event
-                                        self.newEventTitle = event.title
-                                        self.newEventDate = event.date
-                                        self.newEventEndDate = event.endDate ?? Date()
-                                        self.showEndDate = event.endDate != nil
-                                        self.showEditSheet = true
-                                    }
-                                    .listRowSeparator(.hidden) // Hides the divider
                                 }
-                                .onDelete(perform: deleteEvent)
+                                Spacer()
+                                Text("\(event.date.relativeDate(to: event.endDate))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                             }
+                            .onTapGesture {
+                                self.selectedEvent = event
+                                self.newEventTitle = event.title
+                                self.newEventDate = event.date
+                                self.newEventEndDate = event.endDate ?? Date()
+                                self.showEndDate = event.endDate != nil
+                                self.showEditSheet = true
+                            }
+                            .listRowSeparator(.hidden) // Hides the divider
                         }
+                        .onDelete(perform: deleteEvent)
                     }
                     .listStyle(PlainListStyle())  // Use PlainListStyle to minimize padding
                     .clipped(antialiased: false)
@@ -167,7 +164,8 @@ struct ContentView: View {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
         var filtered = events.filter { event in
-            let startOfEvent = Calendar.current.startOfDay(for: event.date)
+            let endOfEvent = event.endDate ?? event.date // Use endDate if it exists, otherwise use startDate
+            let startOfEvent = Calendar.current.startOfDay(for: endOfEvent)
             if selectedSegment == "Past" {
                 return startOfEvent < startOfToday
             } else { // "Upcoming"
@@ -176,37 +174,12 @@ struct ContentView: View {
         }
         
         if selectedSegment == "Past" {
-            filtered.sort { $0.date > $1.date } // Reverse chronological order
+            filtered.sort { ($0.endDate ?? $0.date) > ($1.endDate ?? $1.date) } // Reverse chronological order based on end date
         } else {
-            filtered.sort { $0.date < $1.date } // Chronological order
+            filtered.sort { ($0.endDate ?? $0.date) < ($1.endDate ?? $1.date) } // Chronological order based on end date
         }
         
         return filtered
-    }
-
-    func monthlyGroupedEvents() -> [(key: String, value: [Event])] {
-        let sortedEvents = filteredEvents()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-
-        let grouped = Dictionary(grouping: sortedEvents) { event -> String in
-            return formatter.string(from: event.date)
-        }
-
-        let sortedGroupedEvents = grouped.map { (key: String, value: [Event]) -> (key: String, value: [Event]) in
-            (key, value)
-        }
-        .sorted { first, second in
-            guard let firstDate = formatter.date(from: first.key), let secondDate = formatter.date(from: second.key) else {
-                return false
-            }
-            if selectedSegment == "Past" {
-                return firstDate > secondDate // Reverse chronological order for "Past"
-            } else {
-                return firstDate < secondDate // Chronological order for "Upcoming"
-            }
-        }
-        return sortedGroupedEvents
     }
 
     func deleteEvent(at offsets: IndexSet) {
@@ -285,28 +258,34 @@ struct CustomSectionHeader: View {
 }
 
 extension Date {
-    func relativeDate() -> String {
+    func relativeDate(to endDate: Date? = nil) -> String {
         let calendar = Calendar.current
         let now = Date()
         let startOfNow = calendar.startOfDay(for: now)
         let startOfSelf = calendar.startOfDay(for: self)
 
-        let components = calendar.dateComponents([.day], from: startOfNow, to: startOfSelf)
-        guard let dayCount = components.day else { return "Error" }
+        if let endDate = endDate, startOfSelf <= startOfNow, calendar.startOfDay(for: endDate) >= startOfNow {
+            let componentsToEnd = calendar.dateComponents([.day], from: startOfNow, to: calendar.startOfDay(for: endDate))
+            guard let daysToEnd = componentsToEnd.day else { return "Error" }
+            return daysToEnd == 0 ? "Ends today" : "\(daysToEnd) days left"
+        } else {
+            let components = calendar.dateComponents([.day], from: startOfNow, to: startOfSelf)
+            guard let dayCount = components.day else { return "Error" }
 
-        switch dayCount {
-        case 0:
-            return "Today"
-        case 1:
-            return "Tomorrow"
-        case let x where x > 1:
-            return "In \(x) days"
-        case -1:
-            return "Yesterday"
-        case let x where x < -1:
-            return "\(abs(x)) days ago"
-        default:
-            return "Error"
+            switch dayCount {
+            case 0:
+                return "Today"
+            case 1:
+                return "Tomorrow"
+            case let x where x > 1:
+                return "In \(x) days"
+            case -1:
+                return "Yesterday"
+            case let x where x < -1:
+                return "\(abs(x)) days ago"
+            default:
+                return "Error"
+            }
         }
     }
 }
