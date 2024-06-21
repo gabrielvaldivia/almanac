@@ -23,73 +23,41 @@ struct ContentView: View {
     @State private var showAddEventSheet: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
-    @State private var selectedSegment: String = "Upcoming" // Default selection
     @State private var showEndDate: Bool = false
-
-    private let segments = ["Past", "Upcoming"]
+    @State private var showPastEventsSheet: Bool = false // State for showing past events
 
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottom) {
                 VStack {
-                    Picker("Filter", selection: $selectedSegment) {
-                        ForEach(segments, id: \.self) { segment in
-                            Text(segment)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
-
                     List {
-                        ForEach(filteredEvents(), id: \.id) { event in
-                            HStack(alignment: .top) {
-                                VStack (alignment: .leading) {
-                                    Text(event.title)
-                                    if let endDate = event.endDate {
-                                        let totalDays = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
-                                        let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
-                                        let isEventToday = Calendar.current.isDateInToday(event.date) || (event.date...endDate).contains(Date())
-                                        
-                                        if isEventToday {
-                                            Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(daysLeft) of \(totalDays) days left)")
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
-                                        } else {
-                                            Text("\(event.date, formatter: itemDateFormatter) — \(endDate, formatter: itemDateFormatter) (\(totalDays) days)")
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
-                                        }
-                                    } else {
-                                        Text(event.date, formatter: itemDateFormatter)
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                    }
+                        ForEach(Array(filteredEvents().keys.sorted()), id: \.self) { key in
+                            Section(header: Text(key)) {
+                                ForEach(filteredEvents()[key]!, id: \.id) { event in
+                                    EventRow(event: event, formatter: itemDateFormatter,
+                                             selectedEvent: $selectedEvent,
+                                             newEventTitle: $newEventTitle,
+                                             newEventDate: $newEventDate,
+                                             newEventEndDate: $newEventEndDate,
+                                             showEndDate: $showEndDate,
+                                             showEditSheet: $showEditSheet,
+                                             showRelativeDate: false) // Pass false here if you don't want to show relative dates in the main list
                                 }
-                                Spacer()
-                                Text("\(event.date.relativeDate(to: event.endDate))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                .onDelete(perform: deleteEvent)
                             }
-                            .onTapGesture {
-                                self.selectedEvent = event
-                                self.newEventTitle = event.title
-                                self.newEventDate = event.date
-                                self.newEventEndDate = event.endDate ?? Date()
-                                self.showEndDate = event.endDate != nil
-                                self.showEditSheet = true
-                            }
-                            .listRowSeparator(.hidden) // Hides the divider
                         }
-                        .onDelete(perform: deleteEvent)
                     }
-                    .listStyle(PlainListStyle())  // Use PlainListStyle to minimize padding
-                    .clipped(antialiased: false)
-                    .padding(.bottom, 80)
+                    .listStyle(GroupedListStyle())
                 }
                 .navigationTitle("Events")
                 .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(leading: Button(action: {
+                    self.showPastEventsSheet = true
+                }) {
+                    Image(systemName: "clock.arrow.circlepath") // Icon for past events
+                })
                 .onAppear {
-                    loadEvents()  // Load events when the view appears
+                    loadEvents()
                 }
 
                 Button(action: {
@@ -176,45 +144,69 @@ struct ContentView: View {
                 }
             }
         }
+
+        // Sheet for past events
+        .sheet(isPresented: $showPastEventsSheet) {
+            NavigationView {
+                List {
+                    ForEach(pastEvents(), id: \.id) { event in
+                        EventRow(event: event, formatter: itemDateFormatter,
+                                 selectedEvent: $selectedEvent,
+                                 newEventTitle: $newEventTitle,
+                                 newEventDate: $newEventDate,
+                                 newEventEndDate: $newEventEndDate,
+                                 showEndDate: $showEndDate,
+                                 showEditSheet: $showEditSheet,
+                                 showRelativeDate: true) // Pass true to show the relative date
+                    }
+                    .onDelete(perform: deletePastEvent)
+                }
+                .listStyle(GroupedListStyle()) // Apply grouped list style
+                .navigationTitle("Past Events")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(trailing: Button("Done") {
+                    self.showPastEventsSheet = false
+                })
+            }
+        }
     }
 
-    func filteredEvents() -> [Event] {
+    func filteredEvents() -> [String: [Event]] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
-        var filtered = events.filter { event in
-            let endOfEvent = event.endDate ?? event.date // Use endDate if it exists, otherwise use startDate
-            let startOfEvent = Calendar.current.startOfDay(for: endOfEvent)
-            if selectedSegment == "Past" {
-                return startOfEvent < startOfToday
-            } else { // "Upcoming"
-                return startOfEvent >= startOfToday
-            }
-        }
-        
-        if selectedSegment == "Past" {
-            filtered.sort { ($0.endDate ?? $0.date) > ($1.endDate ?? $1.date) } // Reverse chronological order based on end date
-        } else {
-            // Sort "Upcoming" events by relative date, prioritizing "Today" and "Tomorrow"
-            filtered.sort { event1, event2 in
-                let relativeDate1 = event1.date.relativeDate(to: event1.endDate)
-                let relativeDate2 = event2.date.relativeDate(to: event2.endDate)
-                if relativeDate1 == "Today" && relativeDate2 != "Today" {
-                    return true
-                } else if relativeDate1 == "Tomorrow" && relativeDate2 != "Tomorrow" && relativeDate2 != "Today" {
-                    return true
-                } else if relativeDate1 == relativeDate2 {
-                    return (event1.endDate ?? event1.date) < (event2.endDate ?? event2.date)
-                } else {
-                    return false
+        var groupedEvents = [String: [Event]]()
+
+        for event in events {
+            let relativeDate = event.date.relativeDate(to: event.endDate)
+            // Include events that start today or later, or are ongoing (started before today and end after or on today)
+            if event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday) {
+                if groupedEvents[relativeDate] == nil {
+                    groupedEvents[relativeDate] = []
                 }
+                groupedEvents[relativeDate]?.append(event)
             }
         }
-        
-        return filtered
+
+        // Sort events in the "Today" section by start date
+        if let todayEvents = groupedEvents["Today"] {
+            groupedEvents["Today"] = todayEvents.sorted { $0.date < $1.date }
+        }
+
+        return groupedEvents
     }
 
     func deleteEvent(at offsets: IndexSet) {
-        events.remove(atOffsets: offsets)
+        // First, reconstruct the list as it appears in the UI
+        let allEvents = Array(filteredEvents().values).flatMap { $0 }
+        
+        // Convert the offsets to actual event IDs
+        let idsToDelete = offsets.map { allEvents[$0].id }
+        
+        // Remove events based on their IDs
+        events.removeAll { event in
+            idsToDelete.contains(event.id)
+        }
+        
         saveEvents()  // Save after deleting
     }
 
@@ -240,6 +232,40 @@ struct ContentView: View {
 
     func sortEvents() {
         events.sort { $0.date < $1.date }
+    }
+
+    // Function to filter and sort past events
+    func pastEvents() -> [Event] {
+        let now = Date()
+        return events.filter { event in
+            if let endDate = event.endDate {
+                return endDate < now
+            } else {
+                return event.date < now
+            }
+        }
+        .sorted { (event1, event2) -> Bool in
+            // Sort using endDate if available, otherwise use startDate
+            let endDate1 = event1.endDate ?? event1.date
+            let endDate2 = event2.endDate ?? event2.date
+            if endDate1 == endDate2 {
+                // If end dates are the same, sort by start date
+                return event1.date > event2.date
+            } else {
+                return endDate1 > endDate2 // Sort in reverse chronological order by end date
+            }
+        }
+    }
+
+    // Function to delete past events
+    func deletePastEvent(at offsets: IndexSet) {
+        let pastEvents = self.pastEvents()
+        for index in offsets {
+            if let mainIndex = events.firstIndex(where: { $0.id == pastEvents[index].id }) {
+                events.remove(at: mainIndex)
+            }
+        }
+        saveEvents()  // Save changes after deletion
     }
 }
 
@@ -296,7 +322,6 @@ extension Date {
         let startOfSelf = calendar.startOfDay(for: self)
 
         if let endDate = endDate, startOfSelf <= startOfNow, calendar.startOfDay(for: endDate) >= startOfNow {
-            // Changed to always return "Today" for ongoing events with an end date
             return "Today"
         } else {
             let components = calendar.dateComponents([.day], from: startOfNow, to: startOfSelf)
@@ -308,9 +333,9 @@ extension Date {
             case 1:
                 return "Tomorrow"
             case let x where x > 1:
-                return "In \(x) days"
+                return "in \(x) days"
             case -1:
-                return "Yesterday"
+                return "1 day ago"
             case let x where x < -1:
                 return "\(abs(x)) days ago"
             default:
@@ -320,8 +345,65 @@ extension Date {
     }
 }
 
+struct EventRow: View {
+    var event: Event
+    var formatter: DateFormatter
+    @Binding var selectedEvent: Event?
+    @Binding var newEventTitle: String
+    @Binding var newEventDate: Date
+    @Binding var newEventEndDate: Date
+    @Binding var showEndDate: Bool
+    @Binding var showEditSheet: Bool
+    var showRelativeDate: Bool // New parameter to control display of relative date
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(event.title)
+                        .font(.headline)
+                    Spacer()
+                    if showRelativeDate {
+                        Text(event.date.relativeDate())
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                }
+                if let endDate = event.endDate {
+                    let today = Date()
+                    let duration = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
+                    if today > event.date && today < endDate {
+                        let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
+                        let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
+                        Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(daysLeftText))")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    } else {
+                        Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(duration) days)")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                } else {
+                    Text(event.date, formatter: formatter)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .onTapGesture {
+            self.selectedEvent = event
+            self.newEventTitle = event.title
+            self.newEventDate = event.date
+            self.newEventEndDate = event.endDate ?? Date()
+            self.showEndDate = event.endDate != nil
+            self.showEditSheet = true
+        }
+    }
+}
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
 }
+
