@@ -102,6 +102,7 @@ struct ContentView: View {
                                                  newEventEndDate: $newEventEndDate,
                                                  showEndDate: $showEndDate,
                                                  showEditSheet: $showEditSheet,
+                                                 selectedCategory: $selectedCategory, // Pass this binding
                                                  categories: categories)
                                         .listRowSeparator(.hidden) // Hide dividers
                                     }
@@ -295,6 +296,7 @@ struct ContentView: View {
                                  newEventEndDate: $newEventEndDate,
                                  showEndDate: $showEndDate,
                                  showEditSheet: $showEditSheet,
+                                 selectedCategory: $selectedCategory, // Pass this binding
                                  categories: categories)
                         .listRowSeparator(.hidden) // Hide dividers
                     }
@@ -595,6 +597,7 @@ struct EventRow: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var showEditSheet: Bool
+    @Binding var selectedCategory: String? // Add this line
     var categories: [(name: String, color: Color)]
 
     var body: some View {
@@ -639,6 +642,7 @@ struct EventRow: View {
             self.newEventDate = event.date
             self.newEventEndDate = event.endDate ?? Date()
             self.showEndDate = event.endDate != nil
+            self.selectedCategory = event.category // Set the category when an event is selected for editing
             self.showEditSheet = true
         }
     }
