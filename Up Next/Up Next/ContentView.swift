@@ -36,10 +36,12 @@ struct ContentView: View {
         ("Social", .green), 
         ("Music", .purple)
     ] // Dynamic categories list
-    @State private var showCategoryManagementView: Bool = false // State to show category management view
-    @State private var newCategoryColor: Color = .gray // Default color for new category
-    @State private var newCategoryName: String = "" // State for new category name
-    @State private var showAddCategoryView: Bool = false // State to show add category view
+    @State private var showCategoryManagementView: Bool = false 
+    @State private var newCategoryColor: Color = .gray 
+    @State private var newCategoryName: String = "" 
+    @State private var showAddCategoryView: Bool = false 
+
+    @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
     var body: some View {
          NavigationView {
@@ -62,7 +64,7 @@ struct ContentView: View {
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 8)
                                             .background(self.selectedCategoryFilter == category.name ? category.color : Color.clear) // Change background color based on selection
-                                            .foregroundColor(self.selectedCategoryFilter == category.name ? .white : .black)
+                                            .foregroundColor(self.selectedCategoryFilter == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 20)
                                                     .stroke(Color.gray, lineWidth: 1) // Gray border for all
@@ -90,9 +92,10 @@ struct ContentView: View {
                         ForEach(sortedKeys, id: \.self) { key in
                             HStack(alignment: .top) {
                                 Text(key.uppercased())
-                                    .font(.system(.footnote, design: .monospaced)) // Set font to monospaced
-                                    .foregroundColor(.gray) // Set color to gray
-                                    .frame(width: 100, alignment: .leading) // Adjust width as needed
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .foregroundColor(.gray) 
+                                    .frame(width: 100, alignment: .leading) 
+                                    .padding(.vertical, 14)
                                 VStack(alignment: .leading) {
                                     ForEach(groupedEvents[key]!, id: \.id) { event in
                                         EventRow(event: event, formatter: itemDateFormatter,
@@ -314,7 +317,6 @@ struct ContentView: View {
             }
         }
 
-        // 
         .sheet(isPresented: $showCategoryManagementView) {
             NavigationView {
                 List {
@@ -602,6 +604,7 @@ struct EventRow: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String? // Add this line
     var categories: [(name: String, color: Color)]
+    @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
@@ -635,7 +638,7 @@ struct EventRow: View {
             .padding(.vertical, 10)
             .padding(.leading, 10)
             .background(
-                colorForCategory(event.category).opacity(0.05) // Set background color with 10% opacity
+                colorForCategory(event.category).opacity(colorScheme == .light ? 0.05 : 0.2) // Use the injected color scheme here
             )
             .cornerRadius(10) // Apply rounded corners
         }
@@ -645,14 +648,14 @@ struct EventRow: View {
             self.newEventDate = event.date
             self.newEventEndDate = event.endDate ?? Date()
             self.showEndDate = event.endDate != nil
-            self.selectedCategory = event.category // Set the category when an event is selected for editing
+            self.selectedCategory = event.category 
             self.showEditSheet = true
         }
     }
 
     // Function to determine color based on category
     func colorForCategory(_ category: String?) -> Color {
-        guard let category = category else { return .gray } // Default color if no category
+        guard let category = category else { return .gray } 
         return categories.first(where: { $0.name == category })?.color ?? .gray
     }
 }
@@ -660,6 +663,7 @@ struct EventRow: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .preferredColorScheme(.dark) // Set preview to dark mode
     }
 }
 
