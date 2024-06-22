@@ -17,6 +17,11 @@ struct Event: Identifiable, Codable {
     var category: String? // New property for category, now optional
 }
 
+struct CategoryData: Codable {
+    var name: String
+    var color: String // Store color as a hex string
+}
+
 struct ContentView: View {
     @State private var events: [Event] = []
     @State private var newEventTitle: String = ""
@@ -136,6 +141,7 @@ struct ContentView: View {
                 )
                 .onAppear {
                     loadEvents()
+                    loadCategories() // Load categories from UserDefaults
                 }
 
                 Button(action: {
@@ -457,9 +463,44 @@ struct ContentView: View {
         saveEvents()  // Save changes after deletion
     }
 
-    // Function to add a new category
+    // Function to add a new category and save to UserDefaults
     func addCategory(_ category: (name: String, color: Color)) {
         categories.append(category)
+        saveCategories() // Save categories after adding a new one
+    }
+
+    // Function to save categories to UserDefaults
+    func saveCategories() {
+        let encoder = JSONEncoder()
+        let categoriesData = categories.map { category -> CategoryData in
+            let uiColor = UIColor(category.color)  // Directly use UIColor assuming it always succeeds
+            return CategoryData(name: category.name, color: uiColor.toHex())
+        }
+
+        if let encoded = try? encoder.encode(categoriesData),
+           let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
+            sharedDefaults.set(encoded, forKey: "categories")
+            print("Saved categories: \(categories)")
+        } else {
+            print("Failed to encode categories.")
+        }
+    }
+
+    // Function to load categories from UserDefaults
+    func loadCategories() {
+        let decoder = JSONDecoder()
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "categories"),
+           let decoded = try? decoder.decode([CategoryData].self, from: data) {
+            categories = decoded.map { (categoryData) in
+                // Provide a default color if UIColor initialization fails
+                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray)
+                return (categoryData.name, color)
+            }
+            print("Loaded categories: \(categories)")
+        } else {
+            print("No categories found in shared UserDefaults.")
+        }
     }
 
     // Function to remove a category
@@ -484,10 +525,10 @@ struct ContentView: View {
             return 0
         case "Tomorrow":
             return 1
-        case let otherDay where otherDay.contains("days ago"):
+        case let otherDay where otherDay.contains(" days ago"):
             let days = Int(otherDay.replacingOccurrences(of: " days ago", with: "")) ?? 0
             return -days
-        case let otherDay where otherDay.contains("day ago"):
+        case let otherDay where otherDay.contains(" day ago"):
             return -1
         case let otherDay where otherDay.starts(with: "in ") && otherDay.hasSuffix(" days"):
             let days = Int(otherDay.replacingOccurrences(of: "in ", with: "").replacingOccurrences(of: " days", with: "")) ?? 0
@@ -660,10 +701,47 @@ struct EventRow: View {
     }
 }
 
+// Extension to convert UIColor to and from hex string
+extension UIColor {
+    func toHex(includeAlpha alpha: Bool = false) -> String {
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+
+        if alpha {
+            return String(format: "#%02X%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255), Int(a * 255))
+        } else {
+            return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+        }
+    }
+
+    convenience init?(hex: String) {
+        let r, g, b, a: CGFloat
+        let start = hex.index(hex.startIndex, offsetBy: hex.hasPrefix("#") ? 1 : 0)
+        let hexColor = String(hex[start...])
+
+        if hexColor.count == 8 {
+            let scanner = Scanner(string: hexColor)
+            var hexNumber: UInt64 = 0
+
+            if scanner.scanHexInt64(&hexNumber) {
+                r = CGFloat((hexNumber & 0xff000000) >> 24) / 255
+                g = CGFloat((hexNumber & 0x00ff0000) >> 16) / 255
+                b = CGFloat((hexNumber & 0x0000ff00) >> 8) / 255
+                a = CGFloat(hexNumber & 0x000000ff) / 255
+                self.init(red: r, green: g, blue: b, alpha: a)
+                return
+            }
+        }
+        return nil
+    }
+}
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .preferredColorScheme(.dark) // Set preview to dark mode
     }
 }
-
