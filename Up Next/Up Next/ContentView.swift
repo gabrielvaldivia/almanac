@@ -212,7 +212,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? "Select")
+                                    Text(selectedCategory ?? defaultCategory ?? "Select")
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -354,20 +354,6 @@ struct ContentView: View {
                         }
                         .onDelete(perform: removeCategory)
                         .onMove(perform: moveCategory)
-                        
-                        // Button to add a new category inline
-                        Button(action: {
-                            let newCategory = (name: "New Category", color: Color.random) // Use a random color for new category
-                            categories.append(newCategory)
-                            // Optionally focus on the new category's TextField if desired
-                        }) {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
-                                Text("New Category")
-                                    .foregroundColor(.blue)
-                            }
-                        }
                     }
                     
                     // Section for selecting the default category
@@ -387,8 +373,15 @@ struct ContentView: View {
                 }
                 .listStyle(GroupedListStyle())
                 .navigationBarTitle("Manage Categories", displayMode: .inline)
-                .navigationBarItems(leading: EditButton())
+                .navigationBarItems(leading: EditButton(), trailing: Button(action: {
+                    showAddCategoryView = true
+                }) {
+                    Image(systemName: "plus")
+                })
             }
+        }
+        .sheet(isPresented: $showAddCategoryView) {
+            addCategoryView()
         }
     }
 
