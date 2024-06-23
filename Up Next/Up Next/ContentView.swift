@@ -45,7 +45,7 @@ struct ContentView: View {
     @State private var newCategoryColor: Color = .gray 
     @State private var newCategoryName: String = "" 
     @State private var showAddCategoryView: Bool = false 
-    @State private var defaultCategory: String? = "Work" // Initialize default category to "Work"
+    @State private var defaultCategory: String? = nil // State to store the selected default category
 
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -54,14 +54,14 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 VStack {
                     
-                    // Category Pills based on upcoming events
-                    let categoriesWithUpcomingEvents = categories.filter { category in
-                        upcomingEvents().contains(where: { $0.category == category.name })
+                    // Category Pills
+                    let categoriesWithEvents = categories.filter { category in
+                        events.contains { $0.category == category.name }
                     }
-                    if categoriesWithUpcomingEvents.count >= 2 {
+                    if categoriesWithEvents.count >= 2 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
-                                ForEach(categoriesWithUpcomingEvents, id: \.name) { category in
+                                ForEach(categoriesWithEvents, id: \.name) { category in
                                     Button(action: {
                                         self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
                                     }) {
@@ -84,36 +84,56 @@ struct ContentView: View {
                         .padding(.top)
                     }
                     
-                    // List of events or No Events Placeholder
-                    if upcomingEvents().isEmpty {
+                    // List of events
+                    let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
+                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
+                        let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                        let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                        return date1 < date2
+                    }
+                    if sortedKeys.isEmpty {
                         VStack {
+                            Spacer()
                             Text("No upcoming events")
-                                .font(.title3)
+                                .font(.headline)
+                                // .foregroundColor(.gray)
                             Text("Add something you're looking forward to")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
+                            Spacer()
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure the VStack fills the available space
                     } else {
                         List {
-                            ForEach(upcomingEvents(), id: \.id) { event in
-                                EventRow(event: event, formatter: itemDateFormatter,
-                                         selectedEvent: $selectedEvent,
-                                         newEventTitle: $newEventTitle,
-                                         newEventDate: $newEventDate,
-                                         newEventEndDate: $newEventEndDate,
-                                         showEndDate: $showEndDate,
-                                         showEditSheet: $showEditSheet,
-                                         selectedCategory: $selectedCategory,
-                                         categories: categories)
+                            ForEach(sortedKeys, id: \.self) { key in
+                                HStack(alignment: .top) {
+                                    Text(key.uppercased())
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundColor(.gray) 
+                                        .frame(width: 100, alignment: .leading) 
+                                        .padding(.vertical, 14)
+                                    VStack(alignment: .leading) {
+                                        ForEach(groupedEvents[key]!, id: \.id) { event in
+                                            EventRow(event: event, formatter: itemDateFormatter,
+                                                     selectedEvent: $selectedEvent,
+                                                     newEventTitle: $newEventTitle,
+                                                     newEventDate: $newEventDate,
+                                                     newEventEndDate: $newEventEndDate,
+                                                     showEndDate: $showEndDate,
+                                                     showEditSheet: $showEditSheet,
+                                                     selectedCategory: $selectedCategory, // Pass this binding
+                                                     categories: categories)
+                                            .listRowSeparator(.hidden) // Hide dividers
+                                        }
+                                    }
+                                }
+                                .listRowSeparator(.hidden) // Hide dividers for each group
                             }
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden) // Ensure all dividers are hidden globally in the list
                     }
                 }
-                .id(events.count) // Force refresh when events count changes
 
                 // Navigation Bar
                 .navigationTitle("Events")
@@ -141,7 +161,7 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
-                    self.selectedCategory = self.defaultCategory // Use defaultCategory here
+                    self.selectedCategory = self.defaultCategory ?? self.categories.first?.name // Set the default category to the selected default category or the first in the list
                     self.showAddEventSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -196,7 +216,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? defaultCategory ?? "Work") // Default to defaultCategory if selectedCategory is nil
+                                    Text(selectedCategory ?? "Select")
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -256,7 +276,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? "Work") // Default to "Work" if selectedCategory is nil
+                                    Text(selectedCategory ?? "Select")
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -318,32 +338,29 @@ struct ContentView: View {
         .sheet(isPresented: $showCategoryManagementView) {
             NavigationView {
                 List {
-                    if categories.isEmpty {
-                        Text("No categories available. Please add some.")
-                    } else {
-                        ForEach(categories.indices, id: \.self) { index in
-                            HStack {
-                                TextField("Category Name", text: Binding(
-                                    get: { categories[index].name },
-                                    set: { categories[index].name = $0 }
-                                ))
-                                Spacer()
-                                ColorPicker("", selection: Binding(
-                                    get: { categories[index].color },
-                                    set: { categories[index].color = $0 }
-                                ))
-                                .labelsHidden() // Hide the label of the ColorPicker
-                                .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
-                                .padding(.trailing, 10)
-                            }
+                    ForEach(categories.indices, id: \.self) { index in
+                        HStack {
+                            TextField("Category Name", text: Binding(
+                                get: { categories[index].name },
+                                set: { categories[index].name = $0 }
+                            ))
+                            Spacer()
+                            ColorPicker("", selection: Binding(
+                                get: { categories[index].color },
+                                set: { categories[index].color = $0 }
+                            ))
+                            .labelsHidden() // Hide the label of the ColorPicker
+                            .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
+                            .padding(.trailing, 10)
                         }
-                        .onDelete(perform: removeCategory)
-                        .onMove(perform: moveCategory)
                     }
+                    .onDelete(perform: removeCategory)
+                    .onMove(perform: moveCategory)
                     
                     // Section for selecting the default category
                     Section(header: Text("Default Category")) {
                         Picker("Default Category", selection: $defaultCategory) {
+                            Text("None").tag(String?.none)
                             ForEach(categories, id: \.name) { category in
                                 Text(category.name).tag(category.name as String?)
                             }
@@ -447,7 +464,7 @@ struct ContentView: View {
         .sorted { (event1, event2) -> Bool in
             // Sort using endDate if available, otherwise use startDate
             let endDate1 = event1.endDate ?? event1.date
-            let endDate2 = event2.endDate ?? event1.date
+            let endDate2 = event2.endDate ?? event2.date
             if endDate1 == endDate2 {
                 // If end dates are the same, sort by start date
                 return event1.date > event2.date
@@ -496,40 +513,28 @@ struct ContentView: View {
 
     // Function to load categories from UserDefaults
     func loadCategories() {
-        DispatchQueue.main.async {
-            let decoder = JSONDecoder()
-            if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
-               let data = sharedDefaults.data(forKey: "categories"),
-               let decoded = try? decoder.decode([CategoryData].self, from: data) {
-                self.categories = decoded.map { (categoryData) in
-                    let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray) // Convert hex string back to UIColor, then to SwiftUI Color
-                    print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
-                    return (categoryData.name, color)
-                }
-                print("Categories loaded successfully.")
-            } else {
-                self.categories = []
-                print("Failed to load categories or no categories found.")
+        let decoder = JSONDecoder()
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "categories"),
+           let decoded = try? decoder.decode([CategoryData].self, from: data) {
+            categories = decoded.map { (categoryData) in
+                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray) // Convert hex string back to UIColor, then to SwiftUI Color
+                print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
+                return (categoryData.name, color)
             }
+        } else {
+            print("Failed to load categories or no categories found.")
         }
     }
 
     // Function to remove a category
     func removeCategory(at offsets: IndexSet) {
-        guard offsets.first! < categories.count else {
-            print("Attempted to remove category at out-of-bounds index")
-            return
-        }
         categories.remove(atOffsets: offsets)
         saveCategories() // Save categories after removing one
     }
 
     // Function to move a category
     func moveCategory(from source: IndexSet, to destination: Int) {
-        guard source.first! < categories.count else {
-            print("Attempted to move category at out-of-bounds index")
-            return
-        }
         categories.move(fromOffsets: source, toOffset: destination)
         saveCategories() // Save categories after moving one
     }
@@ -587,16 +592,6 @@ struct ContentView: View {
             events.remove(at: index)
             saveEvents() // Save changes after deletion
         }
-    }
-
-    // Function to get upcoming events
-    func upcomingEvents() -> [Event] {
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        return events.filter { event in
-            event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)
-        }
-        .sorted { $0.date < $1.date }
     }
 }
 
@@ -774,7 +769,6 @@ extension UIColor {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
-            .preferredColorScheme(.dark) // Set preview to dark mode
     }
 }
 
