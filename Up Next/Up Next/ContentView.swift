@@ -45,7 +45,8 @@ struct ContentView: View {
     @State private var newCategoryColor: Color = .gray 
     @State private var newCategoryName: String = "" 
     @State private var showAddCategoryView: Bool = false 
-    @State private var defaultCategory: String? = nil // State to store the selected default category
+    @State private var defaultCategory: String? = "Work" // State to store the selected default category
+    @FocusState private var isCategoryNameFocused: Bool // Add a focus state for the category name text field
 
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -372,9 +373,14 @@ struct ContentView: View {
                     // Section for selecting the default category
                     Section(header: Text("Default Category")) {
                         Picker("Default Category", selection: $defaultCategory) {
-                            Text("None").tag(String?.none)
                             ForEach(categories, id: \.name) { category in
                                 Text(category.name).tag(category.name as String?)
+                            }
+                        }
+                        .onAppear {
+                            // Ensure defaultCategory is never nil or "None" when the picker appears
+                            if defaultCategory == nil || defaultCategory == "None" {
+                                defaultCategory = categories.first?.name
                             }
                         }
                     }
@@ -522,6 +528,10 @@ struct ContentView: View {
                 print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
                 return (categoryData.name, color)
             }
+            // Set default category to the first in the list if it's not already set or is set to "None"
+            if defaultCategory == nil || defaultCategory == "None" {
+                defaultCategory = categories.first?.name
+            }
         } else {
             print("Failed to load categories or no categories found.")
         }
@@ -570,6 +580,7 @@ struct ContentView: View {
             Form {
                 Section(header: Text("Add New Category")) {
                     TextField("Category Name", text: $newCategoryName)
+                        .focused($isCategoryNameFocused) // Apply the focused state
                     ColorPicker("Select Color", selection: $newCategoryColor)
                 }
             }
@@ -583,6 +594,12 @@ struct ContentView: View {
                 }
             }
             .disabled(newCategoryName.isEmpty)) // Disable the button if the category name is empty
+            .onAppear {
+                // Automatically focus the text field when the view appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isCategoryNameFocused = true
+                }
+            }
         }
     }
 
