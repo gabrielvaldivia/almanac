@@ -45,6 +45,7 @@ struct ContentView: View {
     @State private var newCategoryColor: Color = .gray 
     @State private var newCategoryName: String = "" 
     @State private var showAddCategoryView: Bool = false 
+    @State private var defaultCategory: String? = nil // State to store the selected default category
 
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -149,7 +150,7 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
-                    self.selectedCategory = self.categories.first?.name // Set the default category to the first in the list
+                    self.selectedCategory = self.defaultCategory ?? self.categories.first?.name // Set the default category to the selected default category or the first in the list
                     self.showAddEventSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -344,6 +345,16 @@ struct ContentView: View {
                     }
                     .onDelete(perform: removeCategory)
                     .onMove(perform: moveCategory)
+                    
+                    // Section for selecting the default category
+                    Section(header: Text("Default Category")) {
+                        Picker("Default Category", selection: $defaultCategory) {
+                            Text("None").tag(String?.none)
+                            ForEach(categories, id: \.name) { category in
+                                Text(category.name).tag(category.name as String?)
+                            }
+                        }
+                    }
                 }
                 .listStyle(GroupedListStyle())
                 .navigationBarTitle("Manage Categories", displayMode: .inline)
