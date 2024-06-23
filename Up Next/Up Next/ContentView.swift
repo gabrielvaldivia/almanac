@@ -584,11 +584,24 @@ struct ContentView: View {
                 if !newCategoryName.isEmpty {
                     addCategory((newCategoryName, newCategoryColor))
                     newCategoryName = ""
-                    newCategoryColor = .gray
+                    // Set a random color for the next new category
+                    newCategoryColor = Color(
+                        red: .random(in: 0...1),
+                        green: .random(in: 0...1),
+                        blue: .random(in: 0...1)
+                    )
                     showAddCategoryView = false // Close the modal after adding
                 }
             }
             .disabled(newCategoryName.isEmpty)) // Disable the button if the category name is empty
+            .onAppear {
+                // Initialize with a random color when the view appears
+                newCategoryColor = Color(
+                    red: .random(in: 0...1),
+                    green: .random(in: 0...1),
+                    blue: .random(in: 0...1)
+                )
+            }
         }
     }
 
