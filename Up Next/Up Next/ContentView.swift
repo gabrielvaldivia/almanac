@@ -46,7 +46,6 @@ struct ContentView: View {
     @State private var newCategoryName: String = "" 
     @State private var showAddCategoryView: Bool = false 
     @State private var defaultCategory: String? = "Work" // State to store the selected default category
-    @FocusState private var isCategoryNameFocused: Bool // Add a focus state for the category name text field
 
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -56,29 +55,34 @@ struct ContentView: View {
                 VStack {
                     
                     // Category Pills
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(categories, id: \.name) { category in
-                                Button(action: {
-                                    self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
-                                }) {
-                                    Text(category.name)
-                                        .font(.footnote)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 8)
-                                        .background(self.selectedCategoryFilter == category.name ? category.color : Color.clear) // Change background color based on selection
-                                        .foregroundColor(self.selectedCategoryFilter == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .stroke(Color.gray, lineWidth: 1) // Gray border for all
-                                        )
-                                        .cornerRadius(20)
+                    let categoriesWithEvents = categories.filter { category in
+                        filteredEvents().contains { $0.category == category.name }
+                    }
+                    if categoriesWithEvents.count >= 2 {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(categoriesWithEvents, id: \.name) { category in
+                                    Button(action: {
+                                        self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
+                                    }) {
+                                        Text(category.name)
+                                            .font(.footnote)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 8)
+                                            .background(self.selectedCategoryFilter == category.name ? category.color : Color.clear) // Change background color based on selection
+                                            .foregroundColor(self.selectedCategoryFilter == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 20)
+                                                    .stroke(Color.gray, lineWidth: 1) // Gray border for all
+                                            )
+                                            .cornerRadius(20)
+                                    }
                                 }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
+                        .padding(.top)
                     }
-                    .padding(.top)
                     
                     // List of events
                     let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
@@ -212,7 +216,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? defaultCategory ?? "Select")
+                                    Text(selectedCategory ?? defaultCategory ?? "Select") // Ensure default category is shown
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -334,27 +338,24 @@ struct ContentView: View {
         .sheet(isPresented: $showCategoryManagementView) {
             NavigationView {
                 List {
-                    // Section for managing categories
-                    Section(header: Text("Categories")) {
-                        ForEach(categories.indices, id: \.self) { index in
-                            HStack {
-                                TextField("Category Name", text: Binding(
-                                    get: { categories[index].name },
-                                    set: { categories[index].name = $0 }
-                                ))
-                                Spacer()
-                                ColorPicker("", selection: Binding(
-                                    get: { categories[index].color },
-                                    set: { categories[index].color = $0 }
-                                ))
-                                .labelsHidden() // Hide the label of the ColorPicker
-                                .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
-                                .padding(.trailing, 10)
-                            }
+                    ForEach(categories.indices, id: \.self) { index in
+                        HStack {
+                            TextField("Category Name", text: Binding(
+                                get: { categories[index].name },
+                                set: { categories[index].name = $0 }
+                            ))
+                            Spacer()
+                            ColorPicker("", selection: Binding(
+                                get: { categories[index].color },
+                                set: { categories[index].color = $0 }
+                            ))
+                            .labelsHidden() // Hide the label of the ColorPicker
+                            .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
+                            .padding(.trailing, 10)
                         }
-                        .onDelete(perform: removeCategory)
-                        .onMove(perform: moveCategory)
                     }
+                    .onDelete(perform: removeCategory)
+                    .onMove(perform: moveCategory)
                     
                     // Section for selecting the default category
                     Section(header: Text("Default Category")) {
@@ -363,23 +364,22 @@ struct ContentView: View {
                                 Text(category.name).tag(category.name as String?)
                             }
                         }
-                        .onAppear {
-                            // Ensure defaultCategory is never nil or "None" when the picker appears
-                            if defaultCategory == nil || defaultCategory == "None" {
-                                defaultCategory = categories.first?.name
-                            }
-                        }
                     }
                 }
                 .listStyle(GroupedListStyle())
                 .navigationBarTitle("Manage Categories", displayMode: .inline)
                 .navigationBarItems(leading: EditButton(), trailing: Button(action: {
-                    showAddCategoryView = true
+                    self.showAddCategoryView = true
                 }) {
                     Image(systemName: "plus")
                 })
             }
+            .sheet(isPresented: $showAddCategoryView) {
+                addCategoryView()
+            }
         }
+
+        // Add Category Sheet
         .sheet(isPresented: $showAddCategoryView) {
             addCategoryView()
         }
@@ -521,12 +521,15 @@ struct ContentView: View {
                 print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
                 return (categoryData.name, color)
             }
-            // Set default category to the first in the list if it's not already set or is set to "None"
-            if defaultCategory == nil || defaultCategory == "None" {
+            // Set default category if not already set or if it's nil
+            if defaultCategory == nil || !categories.contains(where: { $0.name == defaultCategory }) {
                 defaultCategory = categories.first?.name
             }
         } else {
             print("Failed to load categories or no categories found.")
+            // Set a default category if categories fail to load
+            categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+            defaultCategory = "Work"
         }
     }
 
@@ -573,7 +576,6 @@ struct ContentView: View {
             Form {
                 Section(header: Text("Add New Category")) {
                     TextField("Category Name", text: $newCategoryName)
-                        .focused($isCategoryNameFocused) // Apply the focused state
                     ColorPicker("Select Color", selection: $newCategoryColor)
                 }
             }
@@ -587,12 +589,6 @@ struct ContentView: View {
                 }
             }
             .disabled(newCategoryName.isEmpty)) // Disable the button if the category name is empty
-            .onAppear {
-                // Automatically focus the text field when the view appears
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isCategoryNameFocused = true
-                }
-            }
         }
     }
 
@@ -750,7 +746,7 @@ extension UIColor {
         if alpha {
             return String(format: "#%02X%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255), Int(a * 255))
         } else {
-            return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+            return String(format: "#%02X%02X%02%X", Int(r * 255), Int(g * 255), Int(b * 255))
         }
     }
 
@@ -773,13 +769,6 @@ extension UIColor {
             }
         }
         return nil
-    }
-}
-
-// Extension to generate random colors
-extension Color {
-    static var random: Color {
-        return Color(red: .random(in: 0...1), green: .random(in: 0...1), blue: .random(in: 0...1))
     }
 }
 
