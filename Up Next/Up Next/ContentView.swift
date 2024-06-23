@@ -471,16 +471,19 @@ struct ContentView: View {
 
     // Function to save categories to UserDefaults
     func saveCategories() {
+        print("Attempting to save categories...")
         let encoder = JSONEncoder()
         let categoriesData = categories.map { category -> CategoryData in
-            let uiColor = UIColor(category.color)  // Directly use UIColor assuming it always succeeds
-            return CategoryData(name: category.name, color: uiColor.toHex())
+            let uiColor = UIColor(category.color)  // Convert SwiftUI Color to UIColor
+            let hexColor = uiColor.toHex()
+            print("Saving color: \(hexColor) for category: \(category.name)")
+            return CategoryData(name: category.name, color: hexColor)
         }
 
         if let encoded = try? encoder.encode(categoriesData),
            let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "categories")
-            print("Saved categories: \(categories)")
+            print("Successfully saved categories.")
         } else {
             print("Failed to encode categories.")
         }
@@ -493,29 +496,31 @@ struct ContentView: View {
            let data = sharedDefaults.data(forKey: "categories"),
            let decoded = try? decoder.decode([CategoryData].self, from: data) {
             categories = decoded.map { (categoryData) in
-                // Provide a default color if UIColor initialization fails
-                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray)
+                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray) // Convert hex string back to UIColor, then to SwiftUI Color
+                print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
                 return (categoryData.name, color)
             }
-            print("Loaded categories: \(categories)")
         } else {
-            print("No categories found in shared UserDefaults.")
+            print("Failed to load categories or no categories found.")
         }
     }
 
     // Function to remove a category
     func removeCategory(at offsets: IndexSet) {
         categories.remove(atOffsets: offsets)
+        saveCategories() // Save categories after removing one
     }
 
     // Function to move a category
     func moveCategory(from source: IndexSet, to destination: Int) {
         categories.move(fromOffsets: source, toOffset: destination)
+        saveCategories() // Save categories after moving one
     }
 
     // Function to edit a category
     func editCategory(index: Int, newCategory: String) {
         categories[index].name = newCategory
+        saveCategories() // Save categories after editing one
     }
 
     // Helper function to convert relative date string to TimeInterval
@@ -722,15 +727,15 @@ extension UIColor {
         let start = hex.index(hex.startIndex, offsetBy: hex.hasPrefix("#") ? 1 : 0)
         let hexColor = String(hex[start...])
 
-        if hexColor.count == 8 {
+        if hexColor.count == 6 {
             let scanner = Scanner(string: hexColor)
             var hexNumber: UInt64 = 0
 
             if scanner.scanHexInt64(&hexNumber) {
-                r = CGFloat((hexNumber & 0xff000000) >> 24) / 255
-                g = CGFloat((hexNumber & 0x00ff0000) >> 16) / 255
-                b = CGFloat((hexNumber & 0x0000ff00) >> 8) / 255
-                a = CGFloat(hexNumber & 0x000000ff) / 255
+                r = CGFloat((hexNumber & 0xFF0000) >> 16) / 255
+                g = CGFloat((hexNumber & 0x00FF00) >> 8) / 255
+                b = CGFloat(hexNumber & 0x0000FF) / 255
+                a = 1.0
                 self.init(red: r, green: g, blue: b, alpha: a)
                 return
             }
@@ -745,3 +750,4 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Set preview to dark mode
     }
 }
+
