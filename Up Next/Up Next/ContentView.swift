@@ -318,24 +318,28 @@ struct ContentView: View {
         .sheet(isPresented: $showCategoryManagementView) {
             NavigationView {
                 List {
-                    ForEach(categories.indices, id: \.self) { index in
-                        HStack {
-                            TextField("Category Name", text: Binding(
-                                get: { categories[index].name },
-                                set: { categories[index].name = $0 }
-                            ))
-                            Spacer()
-                            ColorPicker("", selection: Binding(
-                                get: { categories[index].color },
-                                set: { categories[index].color = $0 }
-                            ))
-                            .labelsHidden() // Hide the label of the ColorPicker
-                            .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
-                            .padding(.trailing, 10)
+                    if categories.isEmpty {
+                        Text("No categories available. Please add some.")
+                    } else {
+                        ForEach(categories.indices, id: \.self) { index in
+                            HStack {
+                                TextField("Category Name", text: Binding(
+                                    get: { categories[index].name },
+                                    set: { categories[index].name = $0 }
+                                ))
+                                Spacer()
+                                ColorPicker("", selection: Binding(
+                                    get: { categories[index].color },
+                                    set: { categories[index].color = $0 }
+                                ))
+                                .labelsHidden() // Hide the label of the ColorPicker
+                                .frame(width: 30, height: 30) // Adjust the size of the ColorPicker
+                                .padding(.trailing, 10)
+                            }
                         }
+                        .onDelete(perform: removeCategory)
+                        .onMove(perform: moveCategory)
                     }
-                    .onDelete(perform: removeCategory)
-                    .onMove(perform: moveCategory)
                     
                     // Section for selecting the default category
                     Section(header: Text("Default Category")) {
@@ -492,28 +496,40 @@ struct ContentView: View {
 
     // Function to load categories from UserDefaults
     func loadCategories() {
-        let decoder = JSONDecoder()
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "categories"),
-           let decoded = try? decoder.decode([CategoryData].self, from: data) {
-            categories = decoded.map { (categoryData) in
-                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray) // Convert hex string back to UIColor, then to SwiftUI Color
-                print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
-                return (categoryData.name, color)
+        DispatchQueue.main.async {
+            let decoder = JSONDecoder()
+            if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+               let data = sharedDefaults.data(forKey: "categories"),
+               let decoded = try? decoder.decode([CategoryData].self, from: data) {
+                self.categories = decoded.map { (categoryData) in
+                    let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray) // Convert hex string back to UIColor, then to SwiftUI Color
+                    print("Loaded color: \(categoryData.color) for category: \(categoryData.name)")
+                    return (categoryData.name, color)
+                }
+                print("Categories loaded successfully.")
+            } else {
+                self.categories = []
+                print("Failed to load categories or no categories found.")
             }
-        } else {
-            print("Failed to load categories or no categories found.")
         }
     }
 
     // Function to remove a category
     func removeCategory(at offsets: IndexSet) {
+        guard offsets.first! < categories.count else {
+            print("Attempted to remove category at out-of-bounds index")
+            return
+        }
         categories.remove(atOffsets: offsets)
         saveCategories() // Save categories after removing one
     }
 
     // Function to move a category
     func moveCategory(from source: IndexSet, to destination: Int) {
+        guard source.first! < categories.count else {
+            print("Attempted to move category at out-of-bounds index")
+            return
+        }
         categories.move(fromOffsets: source, toOffset: destination)
         saveCategories() // Save categories after moving one
     }
