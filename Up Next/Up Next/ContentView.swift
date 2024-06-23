@@ -45,7 +45,7 @@ struct ContentView: View {
     @State private var newCategoryColor: Color = .gray 
     @State private var newCategoryName: String = "" 
     @State private var showAddCategoryView: Bool = false 
-    @State private var defaultCategory: String? = nil // State to store the selected default category
+    @State private var defaultCategory: String? = "Work" // Initialize default category to "Work"
 
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -141,7 +141,7 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
-                    self.selectedCategory = self.defaultCategory ?? self.categories.first?.name // Set the default category to the selected default category or the first in the list
+                    self.selectedCategory = self.defaultCategory // Use defaultCategory here
                     self.showAddEventSheet = true
                 }) {
                     Image(systemName: "plus")
@@ -196,7 +196,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? "Select")
+                                    Text(selectedCategory ?? defaultCategory ?? "Work") // Default to defaultCategory if selectedCategory is nil
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -256,7 +256,7 @@ struct ContentView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory ?? "Select")
+                                    Text(selectedCategory ?? "Work") // Default to "Work" if selectedCategory is nil
                                         .foregroundColor(.gray)
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.gray)
@@ -340,7 +340,6 @@ struct ContentView: View {
                     // Section for selecting the default category
                     Section(header: Text("Default Category")) {
                         Picker("Default Category", selection: $defaultCategory) {
-                            Text("None").tag(String?.none)
                             ForEach(categories, id: \.name) { category in
                                 Text(category.name).tag(category.name as String?)
                             }
@@ -444,7 +443,7 @@ struct ContentView: View {
         .sorted { (event1, event2) -> Bool in
             // Sort using endDate if available, otherwise use startDate
             let endDate1 = event1.endDate ?? event1.date
-            let endDate2 = event2.endDate ?? event2.date
+            let endDate2 = event2.endDate ?? event1.date
             if endDate1 == endDate2 {
                 // If end dates are the same, sort by start date
                 return event1.date > event2.date
