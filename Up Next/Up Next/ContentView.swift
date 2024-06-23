@@ -54,14 +54,14 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 VStack {
                     
-                    // Category Pills
-                    let categoriesWithEvents = categories.filter { category in
-                        events.contains { $0.category == category.name }
+                    // Category Pills based on upcoming events
+                    let categoriesWithUpcomingEvents = categories.filter { category in
+                        upcomingEvents().contains(where: { $0.category == category.name })
                     }
-                    if categoriesWithEvents.count >= 2 {
+                    if categoriesWithUpcomingEvents.count >= 2 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
-                                ForEach(categoriesWithEvents, id: \.name) { category in
+                                ForEach(categoriesWithUpcomingEvents, id: \.name) { category in
                                     Button(action: {
                                         self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
                                     }) {
@@ -84,45 +84,36 @@ struct ContentView: View {
                         .padding(.top)
                     }
                     
-                    // List of events
-                    List {
-                        // Group events by relative date
-                        let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
-                        // Sort keys chronologically
-                        let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                            // Convert keys back to dates for comparison
-                            let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
-                            let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
-                            return date1 < date2
+                    // List of events or No Events Placeholder
+                    if upcomingEvents().isEmpty {
+                        VStack {
+                            Text("No upcoming events")
+                                .font(.title3)
+                            Text("Add something you're looking forward to")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
                         }
-                        ForEach(sortedKeys, id: \.self) { key in
-                            HStack(alignment: .top) {
-                                Text(key.uppercased())
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .foregroundColor(.gray) 
-                                    .frame(width: 100, alignment: .leading) 
-                                    .padding(.vertical, 14)
-                                VStack(alignment: .leading) {
-                                    ForEach(groupedEvents[key]!, id: \.id) { event in
-                                        EventRow(event: event, formatter: itemDateFormatter,
-                                                 selectedEvent: $selectedEvent,
-                                                 newEventTitle: $newEventTitle,
-                                                 newEventDate: $newEventDate,
-                                                 newEventEndDate: $newEventEndDate,
-                                                 showEndDate: $showEndDate,
-                                                 showEditSheet: $showEditSheet,
-                                                 selectedCategory: $selectedCategory, // Pass this binding
-                                                 categories: categories)
-                                        .listRowSeparator(.hidden) // Hide dividers
-                                    }
-                                }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .multilineTextAlignment(.center)
+                    } else {
+                        List {
+                            ForEach(upcomingEvents(), id: \.id) { event in
+                                EventRow(event: event, formatter: itemDateFormatter,
+                                         selectedEvent: $selectedEvent,
+                                         newEventTitle: $newEventTitle,
+                                         newEventDate: $newEventDate,
+                                         newEventEndDate: $newEventEndDate,
+                                         showEndDate: $showEndDate,
+                                         showEditSheet: $showEditSheet,
+                                         selectedCategory: $selectedCategory,
+                                         categories: categories)
                             }
-                            .listRowSeparator(.hidden) // Hide dividers for each group
                         }
+                        .listStyle(PlainListStyle())
+                        .listRowSeparator(.hidden) // Ensure all dividers are hidden globally in the list
                     }
-                    .listStyle(PlainListStyle())
-                    .listRowSeparator(.hidden) // Ensure all dividers are hidden globally in the list
                 }
+                .id(events.count) // Force refresh when events count changes
 
                 // Navigation Bar
                 .navigationTitle("Events")
@@ -581,6 +572,16 @@ struct ContentView: View {
             events.remove(at: index)
             saveEvents() // Save changes after deletion
         }
+    }
+
+    // Function to get upcoming events
+    func upcomingEvents() -> [Event] {
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        return events.filter { event in
+            event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)
+        }
+        .sorted { $0.date < $1.date }
     }
 }
 
