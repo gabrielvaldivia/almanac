@@ -56,8 +56,9 @@ struct ContentView: View {
                     
                     // Category Pills
                     let categoriesWithEvents = categories.filter { category in
-                        filteredEvents().contains { $0.category == category.name }
+                        events.contains(where: { $0.category == category.name })
                     }
+                    
                     if categoriesWithEvents.count >= 2 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
@@ -621,6 +622,7 @@ extension ContentView {
         return formatter
     }
     
+    // Load events from UserDefaults
     func loadEvents() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -634,6 +636,7 @@ extension ContentView {
         }
     }
 
+    // Save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
