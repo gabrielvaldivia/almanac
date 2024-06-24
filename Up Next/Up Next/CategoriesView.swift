@@ -17,13 +17,25 @@ struct CategoriesView: View {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         TextField("Category Name", text: Binding(
-                            get: { self.appData.categories[index].name },
-                            set: { self.appData.categories[index].name = $0 }
+                            get: { 
+                                guard self.appData.categories.indices.contains(index) else { return "" }
+                                return self.appData.categories[index].name 
+                            },
+                            set: { 
+                                guard self.appData.categories.indices.contains(index) else { return }
+                                self.appData.categories[index].name = $0 
+                            }
                         ))
                         Spacer()
                         ColorPicker("", selection: Binding(
-                            get: { self.appData.categories[index].color },
-                            set: { self.appData.categories[index].color = $0 }
+                            get: { 
+                                guard self.appData.categories.indices.contains(index) else { return .clear }
+                                return self.appData.categories[index].color 
+                            },
+                            set: { 
+                                guard self.appData.categories.indices.contains(index) else { return }
+                                self.appData.categories[index].color = $0 
+                            }
                         ))
                         .labelsHidden()
                         .frame(width: 30, height: 30)
@@ -50,7 +62,13 @@ struct CategoriesView: View {
     }
 
     private func removeCategory(at offsets: IndexSet) {
-        appData.categories.remove(atOffsets: offsets)
+        // Ensure UI updates are performed on the main thread
+        DispatchQueue.main.async {
+            // Safely unwrap and ensure the index is within the range before removing
+            if let index = offsets.first, index < self.appData.categories.count {
+                self.appData.categories.remove(at: index)
+            }
+        }
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
