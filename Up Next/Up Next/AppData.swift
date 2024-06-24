@@ -24,6 +24,7 @@ struct CategoryData: Codable {
 
 class AppData: ObservableObject {
     @Published var categories: [(name: String, color: Color)] = []
+    @Published var defaultCategory: String = ""
 
     func loadCategories() {
         let decoder = JSONDecoder()

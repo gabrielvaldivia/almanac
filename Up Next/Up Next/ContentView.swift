@@ -40,14 +40,17 @@ struct ContentView: View {
                 VStack {
                     
                     // Category Pills
-                    let categoriesWithEvents = appData.categories.filter { category in
-                        events.contains(where: { $0.category == category.name })
+                    let filteredCategories = appData.categories.filter { category in
+                        let startOfToday = Calendar.current.startOfDay(for: Date())
+                        return events.contains { event in
+                            event.category == category.name && event.date >= startOfToday
+                        }
                     }
                     
-                    if categoriesWithEvents.count >= 2 {
+                    if filteredCategories.count > 1 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
-                                ForEach(categoriesWithEvents, id: \.name) { category in
+                                ForEach(filteredCategories, id: \.name) { category in
                                     Button(action: {
                                         self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
                                     }) {

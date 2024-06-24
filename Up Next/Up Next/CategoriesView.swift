@@ -14,6 +14,7 @@ struct CategoriesView: View {
     var body: some View {
         NavigationView {
             List {
+                // Categories section
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         TextField("Category Name", text: Binding(
@@ -45,11 +46,14 @@ struct CategoriesView: View {
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)
                 
-                Section(header: Text("Add New Category")) {
-                    Button("Add Category") {
-                        // Placeholder for adding a new category
-                        // This could open a new view or a dialog to input the category details
+                // Default category section
+                Section() {
+                    Picker("Default Category", selection: $appData.defaultCategory) {
+                        ForEach(appData.categories, id: \.name) { category in
+                            Text(category.name).tag(category.name)
+                        }
                     }
+                    .pickerStyle(MenuPickerStyle())
                 }
             }
             .listStyle(GroupedListStyle())
@@ -58,6 +62,11 @@ struct CategoriesView: View {
                 // Placeholder for action to add a new category
                 // This could trigger a modal or another view for input
             })
+        }
+        .onAppear {
+            if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
+                appData.defaultCategory = firstCategory
+            }
         }
     }
 
@@ -75,3 +84,4 @@ struct CategoriesView: View {
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }
+

@@ -37,7 +37,7 @@ struct AddEventView: View {
                                 showEndDate = false
                                 newEventEndDate = Date() 
                             }
-                            .foregroundColor(.red) // Set button text color to red
+                            .foregroundColor(.red)
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
@@ -47,20 +47,14 @@ struct AddEventView: View {
                     }
                     Section() {
                         HStack {
-                            Text("Category")
-                            Spacer()
-                            Menu {
-                                Picker("Select Category", selection: $selectedCategory) {
-                                    ForEach(appData.categories, id: \.name) { category in
-                                        Text(category.name).tag(category.name as String?)
-                                    }
+                            Picker("Category", selection: $selectedCategory) {
+                                ForEach(appData.categories, id: \.name) { category in
+                                    Text(category.name).tag(category.name as String?)
                                 }
-                            } label: {
-                                HStack {
-                                    Text(selectedCategory ?? "Select")
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
+                            }
+                            .onAppear {
+                                if selectedCategory == nil {
+                                    selectedCategory = appData.defaultCategory
                                 }
                             }
                         }
@@ -78,13 +72,17 @@ struct AddEventView: View {
                     }
                 }
             }
+            .onAppear {
+                if selectedCategory == nil {
+                    selectedCategory = appData.defaultCategory
+                }
+            }
 
     }
 
     func deleteEvent(at event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
-            saveEvents()  // Save after deleting
         }
     }
 
@@ -102,8 +100,6 @@ struct AddEventView: View {
         newEventDate = Date()
         newEventEndDate = Date()
         showEndDate = false
-        selectedColor = "Black" // Reset to default color
-        selectedCategory = nil // Reset to no category
     }
 
     func saveEvents() {
@@ -116,22 +112,5 @@ struct AddEventView: View {
         } else {
             print("Failed to encode events.")
         }
-    }
-}
-
-// Preview Provider
-struct AddEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddEventView(
-            events: .constant([]),
-            selectedEvent: .constant(nil),
-            newEventTitle: .constant(""),
-            newEventDate: .constant(Date()),
-            newEventEndDate: .constant(Date()),
-            showEndDate: .constant(false),
-            showAddEventSheet: .constant(false),
-            selectedCategory: .constant(nil), selectedColor: .constant("Black")
-        )
-        .environmentObject(AppData())
     }
 }
