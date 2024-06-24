@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct Up_NextApp: App {
+    var appData = AppData()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(appData)
         }
     }
 }
