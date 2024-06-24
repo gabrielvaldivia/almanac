@@ -19,7 +19,11 @@ struct Event: Identifiable, Codable {
     // Convert Color to hex string
     var colorAsColor: Color {
         get {
-            Color(color) ?? .black
+            if let uiColor = UIColor(hex: color) {
+                return Color(uiColor)
+            } else {
+                return Color.black
+            }
         }
         set {
             color = newValue.toHex() ?? "#000000"
