@@ -28,7 +28,7 @@ struct CategoriesView: View {
     var body: some View {
         NavigationView {
             List {
-                // Categories section
+                // Categories section 
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         TextField("Category Name", text: Binding(
@@ -44,12 +44,12 @@ struct CategoriesView: View {
                         Spacer()
                         ColorPicker("", selection: Binding(
                             get: { 
-                                guard self.appData.categories.indices.contains(index) else { return .clear }
-                                return self.appData.categories[index].color 
+                                self.appData.categories.indices.contains(index) ? self.appData.categories[index].color : .clear
                             },
                             set: { 
-                                guard self.appData.categories.indices.contains(index) else { return }
-                                self.appData.categories[index].color = $0 
+                                if self.appData.categories.indices.contains(index) {
+                                    self.appData.categories[index].color = $0
+                                }
                             }
                         ))
                         .labelsHidden()
@@ -79,9 +79,7 @@ struct CategoriesView: View {
             }) {
                 Image(systemName: "plus")
             })
-            .sheet(isPresented: $showingAddCategorySheet, onDismiss: {
-                // No action needed here after removing focus-related code
-            }) {
+            .sheet(isPresented: $showingAddCategorySheet) {
                 NavigationView {
                     Form {
                         TextField("Category Name", text: $newCategoryName)

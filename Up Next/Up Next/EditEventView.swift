@@ -18,6 +18,7 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: String
+    var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
     var body: some View {
@@ -70,8 +71,7 @@ struct EditEventView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Save") {
-                            saveChanges()
-                            showEditSheet = false
+                            saveEvent()
                         }
                         .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
                     }
@@ -134,7 +134,9 @@ struct EditEventView_Previews: PreviewProvider {
             newEventEndDate: .constant(Date()),
             showEndDate: .constant(false),
             showEditSheet: .constant(false),
-            selectedCategory: .constant(nil), selectedColor: .constant("Black")
+            selectedCategory: .constant(nil),
+            selectedColor: .constant("Black"),
+            saveEvent: {} // Provide a dummy implementation for the saveEvent parameter
         )
         .environmentObject(AppData())
     }

@@ -17,8 +17,7 @@ struct EventRow: View {
     @Binding var newEventDate: Date
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
-    @Binding var showEditSheet: Bool
-    @Binding var selectedCategory: String? // Add this line
+    @Binding var selectedCategory: String?
     var categories: [(name: String, color: Color)]
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
@@ -57,15 +56,6 @@ struct EventRow: View {
                 colorForCategory(event.category).opacity(colorScheme == .light ? 0.05 : 0.2) // Use the injected color scheme here
             )
             .cornerRadius(10) // Apply rounded corners
-        }
-        .onTapGesture {
-            self.selectedEvent = event
-            self.newEventTitle = event.title
-            self.newEventDate = event.date
-            self.newEventEndDate = event.endDate ?? Date()
-            self.showEndDate = event.endDate != nil
-            self.selectedCategory = event.category 
-            self.showEditSheet = true
         }
     }
 

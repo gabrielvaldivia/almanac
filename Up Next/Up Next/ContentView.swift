@@ -108,10 +108,8 @@ struct ContentView: View {
                                                      newEventDate: $newEventDate,
                                                      newEventEndDate: $newEventEndDate,
                                                      showEndDate: $showEndDate,
-                                                     showEditSheet: $showEditSheet,
-                                                     selectedCategory: $selectedCategory, // Pass this binding
+                                                     selectedCategory: $selectedCategory,
                                                      categories: appData.categories)
-                                                .listRowSeparator(.hidden) // Hide dividers
                                                 .onTapGesture { // Add tap gesture to open EditEventView
                                                     self.selectedEvent = event
                                                     self.newEventTitle = event.title
@@ -121,14 +119,15 @@ struct ContentView: View {
                                                     self.selectedCategory = event.category
                                                     self.showEditSheet = true
                                                 }
+                                                .listRowSeparator(.hidden) // Hide dividers
                                         }
                                     }
                                 }
-                                .listRowSeparator(.hidden) // Hide dividers for each group
+                                .listRowSeparator(.hidden)
                             }
                         }
                         .listStyle(PlainListStyle())
-                        .listRowSeparator(.hidden) // Ensure all dividers are hidden globally in the list
+                        .listRowSeparator(.hidden)
                     }
                 }
 
@@ -183,12 +182,24 @@ struct ContentView: View {
 
         // Edit Event Sheet
         .sheet(isPresented: $showEditSheet) {
-            EditEventView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, showEditSheet: $showEditSheet, selectedCategory: $selectedCategory, selectedColor: $selectedColor, appData: _appData)
+            EditEventView(
+                events: $events,
+                selectedEvent: $selectedEvent,
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                showEditSheet: $showEditSheet,
+                selectedCategory: $selectedCategory,
+                selectedColor: $selectedColor,
+                saveEvent: saveEvent // Provide the saveEvent function
+            )
         }
 
         // Past events Sheet
         .sheet(isPresented: $showPastEventsSheet) {
-            PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, showEditSheet: $showEditSheet, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
+            PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
+                .environmentObject(appData)
         }
 
         // Categories Sheet
@@ -252,6 +263,19 @@ struct ContentView: View {
             print("Failed to encode events.")
         }
     }
+    
+    func saveEvent() {
+        if let selectedEvent = selectedEvent,
+           let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
+            events[index].title = newEventTitle
+            events[index].date = newEventDate
+            events[index].endDate = showEndDate ? newEventEndDate : nil
+            events[index].category = selectedCategory
+            events[index].color = selectedColor
+            saveEvents()
+        }
+        showEditSheet = false
+    }
 }
 
 // Preview Provider
@@ -261,3 +285,4 @@ struct ContentView_Previews: PreviewProvider {
             .environmentObject(AppData())
     }
 }
+

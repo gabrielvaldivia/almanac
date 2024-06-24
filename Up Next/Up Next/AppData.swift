@@ -13,8 +13,18 @@ struct Event: Identifiable, Codable {
     var title: String
     var date: Date
     var endDate: Date?
-    var color: String 
-    var category: String? 
+    var color: String // Store color as a hex string
+    var category: String?
+
+    // Convert Color to hex string
+    var colorAsColor: Color {
+        get {
+            Color(color) ?? .black
+        }
+        set {
+            color = newValue.toHex() ?? "#000000"
+        }
+    }
 }
 
 struct CategoryData: Codable {
@@ -43,4 +53,3 @@ class AppData: ObservableObject {
         }
     }
 }
-
