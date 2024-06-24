@@ -61,14 +61,14 @@ struct CategoriesView: View {
                 .onMove(perform: moveCategory)
                 
                 // Default category section
-                // Section() {
-                //     Picker("Default Category", selection: $appData.defaultCategory) {
-                //         ForEach(appData.categories, id: \.name) { category in
-                //             Text(category.name).tag(category.name)
-                //         }
-                //     }
-                //     .pickerStyle(MenuPickerStyle())
-                // }
+                Section(header: Text("Default Category")) {
+                    Picker("Default Category", selection: $appData.defaultCategory) {
+                        ForEach(appData.categories, id: \.name) { category in
+                            Text(category.name).tag(category.name)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
             }
             .listStyle(GroupedListStyle())
             .navigationBarTitle("Manage Categories", displayMode: .inline)

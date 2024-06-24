@@ -158,7 +158,7 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
-                    self.selectedCategory = appData.categories.first?.name // Set the default category to the first in the list
+                    self.selectedCategory = appData.defaultCategory // Set the default category to the selected default category
                     self.showAddEventSheet = true // This will now trigger the bottom sheet
                 }) {
                     Image(systemName: "plus")
