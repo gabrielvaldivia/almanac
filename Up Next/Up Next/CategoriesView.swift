@@ -7,9 +7,24 @@
 
 import Foundation
 import SwiftUI
+import UIKit  // Ensure UIKit is imported for UIColor
+
+extension Color {
+    func toHex() -> String? {
+        let components = UIColor(self).cgColor.components
+        let r: CGFloat = components?[0] ?? 0
+        let g: CGFloat = components?[1] ?? 0
+        let b: CGFloat = components?[2] ?? 0
+        return String(format: "#%02lX%02lX%02lX", lroundf(Float(r * 255)), lroundf(Float(g * 255)), lroundf(Float(b * 255)))
+    }
+}
 
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
+    @State private var showingAddCategorySheet = false
+    @State private var newCategoryName = ""
+    @State private var newCategoryColor = Color.blue  // Default color for new category
+    @FocusState private var isNameFieldFocused: Bool
 
     var body: some View {
         NavigationView {
@@ -47,25 +62,50 @@ struct CategoriesView: View {
                 .onMove(perform: moveCategory)
                 
                 // Default category section
-                Section() {
-                    Picker("Default Category", selection: $appData.defaultCategory) {
-                        ForEach(appData.categories, id: \.name) { category in
-                            Text(category.name).tag(category.name)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
+                // Section() {
+                //     Picker("Default Category", selection: $appData.defaultCategory) {
+                //         ForEach(appData.categories, id: \.name) { category in
+                //             Text(category.name).tag(category.name)
+                //         }
+                //     }
+                //     .pickerStyle(MenuPickerStyle())
+                // }
             }
             .listStyle(GroupedListStyle())
             .navigationBarTitle("Manage Categories", displayMode: .inline)
-            .navigationBarItems(leading: EditButton(), trailing: Button("Add") {
-                // Placeholder for action to add a new category
-                // This could trigger a modal or another view for input
+            .navigationBarItems(leading: EditButton(), trailing: Button(action: {
+                showingAddCategorySheet = true
+                newCategoryName = ""
+                newCategoryColor = Color(red: Double.random(in: 0...1), green: Double.random(in: 0...1), blue: Double.random(in: 0...1))
+                isNameFieldFocused = true  // Focus the name field when opening the sheet
+            }) {
+                Image(systemName: "plus")
             })
-        }
-        .onAppear {
-            if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
-                appData.defaultCategory = firstCategory
+            .sheet(isPresented: $showingAddCategorySheet, onDismiss: {
+                isNameFieldFocused = false
+            }) {
+                NavigationView {
+                    Form {
+                        TextField("Category Name", text: $newCategoryName)
+                            .focused($isNameFieldFocused)
+                        ColorPicker("Choose Color", selection: $newCategoryColor)
+                    }
+                    .navigationBarItems(
+                        leading: Button("Cancel") {
+                            showingAddCategorySheet = false
+                        },
+                        trailing: Button("Save") {
+                            let newCategory = (name: newCategoryName, color: newCategoryColor)
+                            appData.categories.append(newCategory)
+                            showingAddCategorySheet = false
+                        }
+                    )
+                }
+            }
+            .onAppear {
+                if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
+                    appData.defaultCategory = firstCategory
+                }
             }
         }
     }
@@ -84,4 +124,3 @@ struct CategoriesView: View {
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }
-

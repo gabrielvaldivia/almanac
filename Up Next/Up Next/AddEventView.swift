@@ -19,13 +19,14 @@ struct AddEventView: View {
     @Binding var selectedCategory: String?
     @Binding var selectedColor: String
     @EnvironmentObject var appData: AppData
+    @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
 
     var body: some View {
             NavigationView {
                 Form {
                     Section() {
                         TextField("Title", text: $newEventTitle)
-                        
+                            .focused($isTitleFocused) // Apply focused state to the TextField
                     }
                     Section() {
                         DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
@@ -73,6 +74,7 @@ struct AddEventView: View {
                 }
             }
             .onAppear {
+                isTitleFocused = true // Set focus to true when the view appears
                 if selectedCategory == nil {
                     selectedCategory = appData.defaultCategory
                 }
