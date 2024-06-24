@@ -62,7 +62,10 @@ struct CategoriesView: View {
                 
                 // Default category section
                 Section(header: Text("Default Category")) {
-                    Picker("Default Category", selection: $appData.defaultCategory) {
+                    Picker("Default Category", selection: Binding(
+                        get: { appData.defaultCategory.isEmpty ? appData.categories.first?.name ?? "" : appData.defaultCategory },
+                        set: { appData.defaultCategory = $0 }
+                    )) {
                         ForEach(appData.categories, id: \.name) { category in
                             Text(category.name).tag(category.name)
                         }
