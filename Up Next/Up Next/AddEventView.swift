@@ -76,7 +76,7 @@ struct AddEventView: View {
             .onAppear {
                 isTitleFocused = true // Set focus to true when the view appears
                 if selectedCategory == nil {
-                    selectedCategory = appData.defaultCategory
+                    selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
                 }
             }
 
