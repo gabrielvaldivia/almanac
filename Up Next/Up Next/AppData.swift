@@ -13,8 +13,8 @@ struct Event: Identifiable, Codable {
     var title: String
     var date: Date
     var endDate: Date?
-    var color: String // Store color as a String
-    var category: String? // New property for category, now optional
+    var color: String 
+    var category: String? 
 }
 
 struct CategoryData: Codable {
@@ -31,9 +31,9 @@ class AppData: ObservableObject {
         if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
            let data = sharedDefaults.data(forKey: "categories"),
            let decoded = try? decoder.decode([CategoryData].self, from: data) {
-            self.categories = decoded.map { CategoryData in
-                let color = Color(UIColor(hex: CategoryData.color) ?? UIColor.gray)
-                return (name: CategoryData.name, color: color)
+            self.categories = decoded.map { categoryData in
+                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray)
+                return (name: categoryData.name, color: color)
             }
             print("Categories loaded successfully.")
         } else {
@@ -43,3 +43,4 @@ class AppData: ObservableObject {
         }
     }
 }
+

@@ -85,13 +85,12 @@ struct ContentView: View {
                             Spacer()
                             Text("No upcoming events")
                                 .font(.headline)
-                                // .foregroundColor(.gray)
                             Text("Add something you're looking forward to")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                             Spacer()
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure the VStack fills the available space
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         List {
                             ForEach(sortedKeys, id: \.self) { key in
@@ -140,13 +139,13 @@ struct ContentView: View {
                         self.showPastEventsSheet = true
                     }) {
                         Image(systemName: "clock.arrow.circlepath") // Icon for past events
-                            .bold() // Make the icon thicker
+                            .bold() 
                     },
                     trailing: Button(action: {
                         self.showCategoryManagementView = true
                     }) {
                         Image(systemName: "slider.horizontal.3")
-                            .bold() // Make the icon thicker
+                            .bold()
                     }
                 )
                 .onAppear {

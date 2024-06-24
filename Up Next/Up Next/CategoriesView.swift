@@ -24,7 +24,6 @@ struct CategoriesView: View {
     @State private var showingAddCategorySheet = false
     @State private var newCategoryName = ""
     @State private var newCategoryColor = Color.blue  // Default color for new category
-    @FocusState private var isNameFieldFocused: Bool
 
     var body: some View {
         NavigationView {
@@ -34,12 +33,12 @@ struct CategoriesView: View {
                     HStack {
                         TextField("Category Name", text: Binding(
                             get: { 
-                                guard self.appData.categories.indices.contains(index) else { return "" }
-                                return self.appData.categories[index].name 
+                                self.appData.categories.indices.contains(index) ? self.appData.categories[index].name : ""
                             },
                             set: { 
-                                guard self.appData.categories.indices.contains(index) else { return }
-                                self.appData.categories[index].name = $0 
+                                if self.appData.categories.indices.contains(index) {
+                                    self.appData.categories[index].name = $0
+                                }
                             }
                         ))
                         Spacer()
@@ -77,17 +76,15 @@ struct CategoriesView: View {
                 showingAddCategorySheet = true
                 newCategoryName = ""
                 newCategoryColor = Color(red: Double.random(in: 0...1), green: Double.random(in: 0...1), blue: Double.random(in: 0...1))
-                isNameFieldFocused = true  // Focus the name field when opening the sheet
             }) {
                 Image(systemName: "plus")
             })
             .sheet(isPresented: $showingAddCategorySheet, onDismiss: {
-                isNameFieldFocused = false
+                // No action needed here after removing focus-related code
             }) {
                 NavigationView {
                     Form {
                         TextField("Category Name", text: $newCategoryName)
-                            .focused($isNameFieldFocused)
                         ColorPicker("Choose Color", selection: $newCategoryColor)
                     }
                     .navigationBarItems(
