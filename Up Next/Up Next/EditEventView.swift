@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import WidgetKit
 
 struct EditEventView: View {
     @Binding var events: [Event]
@@ -17,7 +18,7 @@ struct EditEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: String
+    @Binding var selectedColor: CodableColor // Use CodableColor to store color
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -117,6 +118,7 @@ struct EditEventView: View {
            let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         } else {
             print("Failed to encode events.")
         }
@@ -135,7 +137,7 @@ struct EditEventView_Previews: PreviewProvider {
             showEndDate: .constant(false),
             showEditSheet: .constant(false),
             selectedCategory: .constant(nil),
-            selectedColor: .constant("Black"),
+            selectedColor: .constant(CodableColor(color: .black)), // Use CodableColor for selectedColor
             saveEvent: {} // Provide a dummy implementation for the saveEvent parameter
         )
         .environmentObject(AppData())

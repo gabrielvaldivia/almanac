@@ -18,7 +18,7 @@ struct PastEventsView: View {
     @Binding var selectedCategory: String?
     @Binding var showPastEventsSheet: Bool
     @Binding var showEditSheet: Bool
-    @Binding var selectedColor: String // Change this to String
+    @Binding var selectedColor: CodableColor // Change this to CodableColor
     var categories: [(name: String, color: Color)]
     var itemDateFormatter: DateFormatter
     var saveEvents: () -> Void
@@ -134,7 +134,7 @@ struct PastEventsView_Previews: PreviewProvider {
                        selectedCategory: .constant(nil), 
                        showPastEventsSheet: .constant(false), 
                        showEditSheet: .constant(false), 
-                       selectedColor: .constant("Black"), 
+                       selectedColor: .constant(CodableColor(color: .black)), 
                        categories: [], 
                        itemDateFormatter: DateFormatter(), 
                        saveEvents: {})

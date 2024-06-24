@@ -82,6 +82,8 @@ struct CategoriesView: View {
             }) {
                 Image(systemName: "plus")
             })
+            
+            // Add Category Sheet
             .sheet(isPresented: $showingAddCategorySheet) {
                 NavigationView {
                     Form {
@@ -101,6 +103,7 @@ struct CategoriesView: View {
                 }
             }
             .onAppear {
+                appData.loadCategories()
                 if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
                     appData.defaultCategory = firstCategory
                 }

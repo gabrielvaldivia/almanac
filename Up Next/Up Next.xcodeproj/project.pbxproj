@@ -1,4 +1,4 @@
-// !$*UTF8*$!
+ // !$*UTF8*$!
 {
 	archiveVersion = 1;
 	classes = {
@@ -23,6 +23,9 @@
 		40790D832C23286C005DDC65 /* Up_NextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D822C23286C005DDC65 /* Up_NextTests.swift */; };
 		40790D8D2C23286C005DDC65 /* Up_NextUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */; };
 		40790D8F2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */; };
+		40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
+		40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
+		40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
 		40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
 		40FEEC492C291558008AA61D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
@@ -81,7 +84,7 @@
 		405920E82C23B863008A9CF2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		405920EA2C23B863008A9CF2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		405920F12C23B87A008A9CF2 /* Up Next.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Up Next.entitlements"; sourceTree = "<group>"; };
-		405920F22C23B887008A9CF2 /* UpNextWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UpNextWidgetExtension.entitlements; sourceTree = "<group>"; };
+		405920F22C23B887008A9CF2 /* UpNextWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UpNextWidgetExtension.entitlements; sourceTree = SOURCE_ROOT; };
 		40790D6E2C23286B005DDC65 /* Up Next.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Up Next.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D712C23286B005DDC65 /* Up_NextApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextApp.swift; sourceTree = "<group>"; };
 		40790D732C23286B005DDC65 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -385,10 +388,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */,
+				40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */,
 				405920E32C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift in Sources */,
 				405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */,
 				405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */,
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
+				40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -471,6 +477,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -499,6 +506,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -562,6 +570,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -618,6 +627,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -649,6 +659,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -680,6 +691,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -699,6 +711,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -718,6 +731,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -735,6 +749,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "Up Next";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -752,6 +767,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "Up Next";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};

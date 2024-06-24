@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import WidgetKit
 
 
 struct ContentView: View {
@@ -21,7 +22,7 @@ struct ContentView: View {
     @State private var showPastEventsSheet: Bool = false // State for showing past events
     @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
     @State private var showCategoryManagementView: Bool = false // State to show category management view
-    @State private var selectedColor: String = "Black" // Default color set to Black
+    @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
 
     @EnvironmentObject var appData: AppData
@@ -259,6 +260,7 @@ struct ContentView: View {
            let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         } else {
             print("Failed to encode events.")
         }

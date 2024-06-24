@@ -13,47 +13,113 @@ struct Event: Identifiable, Codable {
     var title: String
     var date: Date
     var endDate: Date?
-    var color: String // Store color as a hex string
+    var color: CodableColor // Use CodableColor to store color
     var category: String?
-
-    // Convert Color to hex string
-    var colorAsColor: Color {
-        get {
-            if let uiColor = UIColor(hex: color) {
-                return Color(uiColor)
-            } else {
-                return Color.black
-            }
-        }
-        set {
-            color = newValue.toHex() ?? "#000000"
-        }
-    }
 }
 
 struct CategoryData: Codable {
     var name: String
-    var color: String // Store color as a hex string
+    var color: CodableColor // Use CodableColor to store color
+}
+
+struct CodableColor: Codable {
+    var red: Double
+    var green: Double
+    var blue: Double
+    var opacity: Double
+
+    var color: Color {
+        Color(red: red, green: green, blue: blue, opacity: opacity)
+    }
+
+    init(color: Color) {
+        if let components = UIColor(color).cgColor.components {
+            self.red = Double(components[0])
+            self.green = Double(components[1])
+            self.blue = Double(components[2])
+            self.opacity = Double(components[3])
+        } else {
+            self.red = 0
+            self.green = 0
+            self.blue = 0
+            self.opacity = 1
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        red = try container.decode(Double.self, forKey: .red)
+        green = try container.decode(Double.self, forKey: .green)
+        blue = try container.decode(Double.self, forKey: .blue)
+        opacity = try container.decode(Double.self, forKey: .opacity)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(red, forKey: .red)
+        try container.encode(green, forKey: .green)
+        try container.encode(blue, forKey: .blue)
+        try container.encode(opacity, forKey: .opacity)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case red, green, blue, opacity
+    }
 }
 
 class AppData: ObservableObject {
     @Published var categories: [(name: String, color: Color)] = []
     @Published var defaultCategory: String = ""
 
+    // Load categories from UserDefaults
     func loadCategories() {
         let decoder = JSONDecoder()
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "categories"),
-           let decoded = try? decoder.decode([CategoryData].self, from: data) {
-            self.categories = decoded.map { categoryData in
-                let color = Color(UIColor(hex: categoryData.color) ?? UIColor.gray)
-                return (name: categoryData.name, color: color)
-            }
-            print("Categories loaded successfully.")
-        } else {
-            print("Failed to load categories.")
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") else {
+            print("Failed to access shared UserDefaults.")
+            return
+        }
+        guard let data = sharedDefaults.data(forKey: "categories") else {
+            print("No categories data found in UserDefaults.")
             // Set a default category if categories fail to load
             self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+            return
+        }
+        
+        // Print the raw data
+        print("Raw categories data from UserDefaults: \(data)")
+        
+        do {
+            let decoded = try decoder.decode([CategoryData].self, from: data)
+            self.categories = decoded.map { categoryData in
+                return (name: categoryData.name, color: categoryData.color.color)
+            }
+            // Print the decoded data
+            print("Decoded categories: \(decoded)")
+        } catch {
+            print("Failed to decode categories: \(error.localizedDescription)")
+            // Set a default category if categories fail to load
+            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+        }
+    }
+
+    // Save categories to UserDefaults
+    func saveCategories() {
+        let encoder = JSONEncoder()
+        let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
+        do {
+            let encodedData = try encoder.encode(categoryData)
+            
+            // Print the encoded data
+            print("Encoded categories data: \(encodedData)")
+            
+            guard let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") else {
+                print("Failed to access shared UserDefaults.")
+                return
+            }
+            sharedDefaults.set(encodedData, forKey: "categories")
+            print("Categories saved successfully: \(categoryData)")
+        } catch {
+            print("Failed to encode categories: \(error.localizedDescription)")
         }
     }
 }

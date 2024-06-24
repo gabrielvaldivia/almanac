@@ -17,7 +17,7 @@ struct AddEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: String
+    @Binding var selectedColor: CodableColor // Use CodableColor to store color
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
 
