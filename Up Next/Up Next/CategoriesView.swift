@@ -24,6 +24,7 @@ struct CategoriesView: View {
     @State private var showingAddCategorySheet = false
     @State private var newCategoryName = ""
     @State private var newCategoryColor = Color.blue  // Default color for new category
+    @FocusState private var isCategoryNameFieldFocused: Bool  // Add this line
 
     var body: some View {
         NavigationView {
@@ -88,6 +89,7 @@ struct CategoriesView: View {
                 NavigationView {
                     Form {
                         TextField("Category Name", text: $newCategoryName)
+                            .focused($isCategoryNameFieldFocused)  // Add this line
                         ColorPicker("Choose Color", selection: $newCategoryColor)
                     }
                     .navigationBarItems(
@@ -100,6 +102,9 @@ struct CategoriesView: View {
                             showingAddCategorySheet = false
                         }
                     )
+                }
+                .onAppear {
+                    isCategoryNameFieldFocused = true  
                 }
             }
             .onAppear {
@@ -125,3 +130,4 @@ struct CategoriesView: View {
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }
+

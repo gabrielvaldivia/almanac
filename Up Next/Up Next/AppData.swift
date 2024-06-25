@@ -68,7 +68,12 @@ struct CodableColor: Codable {
 }
 
 class AppData: ObservableObject {
-    @Published var categories: [(name: String, color: Color)] = [] {
+    @Published var categories: [(name: String, color: Color)] = [
+        ("Work", .blue),
+        ("Social", .green),
+        ("Birthdays", .red),
+        ("Movies", .purple) // Changed from .yellow to .purple
+    ] {
         didSet {
             saveCategories()
         }
@@ -79,7 +84,18 @@ class AppData: ObservableObject {
         }
     }
 
+    // Ensure this method is defined only once
+    func clearCategories() {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
+            print("Failed to access shared UserDefaults.")
+            return
+        }
+        sharedDefaults.removeObject(forKey: "categories")
+        print("Categories cleared from UserDefaults.")
+    }
+
     init() {
+        // clearCategories() // Comment out or remove this line after testing
         loadCategories()
         defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? ""
     }
@@ -110,7 +126,13 @@ class AppData: ObservableObject {
         }
         guard let data = sharedDefaults.data(forKey: "categories") else {
             print("No categories data found in UserDefaults.")
-            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+            self.categories = [
+                ("Work", .blue),
+                ("Social", .green),
+                ("Birthdays", .red),
+                ("Movies", .purple)
+            ] // Default to all categories if nothing is loaded
+            print("Default categories set: \(self.categories)")
             return
         }
         
@@ -119,10 +141,16 @@ class AppData: ObservableObject {
             self.categories = decoded.map { categoryData in
                 return (name: categoryData.name, color: categoryData.color.color)
             }
-            print("Decoded categories: \(decoded)")
+            print("Decoded categories: \(self.categories)")
         } catch {
             print("Failed to decode categories: \(error.localizedDescription)")
-            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+            self.categories = [
+                ("Work", .blue),
+                ("Social", .green),
+                ("Birthdays", .red),
+                ("Movies", .purple)
+            ] // Default to all categories if decoding fails
+            print("Default categories set after decoding failure: \(self.categories)")
         }
     }
 }
