@@ -68,51 +68,29 @@ struct CodableColor: Codable {
 }
 
 class AppData: ObservableObject {
-    @Published var categories: [(name: String, color: Color)] = []
-    @Published var defaultCategory: String = ""
-
-    // Load categories from UserDefaults
-    func loadCategories() {
-        let decoder = JSONDecoder()
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") else {
-            print("Failed to access shared UserDefaults.")
-            return
+    @Published var categories: [(name: String, color: Color)] = [] {
+        didSet {
+            saveCategories()
         }
-        guard let data = sharedDefaults.data(forKey: "categories") else {
-            print("No categories data found in UserDefaults.")
-            // Set a default category if categories fail to load
-            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
-            return
-        }
-        
-        // Print the raw data
-        print("Raw categories data from UserDefaults: \(data)")
-        
-        do {
-            let decoded = try decoder.decode([CategoryData].self, from: data)
-            self.categories = decoded.map { categoryData in
-                return (name: categoryData.name, color: categoryData.color.color)
-            }
-            // Print the decoded data
-            print("Decoded categories: \(decoded)")
-        } catch {
-            print("Failed to decode categories: \(error.localizedDescription)")
-            // Set a default category if categories fail to load
-            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+    }
+    @Published var defaultCategory: String = "" {
+        didSet {
+            UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
         }
     }
 
+    init() {
+        loadCategories()
+        defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? ""
+    }
+
     // Save categories to UserDefaults
-    func saveCategories() {
+    private func saveCategories() {
         let encoder = JSONEncoder()
         let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
         do {
             let encodedData = try encoder.encode(categoryData)
-            
-            // Print the encoded data
-            print("Encoded categories data: \(encodedData)")
-            
-            guard let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") else {
+            guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
                 print("Failed to access shared UserDefaults.")
                 return
             }
@@ -120,6 +98,31 @@ class AppData: ObservableObject {
             print("Categories saved successfully: \(categoryData)")
         } catch {
             print("Failed to encode categories: \(error.localizedDescription)")
+        }
+    }
+
+    // Load categories from UserDefaults
+    func loadCategories() {
+        let decoder = JSONDecoder()
+        guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
+            print("Failed to access shared UserDefaults.")
+            return
+        }
+        guard let data = sharedDefaults.data(forKey: "categories") else {
+            print("No categories data found in UserDefaults.")
+            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
+            return
+        }
+        
+        do {
+            let decoded = try decoder.decode([CategoryData].self, from: data)
+            self.categories = decoded.map { categoryData in
+                return (name: categoryData.name, color: categoryData.color.color)
+            }
+            print("Decoded categories: \(decoded)")
+        } catch {
+            print("Failed to decode categories: \(error.localizedDescription)")
+            self.categories = [("Work", .blue)] // Default to "Work" if nothing is loaded
         }
     }
 }

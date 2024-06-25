@@ -242,7 +242,7 @@ struct ContentView: View {
     func loadEvents() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
            let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             events = decoded
@@ -257,7 +257,7 @@ struct ContentView: View {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
+           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload

@@ -37,7 +37,7 @@ struct Provider: AppIntentTimelineProvider {
     private func loadEvents() -> [Event] {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier"),
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
            let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             return decoded

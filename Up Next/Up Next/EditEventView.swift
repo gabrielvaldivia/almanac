@@ -115,7 +115,7 @@ struct EditEventView: View {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.com.UpNextIdentifier") {
+           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
