@@ -133,7 +133,7 @@ struct ContentView: View {
                 }
 
                 // Navigation Bar
-                .navigationTitle("Events")
+                .navigationTitle("Up Next")
                 .navigationBarItems(
                     leading: Button(action: {
                         self.showPastEventsSheet = true

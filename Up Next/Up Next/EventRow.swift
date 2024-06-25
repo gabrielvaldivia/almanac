@@ -36,16 +36,16 @@ struct EventRow: View {
                     if today > event.date && today < endDate {
                         let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
-                        Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(daysLeftText))")
+                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .font(.subheadline)
                             .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                     } else {
-                        Text("\(event.date, formatter: formatter) — \(endDate, formatter: formatter) (\(duration) days)")
+                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .font(.subheadline)
                             .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                     }
                 } else {
-                    Text(event.date, formatter: formatter)
+                    Text(event.date, formatter: monthDayFormatter)
                         .font(.subheadline)
                         .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
                 }
@@ -63,5 +63,12 @@ struct EventRow: View {
     func colorForCategory(_ category: String?) -> Color {
         guard let category = category else { return .gray } 
         return categories.first(where: { $0.name == category })?.color ?? .gray
+    }
+
+    // New DateFormatter for month and day
+    private var monthDayFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d"
+        return formatter
     }
 }

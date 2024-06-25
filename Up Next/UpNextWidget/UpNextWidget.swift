@@ -75,7 +75,7 @@ struct UpNextWidgetEntryView : View {
                 let visibleEvents = entry.events.prefix(2)
                 ForEach(visibleEvents) { event in
                     VStack(alignment: .leading) {
-                        Text(event.date.relativeDate()) // Show relative date
+                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
                             .foregroundColor(.gray)
                             .font(.caption)
                         Text(event.title)
@@ -92,7 +92,7 @@ struct UpNextWidgetEntryView : View {
                 let visibleEvents = entry.events.prefix(2) // Show max 2 events
                 ForEach(visibleEvents) { event in
                     HStack(alignment: .top) {
-                        Text(event.date.relativeDate()) // Show relative date
+                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
                             .foregroundColor(.gray)
                             .font(.caption)
                             .frame(width: 60, alignment: .leading)
@@ -115,10 +115,11 @@ struct UpNextWidgetEntryView : View {
                 let visibleEvents = entry.events.prefix(5)
                 ForEach(visibleEvents) { event in
                     HStack(alignment: .top) {
-                        Text(event.date.relativeDate()) // Show relative date
+                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
                             .foregroundColor(.gray)
                             .font(.caption)
-                            .frame(width: 70, alignment: .leading) // Fixed width for relative date
+                            .frame(width: 70, alignment: .leading)
+                            .padding(.vertical, 1)
                         VStack(alignment: .leading) {
                             Text(event.title)
                                 .font(.subheadline)
@@ -184,5 +185,6 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
 
 
