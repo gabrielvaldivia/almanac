@@ -59,6 +59,12 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d" // Format to show month and day only
+        return formatter
+    }()
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -82,6 +88,11 @@ struct UpNextWidgetEntryView : View {
                             .font(.subheadline)
                             .lineLimit(2) 
                             .padding(.bottom, 1)
+                        if let endDate = event.endDate {
+                            Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
@@ -101,9 +112,15 @@ struct UpNextWidgetEntryView : View {
                                 .font(.subheadline)
                                 .lineLimit(2) // Allow up to 2 lines
                                 .padding(.bottom, 0)
-                            Text(event.date, style: .date) // Show actual date
-                                .foregroundColor(.gray)
-                                .font(.caption)
+                            if let endDate = event.endDate {
+                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            } else {
+                                Text(event.date, formatter: dateFormatter) // Use custom date formatter
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, 6)
@@ -125,9 +142,15 @@ struct UpNextWidgetEntryView : View {
                                 .font(.subheadline)
                                 .lineLimit(2) // Allow up to 2 lines
                                 .padding(.bottom, 1)
-                            Text(event.date, style: .date) // Show actual date
-                                .foregroundColor(.gray)
-                                .font(.caption)
+                            if let endDate = event.endDate {
+                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            } else {
+                                Text(event.date, formatter: dateFormatter) // Use custom date formatter
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -143,9 +166,16 @@ struct UpNextWidgetEntryView : View {
                             .font(.subheadline)
                             .lineLimit(1) // Allow up to 1 line
                             .padding(.bottom, 1)
-                        Text(event.date, style: .date) // Show actual date
-                            .foregroundColor(.gray)
-                            .font(.caption)
+                        
+                        if let endDate = event.endDate {
+                            Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        } else {
+                            Text(event.date, formatter: dateFormatter) // Use custom date formatter
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
@@ -185,6 +215,3 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
-
-
-
