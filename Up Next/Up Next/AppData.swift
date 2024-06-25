@@ -72,7 +72,7 @@ class AppData: ObservableObject {
         ("Work", .blue),
         ("Social", .green),
         ("Birthdays", .red),
-        ("Movies", .purple) // Changed from .yellow to .purple
+        ("Movies", .purple)
     ] {
         didSet {
             saveCategories()

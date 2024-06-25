@@ -79,7 +79,7 @@ struct CategoriesView: View {
             .navigationBarItems(leading: EditButton(), trailing: Button(action: {
                 showingAddCategorySheet = true
                 newCategoryName = ""
-                newCategoryColor = Color(red: Double.random(in: 0...1), green: Double.random(in: 0...1), blue: Double.random(in: 0...1))
+                newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))  // Ensure middle range color
             }) {
                 Image(systemName: "plus")
             })
@@ -130,4 +130,3 @@ struct CategoriesView: View {
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }
-
