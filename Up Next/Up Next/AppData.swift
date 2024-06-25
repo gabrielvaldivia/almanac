@@ -18,8 +18,8 @@ struct Event: Identifiable, Codable {
 }
 
 struct CategoryData: Codable {
-    var name: String
-    var color: CodableColor // Use CodableColor to store color
+    let name: String
+    let color: CodableColor
 }
 
 struct CodableColor: Codable {

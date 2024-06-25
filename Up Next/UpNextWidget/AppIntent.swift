@@ -12,7 +12,22 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Configuration"
     static var description = IntentDescription("This is an example widget.")
 
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+    @Parameter(title: "Category", default: "All Categories")
+    var category: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Show events for \(\.$category)") {
+            \.$category
+        }
+    }
+
+    static var options: [String] {
+        var categories = ["All Categories"]
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "categories"),
+           let decoded = try? JSONDecoder().decode([CategoryData].self, from: data) {
+            categories.append(contentsOf: decoded.map { $0.name })
+        }
+        return categories
+    }
 }
