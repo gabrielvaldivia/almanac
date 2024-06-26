@@ -63,7 +63,7 @@ struct ContentView: View {
                                             .foregroundColor(self.selectedCategoryFilter == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 20)
-                                                    .stroke(Color.gray, lineWidth: 1) // Gray border for all
+                                                    .stroke(self.selectedCategoryFilter == category.name ? Color.clear : Color.gray, lineWidth: 1) // Conditionally apply border
                                             )
                                             .cornerRadius(20)
                                     }
