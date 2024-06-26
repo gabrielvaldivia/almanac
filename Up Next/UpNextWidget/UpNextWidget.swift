@@ -39,10 +39,15 @@ struct Provider: AppIntentTimelineProvider {
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
            let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
+            let today = Calendar.current.startOfDay(for: Date())
+            let upcomingEvents = decoded.filter { event in
+                let eventDate = event.endDate ?? event.date
+                return eventDate >= today
+            }
             if category == "All Categories" {
-                return decoded
+                return upcomingEvents
             } else {
-                return decoded.filter { $0.category == category }
+                return upcomingEvents.filter { $0.category == category }
             }
         } else {
             return []
@@ -59,14 +64,28 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
-    
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d" // Format to show month and day only
+        formatter.dateFormat = "MMM d"
         return formatter
     }()
 
+    func fetchCategoryColors() -> [String: Color] {
+        var categoryColors: [String: Color] = [:]
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "categories"),
+           let decoded = try? JSONDecoder().decode([CategoryData].self, from: data) {
+            for category in decoded {
+                categoryColors[category.name] = category.color.color
+            }
+        }
+        return categoryColors
+    }
+
     var body: some View {
+        let categoryColors = fetchCategoryColors()
+        
         VStack(alignment: .leading) {
             Text("UP NEXT")
                 .bold()
@@ -75,51 +94,49 @@ struct UpNextWidgetEntryView : View {
             Spacer()
             
             switch widgetFamily {
-            
-            // Small widget
             case .systemSmall:
                 let visibleEvents = entry.events.prefix(2)
                 ForEach(visibleEvents) { event in
                     VStack(alignment: .leading) {
-                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
+                        Text(event.date.relativeDate().capitalized)
                             .foregroundColor(.gray)
                             .font(.caption)
                         Text(event.title)
                             .font(.subheadline)
-                            .lineLimit(2) 
+                            .lineLimit(2)
                             .padding(.bottom, 1)
-                        if let endDate = event.endDate {
-                            Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
                 }
 
-            // Medium widget
             case .systemMedium:
-                let visibleEvents = entry.events.prefix(2) // Show max 2 events
+                let visibleEvents = entry.events.prefix(2)
                 ForEach(visibleEvents) { event in
                     HStack(alignment: .top) {
-                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
+                        Text(event.date.relativeDate().capitalized)
                             .foregroundColor(.gray)
                             .font(.caption)
-                            .frame(width: 60, alignment: .leading)
-                        VStack(alignment: .leading) {
-                            Text(event.title)
-                                .font(.subheadline)
-                                .lineLimit(2) // Allow up to 2 lines
-                                .padding(.bottom, 0)
-                            if let endDate = event.endDate {
-                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            } else {
-                                Text(event.date, formatter: dateFormatter) // Use custom date formatter
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
+                            .frame(width: 70, alignment: .leading)
+                        HStack {
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                .frame(width: 5)
+                                .padding(.vertical, 1)
+                            VStack(alignment: .leading) {
+                                Text(event.title)
+                                    .font(.subheadline)
+                                    .lineLimit(2)
+                                    .padding(.bottom, 0)
+                                if let endDate = event.endDate {
+                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                } else {
+                                    Text(event.date, formatter: dateFormatter)
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -127,29 +144,34 @@ struct UpNextWidgetEntryView : View {
                     }
                 }
 
-            // Large widget    
             case .systemLarge:
                 let visibleEvents = entry.events.prefix(5)
                 ForEach(visibleEvents) { event in
                     HStack(alignment: .top) {
-                        Text(event.date.relativeDate().capitalized) // Capitalize relative date
+                        Text(event.date.relativeDate().capitalized)
                             .foregroundColor(.gray)
                             .font(.caption)
                             .frame(width: 70, alignment: .leading)
                             .padding(.vertical, 1)
-                        VStack(alignment: .leading) {
-                            Text(event.title)
-                                .font(.subheadline)
-                                .lineLimit(2) // Allow up to 2 lines
-                                .padding(.bottom, 1)
-                            if let endDate = event.endDate {
-                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            } else {
-                                Text(event.date, formatter: dateFormatter) // Use custom date formatter
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
+                        HStack {
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                .frame(width: 5)
+                                .padding(.vertical, 1)
+                            VStack(alignment: .leading) {
+                                Text(event.title)
+                                    .font(.subheadline)
+                                    .lineLimit(2)
+                                    .padding(.bottom, 1)
+                                if let endDate = event.endDate {
+                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                } else {
+                                    Text(event.date, formatter: dateFormatter)
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,14 +179,13 @@ struct UpNextWidgetEntryView : View {
                     .padding(.bottom, 10)
                 }
 
-            // Accessory widget
             case .accessoryRectangular:
                 let visibleEvents = entry.events.prefix(1)
                 ForEach(visibleEvents) { event in
                     VStack(alignment: .leading) {
                         Text(event.title)
                             .font(.subheadline)
-                            .lineLimit(1) // Allow up to 1 line
+                            .lineLimit(1)
                             .padding(.bottom, 1)
                         
                         if let endDate = event.endDate {
@@ -172,7 +193,7 @@ struct UpNextWidgetEntryView : View {
                                 .foregroundColor(.gray)
                                 .font(.caption)
                         } else {
-                            Text(event.date, formatter: dateFormatter) // Use custom date formatter
+                            Text(event.date, formatter: dateFormatter)
                                 .foregroundColor(.gray)
                                 .font(.caption)
                         }
@@ -215,3 +236,4 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+

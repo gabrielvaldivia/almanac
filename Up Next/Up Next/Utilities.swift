@@ -30,7 +30,7 @@ extension Date {
             case let x where x > 1:
                 return "in \(x) days"
             case -1:
-                return "1 day ago"
+                return "Yesterday"
             case let x where x < -1:
                 return "\(abs(x)) days ago"
             default:
@@ -97,4 +97,3 @@ func daysFromRelativeDate(_ relativeDate: String) -> Int {
         return 0
     }
 }
-

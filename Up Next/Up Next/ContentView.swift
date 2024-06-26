@@ -219,11 +219,11 @@ struct ContentView: View {
 
         for event in events {
             if let filter = selectedCategoryFilter {
-                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday)) {
+                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)) {
                     allEvents.append(event)
                 }
             } else {
-                if event.date >= startOfToday || (event.endDate != nil && event.date < startOfToday && event.endDate! >= startOfToday) {
+                if event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday) {
                     allEvents.append(event)
                 }
             }
