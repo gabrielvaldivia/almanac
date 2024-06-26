@@ -34,7 +34,10 @@ struct CategoriesView: View {
                     HStack {
                         TextField("Category Name", text: Binding(
                             get: { 
-                                self.appData.categories.indices.contains(index) ? self.appData.categories[index].name : ""
+                                if self.appData.categories.indices.contains(index) {
+                                    return self.appData.categories[index].name
+                                }
+                                return ""
                             },
                             set: { 
                                 if self.appData.categories.indices.contains(index) {
@@ -45,7 +48,10 @@ struct CategoriesView: View {
                         Spacer()
                         ColorPicker("", selection: Binding(
                             get: { 
-                                self.appData.categories.indices.contains(index) ? self.appData.categories[index].color : .clear
+                                if self.appData.categories.indices.contains(index) {
+                                    return self.appData.categories[index].color
+                                }
+                                return .clear
                             },
                             set: { 
                                 if self.appData.categories.indices.contains(index) {
@@ -64,7 +70,12 @@ struct CategoriesView: View {
                 // Default category section
                 Section(header: Text("Default Category")) {
                     Picker("Default Category", selection: Binding(
-                        get: { appData.defaultCategory.isEmpty ? appData.categories.first?.name ?? "" : appData.defaultCategory },
+                        get: { 
+                            if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
+                                return firstCategory
+                            }
+                            return appData.defaultCategory
+                        },
                         set: { appData.defaultCategory = $0 }
                     )) {
                         ForEach(appData.categories, id: \.name) { category in

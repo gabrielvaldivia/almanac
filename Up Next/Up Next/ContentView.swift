@@ -138,14 +138,16 @@ struct ContentView: View {
                     leading: Button(action: {
                         self.showPastEventsSheet = true
                     }) {
-                        Image(systemName: "clock.arrow.circlepath") // Icon for past events
-                            .bold() 
+                        Image(systemName: "clock.arrow.circlepath")
+                            .bold()
+                            .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
                     },
                     trailing: Button(action: {
                         self.showCategoryManagementView = true
                     }) {
                         Image(systemName: "slider.horizontal.3")
                             .bold()
+                            .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
                     }
                 )
                 .onAppear {
@@ -159,16 +161,16 @@ struct ContentView: View {
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
                     self.showEndDate = false
-                    self.selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory // Set the default category to "Work" if no default category is set
+                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory) // Set the selected category or default category
                     self.showAddEventSheet = true // This will now trigger the bottom sheet
                 }) {
                     Image(systemName: "plus")
                         .font(.title)
                         .bold() // Make the icon thicker
-                        .foregroundColor(.white)
+                        .foregroundColor(.white) // Always white
                         .padding(.horizontal, 24)
                         .padding(.vertical, 16)
-                        .background(Color.blue)
+                        .background(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change background color based on selected category and color scheme
                         .cornerRadius(40)
                 }
                 .padding()
@@ -285,6 +287,10 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .environmentObject(AppData())
+            .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
+
+
+
 
