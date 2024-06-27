@@ -122,10 +122,11 @@ struct EditEventView: View {
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
             if events[index].notificationsEnabled {
-                scheduleNotification(for: events[index]) // Schedule notification
+                appData.scheduleNotification(for: events[index]) // Call centralized function
             } else {
-                removeNotification(for: events[index]) // Remove notification
+                appData.removeNotification(for: events[index]) // Call centralized function
             }
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         }
     }
 
@@ -144,31 +145,6 @@ struct EditEventView: View {
         } else {
             print("Failed to encode events.")
         }
-    }
-
-    func scheduleNotification(for event: Event) {
-        let content = UNMutableNotificationContent()
-        content.title = event.title
-        content.body = "Event is starting soon!"
-        content.sound = .default
-
-        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
-
-        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error)")
-            } else {
-                print("Notification scheduled for event: \(event.title)")
-            }
-        }
-    }
-
-    func removeNotification(for event: Event) {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [event.id.uuidString])
-        print("Notification removed for event: \(event.title).")
     }
 }
 

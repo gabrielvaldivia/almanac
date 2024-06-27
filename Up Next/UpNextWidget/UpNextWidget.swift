@@ -151,7 +151,7 @@ struct UpNextWidgetEntryView : View {
             
             // Large widget
             case .systemLarge:
-                let visibleEvents = entry.events.prefix(5) // Limit the number of events to 6
+                let visibleEvents = entry.events.prefix(5) // Limit the number of events to 5
                 let groupedEvents = Dictionary(grouping: visibleEvents.sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
                 let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
                     let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
@@ -194,17 +194,10 @@ struct UpNextWidgetEntryView : View {
                                     }
                                     .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
                                 }
-                                .padding(.bottom, 10)
-                            }
-                        }
+                            } 
+                        } .padding(.bottom, 10)
                     }
                 }
-                Spacer()
-                // if remainingEventsCount > 0 {
-                //     Text("\(remainingEventsCount) more events")
-                //         .foregroundColor(.gray)
-                //         .font(.caption)
-                // }
 
             case .accessoryRectangular:
                 let visibleEvents = entry.events.prefix(1)
@@ -262,3 +255,7 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
+
+
+

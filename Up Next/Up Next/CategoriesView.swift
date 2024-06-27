@@ -67,8 +67,22 @@ struct CategoriesView: View {
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)
                 
+                // Add Category button\
+                HStack {
+                    Button(action: {
+                        showingAddCategorySheet = true
+                        newCategoryName = ""
+                        newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))  // Ensure middle range color
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add Category")
+                        }
+                    }
+                }
+                
                 // Default category section
-                Section(header: Text("Default Category")) {
+                Section() {
                     Picker("Default Category", selection: Binding(
                         get: { 
                             if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
@@ -86,19 +100,13 @@ struct CategoriesView: View {
                 }
 
                 // Notification time section
-                Section(header: Text("Notification Time")) {
-                    DatePicker("Select Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                Section() {
+                    DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
                 }
             }
             .listStyle(GroupedListStyle())
-            .navigationBarTitle("Manage Categories", displayMode: .inline)
-            .navigationBarItems(leading: EditButton(), trailing: Button(action: {
-                showingAddCategorySheet = true
-                newCategoryName = ""
-                newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))  // Ensure middle range color
-            }) {
-                Image(systemName: "plus")
-            })
+            .navigationBarTitle("Settings", displayMode: .inline)
+            .navigationBarItems(leading: EditButton())
             
             // Add Category Sheet
             .sheet(isPresented: $showingAddCategorySheet) {

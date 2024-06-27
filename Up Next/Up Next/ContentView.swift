@@ -40,41 +40,6 @@ struct ContentView: View {
          NavigationView {
             ZStack(alignment: .bottom) {
                 VStack {
-                    
-                    // Category Pills
-                    let filteredCategories = appData.categories.filter { category in
-                        let startOfToday = Calendar.current.startOfDay(for: Date())
-                        return events.contains { event in
-                            event.category == category.name && event.date >= startOfToday
-                        }
-                    }
-                    
-                    if filteredCategories.count > 1 {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(filteredCategories, id: \.name) { category in
-                                    Button(action: {
-                                        self.selectedCategoryFilter = self.selectedCategoryFilter == category.name ? nil : category.name
-                                    }) {
-                                        Text(category.name)
-                                            .font(.footnote)
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 8)
-                                            .background(self.selectedCategoryFilter == category.name ? category.color : Color.clear) // Change background color based on selection
-                                            .foregroundColor(self.selectedCategoryFilter == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 20)
-                                                    .stroke(self.selectedCategoryFilter == category.name ? Color.clear : Color.gray, lineWidth: 1) // Conditionally apply border
-                                            )
-                                            .cornerRadius(20)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.top)
-                    }
-                    
                     // List of events
                     let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -95,42 +60,49 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         List {
-                            ForEach(sortedKeys, id: \.self) { key in
-                                HStack(alignment: .top) {
-                                    Text(key.uppercased())
-                                        .font(.system(.footnote, design: .monospaced))
-                                        .foregroundColor(.gray) 
-                                        .frame(width: 100, alignment: .leading) 
-                                        .padding(.vertical, 14)
-                                    VStack(alignment: .leading) {
-                                        ForEach(groupedEvents[key]!, id: \.id) { event in
-                                            EventRow(event: event, formatter: itemDateFormatter,
-                                                     selectedEvent: $selectedEvent,
-                                                     newEventTitle: $newEventTitle,
-                                                     newEventDate: $newEventDate,
-                                                     newEventEndDate: $newEventEndDate,
-                                                     showEndDate: $showEndDate,
-                                                     selectedCategory: $selectedCategory,
-                                                     categories: appData.categories)
-                                                .onTapGesture { // Add tap gesture to open EditEventView
-                                                    self.selectedEvent = event
-                                                    self.newEventTitle = event.title
-                                                    self.newEventDate = event.date
-                                                    self.newEventEndDate = event.endDate ?? Date()
-                                                    self.showEndDate = event.endDate != nil
-                                                    self.selectedCategory = event.category
-                                                    self.showEditSheet = true
-                                                }
-                                                .listRowSeparator(.hidden) // Hide dividers
+                            // Sticky Category Pills
+                            Section(header: categoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+                                        .padding(.leading, -20) // Remove left padding
+                                        .padding(.trailing, -20) // Remove right padding
+                            ) {
+                                ForEach(sortedKeys, id: \.self) { key in
+                                    HStack(alignment: .top) {
+                                        Text(key.uppercased())
+                                            .font(.system(.footnote, design: .monospaced))
+                                            .foregroundColor(.gray) 
+                                            .frame(width: 100, alignment: .leading) 
+                                            .padding(.vertical, 14)
+                                        VStack(alignment: .leading) {
+                                            ForEach(groupedEvents[key]!, id: \.id) { event in
+                                                EventRow(event: event, formatter: itemDateFormatter,
+                                                         selectedEvent: $selectedEvent,
+                                                         newEventTitle: $newEventTitle,
+                                                         newEventDate: $newEventDate,
+                                                         newEventEndDate: $newEventEndDate,
+                                                         showEndDate: $showEndDate,
+                                                         selectedCategory: $selectedCategory,
+                                                         categories: appData.categories)
+                                                    .onTapGesture { // Add tap gesture to open EditEventView
+                                                        self.selectedEvent = event
+                                                        self.newEventTitle = event.title
+                                                        self.newEventDate = event.date
+                                                        self.newEventEndDate = event.endDate ?? Date()
+                                                        self.showEndDate = event.endDate != nil
+                                                        self.selectedCategory = event.category
+                                                        self.showEditSheet = true
+                                                    }
+                                                    .listRowSeparator(.hidden) // Hide dividers
+                                            }
                                         }
                                     }
+                                    .listRowSeparator(.hidden)
                                 }
-                                .listRowSeparator(.hidden)
                             }
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
-                    }
+                        
+                    } 
                 }
 
                 // Navigation Bar
@@ -154,8 +126,11 @@ struct ContentView: View {
                     }
                 )
                 .onAppear {
+                    print("ContentView appeared")
                     loadEvents()
                     appData.loadCategories() // Load categories from UserDefaults
+                    print("Events loaded: \(events)")
+                    print("Categories loaded: \(appData.categories)")
                 }
 
                 // Add event Button
@@ -176,14 +151,26 @@ struct ContentView: View {
                         .background(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change background color based on selected category and color scheme
                         .cornerRadius(40)
                 }
-                .padding()
+                .padding(0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
 
         // Add Event Sheet
         .sheet(isPresented: $showAddEventSheet) {
-            AddEventView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, showAddEventSheet: $showAddEventSheet, selectedCategory: $selectedCategory, selectedColor: $selectedColor, notificationsEnabled: $notificationsEnabled, appData: _appData)
+            AddEventView(
+                events: $events,
+                selectedEvent: $selectedEvent,
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                showAddEventSheet: $showAddEventSheet,
+                selectedCategory: $selectedCategory,
+                selectedColor: $selectedColor,
+                notificationsEnabled: $notificationsEnabled,
+                appData: _appData // Ensure this is correctly passed
+            )
         }
 
         // Edit Event Sheet
@@ -201,6 +188,7 @@ struct ContentView: View {
                 notificationsEnabled: $notificationsEnabled,
                 saveEvent: saveEvent
             )
+            .environmentObject(appData)
         }
 
         // Past events Sheet
@@ -240,6 +228,8 @@ struct ContentView: View {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
             saveEvents()  // Save after deleting
+            appData.removeNotification(for: event) // Call centralized function
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         }
     }
 
@@ -282,10 +272,11 @@ struct ContentView: View {
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
             if events[index].notificationsEnabled {
-                scheduleNotification(for: events[index]) // Schedule notification if enabled
+                appData.scheduleNotification(for: events[index]) // Call centralized function
             } else {
-                removeNotification(for: events[index]) // Remove notification if disabled
+                appData.removeNotification(for: events[index]) // Call centralized function
             }
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         }
         showEditSheet = false
     }
@@ -300,47 +291,49 @@ struct ContentView: View {
         }
         saveEvents()
         if newEvent.notificationsEnabled {
-            scheduleNotification(for: newEvent) // Schedule notification if enabled
+            appData.scheduleNotification(for: newEvent) // Call centralized function
         }
         newEventTitle = ""
         newEventDate = Date()
         newEventEndDate = Date()
         showEndDate = false
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
-    
-    func removeNotification(for event: Event) {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [event.id.uuidString])
-        print("Notification removed for event: \(event.title).")
-    }
-    
-    // Function to schedule notification for a specific event
-    func scheduleNotification(for event: Event) {
-        let content = UNMutableNotificationContent()
-        let eventsToday = events.filter { Calendar.current.isDate($0.date, inSameDayAs: event.date) }
-        let eventCount = eventsToday.count
-        content.title = "\(eventCount) \(eventCount == 1 ? "event" : "events") today"
-        content.body = eventsToday.map { $0.title }.joined(separator: ", ")
-        content.sound = .default
+}
 
-        // Use the configured notification time
-        var triggerDate = Calendar.current.dateComponents([.year, .month, .day], from: event.date)
-        let notificationTime = Calendar.current.dateComponents([.hour, .minute], from: appData.notificationTime)
-        triggerDate.hour = notificationTime.hour
-        triggerDate.minute = notificationTime.minute
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
-
-        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error)")
-            } else {
-                print("Notification scheduled successfully for event: \(event.title).")
-            }
+@ViewBuilder
+private func categoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter: Binding<String?>, colorScheme: ColorScheme) -> some View {
+    let filteredCategories = appData.categories.filter { category in
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return events.contains { event in
+            event.category == category.name && event.date >= startOfToday
         }
     }
-
+    
+    if filteredCategories.count > 1 {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack {
+                ForEach(filteredCategories, id: \.name) { category in
+                    Button(action: {
+                        selectedCategoryFilter.wrappedValue = selectedCategoryFilter.wrappedValue == category.name ? nil : category.name
+                    }) {
+                        Text(category.name)
+                            .font(.footnote)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(selectedCategoryFilter.wrappedValue == category.name ? category.color : Color.clear) // Change background color based on selection
+                            .foregroundColor(selectedCategoryFilter.wrappedValue == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(selectedCategoryFilter.wrappedValue == category.name ? Color.clear : Color.gray, lineWidth: 1) // Conditionally apply border
+                            )
+                            .cornerRadius(20)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
 }
 
 // Preview Provider

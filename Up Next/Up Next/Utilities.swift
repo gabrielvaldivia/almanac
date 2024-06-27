@@ -97,3 +97,35 @@ func daysFromRelativeDate(_ relativeDate: String) -> Int {
         return 0
     }
 }
+
+
+func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, suiteName: String? = nil) {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    do {
+        let data = try encoder.encode(value)
+        let defaults = suiteName != nil ? UserDefaults(suiteName: suiteName) : UserDefaults.standard
+        defaults?.set(data, forKey: key)
+        print("Successfully saved data for key: \(key)")
+    } catch {
+        print("Failed to encode data for key \(key): \(error.localizedDescription)")
+    }
+}
+
+func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, suiteName: String? = nil) -> T? {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let defaults = suiteName != nil ? UserDefaults(suiteName: suiteName) : UserDefaults.standard
+    guard let data = defaults?.data(forKey: key) else {
+        print("No data found for key: \(key)")
+        return nil
+    }
+    do {
+        let value = try decoder.decode(T.self, from: data)
+        print("Successfully loaded data for key: \(key)")
+        return value
+    } catch {
+        print("Failed to decode data for key \(key): \(error.localizedDescription)")
+        return nil
+    }
+}

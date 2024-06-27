@@ -11,11 +11,10 @@ import UserNotifications
 @main
 struct Up_NextApp: App {
     var appData = AppData()
-    private var notificationDelegate = NotificationDelegate() // Strong reference to NotificationDelegate
 
     init() {
         requestNotificationPermissions()
-        UNUserNotificationCenter.current().delegate = notificationDelegate
+        UNUserNotificationCenter.current().delegate = appData
     }
 
     var body: some Scene {
@@ -31,20 +30,7 @@ struct Up_NextApp: App {
                 print("Error requesting notification permissions: \(error)")
             } else {
                 print("Notification permissions granted: \(granted)")
-                if granted {
-                    appData.scheduleDailyNotification() // Schedule the notification after permissions are granted
-                }
             }
-        }
-    }
-}
-
-class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if #available(iOS 14.0, *) {
-            completionHandler([.banner, .sound, .badge])
-        } else {
-            completionHandler([.alert, .sound, .badge])
         }
     }
 }

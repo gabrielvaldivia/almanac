@@ -13,9 +13,9 @@ struct Event: Identifiable, Codable {
     var title: String
     var date: Date
     var endDate: Date?
-    var color: CodableColor // Use CodableColor to store color
+    var color: CodableColor
     var category: String?
-    var notificationsEnabled: Bool = true // New property to track notification status
+    var notificationsEnabled: Bool = true
 }
 
 struct CategoryData: Codable {
@@ -89,12 +89,13 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
-    @Published var notificationTime: Date = Date() {
+    @Published var notificationTime: Date = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date() {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
                 print("Notification time saved: \(notificationTime)")
                 scheduleDailyNotification()
+                saveState()
             }
         }
     }
@@ -114,66 +115,32 @@ class AppData: NSObject, ObservableObject {
     }
 
     private func saveCategories() {
-        let encoder = JSONEncoder()
         let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
-        do {
-            let encodedData = try encoder.encode(categoryData)
-            guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
-                print("Failed to access shared UserDefaults.")
-                return
-            }
-            sharedDefaults.set(encodedData, forKey: "categories")
-            print("Categories saved successfully: \(categoryData)")
-        } catch {
-            print("Failed to encode categories: \(error.localizedDescription)")
-        }
-        
-        // Save notification time
-        UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+        encodeToUserDefaults(categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
     }
 
     func loadCategories() {
-        let decoder = JSONDecoder()
-        guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
-            print("Failed to access shared UserDefaults.")
-            return
-        }
-        guard let data = sharedDefaults.data(forKey: "categories") else {
-            print("No categories data found in UserDefaults.")
-            self.categories = [
-                ("Work", .blue),
-                ("Social", .green),
-                ("Birthdays", .red),
-                ("Movies", .purple)
-            ] // Default to all categories if nothing is loaded
-            print("Default categories set: \(self.categories)")
-            return
-        }
-        
-        do {
-            let decoded = try decoder.decode([CategoryData].self, from: data)
+        if let decoded: [CategoryData] = decodeFromUserDefaults([CategoryData].self, forKey: "categories", suiteName: "group.UpNextIdentifier") {
             self.categories = decoded.map { categoryData in
                 return (name: categoryData.name, color: categoryData.color.color)
             }
             print("Decoded categories: \(self.categories)")
-        } catch {
-            print("Failed to decode categories: \(error.localizedDescription)")
+        } else {
             self.categories = [
                 ("Work", .blue),
                 ("Social", .green),
                 ("Birthdays", .red),
                 ("Movies", .purple)
-            ] // Default to all categories if decoding fails
-            print("Default categories set after decoding failure: \(self.categories)")
+            ]
+            print("Default categories set: \(self.categories)")
         }
         
-        // Load notification time
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
             print("Notification time loaded: \(notificationTime)")
         }
     }
-    
+
     func scheduleDailyNotification() {
         let content = UNMutableNotificationContent()
         content.title = "Today's Events"
@@ -191,13 +158,14 @@ class AppData: NSObject, ObservableObject {
         content.body = eventsString
         content.sound = .default
         content.categoryIdentifier = "DAILY_NOTIFICATION"
-
+        
         var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: notificationTime)
         dateComponents.second = 0
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
 
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"]) // Remove any existing daily notification
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Error scheduling daily notification: \(error)")
@@ -220,6 +188,31 @@ class AppData: NSObject, ObservableObject {
     
     func saveState() {
         UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+    }
+    
+    func scheduleNotification(for event: Event) {
+        let content = UNMutableNotificationContent()
+        content.title = event.title
+        content.body = "Event is starting soon!"
+        content.sound = .default
+
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            } else {
+                print("Notification scheduled for event: \(event.title)")
+            }
+        }
+    }
+
+    func removeNotification(for event: Event) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [event.id.uuidString])
+        print("Notification removed for event: \(event.title).")
     }
 }
 
