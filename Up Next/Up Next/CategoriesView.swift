@@ -101,7 +101,13 @@ struct CategoriesView: View {
 
                 // Notification time section
                 Section() {
-                    DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                    DatePicker("Notification Time", selection: Binding(
+                        get: { appData.notificationTime },
+                        set: { newTime in
+                            appData.notificationTime = newTime
+                            updateDailyNotificationTime(newTime)  // Call the update method
+                        }
+                    ), displayedComponents: .hourAndMinute)
                 }
             }
             .listStyle(GroupedListStyle())
@@ -152,5 +158,25 @@ struct CategoriesView: View {
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
         appData.categories.move(fromOffsets: source, toOffset: destination)
+    }
+
+    private func updateDailyNotificationTime(_ time: Date) {
+        // Logic to update the daily notification time
+        // This could involve scheduling a local notification or updating a server
+        // For example:
+        let content = UNMutableNotificationContent()
+        content.title = "Daily Reminder"
+        content.body = "This is your daily reminder."
+        content.sound = .default
+
+        var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+
+        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
     }
 }
