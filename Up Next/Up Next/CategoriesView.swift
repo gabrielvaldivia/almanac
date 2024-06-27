@@ -84,6 +84,11 @@ struct CategoriesView: View {
                     }
                     .pickerStyle(MenuPickerStyle())
                 }
+
+                // Notification time section
+                Section(header: Text("Notification Time")) {
+                    DatePicker("Select Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                }
             }
             .listStyle(GroupedListStyle())
             .navigationBarTitle("Manage Categories", displayMode: .inline)

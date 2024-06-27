@@ -15,6 +15,7 @@ struct Event: Identifiable, Codable {
     var endDate: Date?
     var color: CodableColor // Use CodableColor to store color
     var category: String?
+    var notificationsEnabled: Bool = true // New property to track notification status
 }
 
 struct CategoryData: Codable {
@@ -67,7 +68,8 @@ struct CodableColor: Codable {
     }
 }
 
-class AppData: ObservableObject {
+class AppData: NSObject, ObservableObject {
+    @Published var events: [Event] = []
     @Published var categories: [(name: String, color: Color)] = [
         ("Work", .blue),
         ("Social", .green),
@@ -75,32 +77,42 @@ class AppData: ObservableObject {
         ("Movies", .purple)
     ] {
         didSet {
-            saveCategories()
+            if isDataLoaded {
+                saveCategories()
+            }
         }
     }
     @Published var defaultCategory: String = "" {
         didSet {
-            UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
+            if isDataLoaded {
+                UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
+            }
+        }
+    }
+    @Published var notificationTime: Date = Date() {
+        didSet {
+            if isDataLoaded {
+                UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+                print("Notification time saved: \(notificationTime)")
+                scheduleDailyNotification()
+            }
         }
     }
 
-    // Ensure this method is defined only once
-    func clearCategories() {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
-            print("Failed to access shared UserDefaults.")
-            return
-        }
-        sharedDefaults.removeObject(forKey: "categories")
-        print("Categories cleared from UserDefaults.")
-    }
+    private var isDataLoaded = false
 
-    init() {
-        // clearCategories() // Comment out or remove this line after testing
+    override init() {
+        super.init()
         loadCategories()
         defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? ""
+        if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
+            notificationTime = savedTime
+            print("Notification time loaded: \(notificationTime)")
+        }
+        isDataLoaded = true
+        UNUserNotificationCenter.current().delegate = self
     }
 
-    // Save categories to UserDefaults
     private func saveCategories() {
         let encoder = JSONEncoder()
         let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
@@ -115,9 +127,11 @@ class AppData: ObservableObject {
         } catch {
             print("Failed to encode categories: \(error.localizedDescription)")
         }
+        
+        // Save notification time
+        UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
     }
 
-    // Load categories from UserDefaults
     func loadCategories() {
         let decoder = JSONDecoder()
         guard let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") else {
@@ -152,5 +166,74 @@ class AppData: ObservableObject {
             ] // Default to all categories if decoding fails
             print("Default categories set after decoding failure: \(self.categories)")
         }
+        
+        // Load notification time
+        if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
+            notificationTime = savedTime
+            print("Notification time loaded: \(notificationTime)")
+        }
+    }
+    
+    func scheduleDailyNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Today's Events"
+        
+        // Fetch today's events
+        let todayEvents = getTodayEvents()
+        let eventsString = todayEvents.map { $0.title }.joined(separator: ", ")
+        
+        // If there are no events, do not schedule the notification
+        if eventsString.isEmpty {
+            print("No events for today. Notification will not be scheduled.")
+            return
+        }
+        
+        content.body = eventsString
+        content.sound = .default
+        content.categoryIdentifier = "DAILY_NOTIFICATION"
+
+        var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: notificationTime)
+        dateComponents.second = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling daily notification: \(error)")
+            } else {
+                print("Daily notification scheduled successfully.")
+            }
+        }
+
+        // Define the custom action
+        let action = UNNotificationAction(identifier: "VIEW_ACTION", title: "View", options: .foreground)
+        let category = UNNotificationCategory(identifier: "DAILY_NOTIFICATION", actions: [action], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
+
+    private func getTodayEvents() -> [Event] {
+        let today = Calendar.current.startOfDay(for: Date())
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        return events.filter { $0.date >= today && $0.date < tomorrow }
+    }
+    
+    func saveState() {
+        UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+    }
+}
+
+// Extend AppData to conform to UNUserNotificationCenterDelegate
+extension AppData: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        print("Notification will present: \(notification.request.content.body)")
+        completionHandler([.banner, .sound])
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.actionIdentifier == "VIEW_ACTION" {
+            print("Notification action triggered: \(response.actionIdentifier)")
+        }
+        completionHandler()
     }
 }

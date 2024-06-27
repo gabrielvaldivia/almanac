@@ -151,41 +151,60 @@ struct UpNextWidgetEntryView : View {
             
             // Large widget
             case .systemLarge:
-                let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(5)
+                let visibleEvents = entry.events.prefix(5) // Limit the number of events to 6
+                let groupedEvents = Dictionary(grouping: visibleEvents.sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
+                let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
+                    let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                    let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                    return date1 < date2
+                }
 
-                ForEach(visibleEvents) { event in
+                let remainingEventsCount = entry.events.count - visibleEvents.count
+
+                ForEach(sortedKeys, id: \.self) { key in
                     HStack(alignment: .top) {
-                        Text(event.date.relativeDate().capitalized)
-                            .foregroundColor(.gray)
-                            .font(.caption)
+                        Text(key)
                             .frame(width: 70, alignment: .leading)
-                            .padding(.vertical, 1)
-                        HStack {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(categoryColors[event.category ?? ""] ?? .gray)
-                                .frame(width: 4)
-                                .padding(.vertical, 1)
-                            VStack(alignment: .leading) {
-                                Text(event.title)
-                                    .font(.subheadline)
-                                    .lineLimit(2)
-                                    .padding(.bottom, 1)
-                                if let endDate = event.endDate {
-                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                } else {
-                                    Text(event.date, formatter: dateFormatter)
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 4)
+                        VStack(alignment: .leading) {
+                            ForEach(groupedEvents[key]!) { event in 
+                                VStack(alignment: .leading) {
+                                    HStack {
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                            .frame(width: 4)
+                                            .padding(.vertical, 1)
+                                        VStack(alignment: .leading) {
+                                            Text(event.title)
+                                                .font(.subheadline)
+                                                .lineLimit(2)
+                                                .padding(.bottom, 1)
+                                            if let endDate = event.endDate {
+                                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                                    .foregroundColor(.gray)
+                                                    .font(.caption)
+                                            } else {
+                                                Text(event.date, formatter: dateFormatter)
+                                                    .foregroundColor(.gray)
+                                                    .font(.caption)
+                                            }
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
                                 }
+                                .padding(.bottom, 10)
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
-                        
-                    } .padding(.bottom, 10)
+                    }
                 }
                 Spacer()
+                // if remainingEventsCount > 0 {
+                //     Text("\(remainingEventsCount) more events")
+                //         .foregroundColor(.gray)
+                //         .font(.caption)
+                // }
 
             case .accessoryRectangular:
                 let visibleEvents = entry.events.prefix(1)

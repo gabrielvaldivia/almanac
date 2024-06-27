@@ -8,10 +8,17 @@
 import Foundation
 import SwiftUI
 import WidgetKit
+import UserNotifications
 
 struct EditEventView: View {
     @Binding var events: [Event]
-    @Binding var selectedEvent: Event?
+    @Binding var selectedEvent: Event? {
+        didSet {
+            if let event = selectedEvent {
+                notificationsEnabled = event.notificationsEnabled
+            }
+        }
+    }
     @Binding var newEventTitle: String
     @Binding var newEventDate: Date
     @Binding var newEventEndDate: Date
@@ -19,6 +26,7 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor // Use CodableColor to store color
+    @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -66,6 +74,9 @@ struct EditEventView: View {
                             }
                         }
                     }
+                    Section() {
+                        Toggle("Notify me", isOn: $notificationsEnabled)
+                    }
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -87,6 +98,11 @@ struct EditEventView: View {
                     }
                 }
             }
+            .onAppear {
+                if let event = selectedEvent {
+                    notificationsEnabled = event.notificationsEnabled
+                }
+            }
     }
 
     func deleteEvent(at event: Event) {
@@ -103,7 +119,13 @@ struct EditEventView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].color = selectedColor
             events[index].category = selectedCategory
+            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
+            if events[index].notificationsEnabled {
+                scheduleNotification(for: events[index]) // Schedule notification
+            } else {
+                removeNotification(for: events[index]) // Remove notification
+            }
         }
     }
 
@@ -123,6 +145,31 @@ struct EditEventView: View {
             print("Failed to encode events.")
         }
     }
+
+    func scheduleNotification(for event: Event) {
+        let content = UNMutableNotificationContent()
+        content.title = event.title
+        content.body = "Event is starting soon!"
+        content.sound = .default
+
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            } else {
+                print("Notification scheduled for event: \(event.title)")
+            }
+        }
+    }
+
+    func removeNotification(for event: Event) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [event.id.uuidString])
+        print("Notification removed for event: \(event.title).")
+    }
 }
 
 // Preview Provider
@@ -138,6 +185,7 @@ struct EditEventView_Previews: PreviewProvider {
             showEditSheet: .constant(false),
             selectedCategory: .constant(nil),
             selectedColor: .constant(CodableColor(color: .black)), // Use CodableColor for selectedColor
+            notificationsEnabled: .constant(true), // New binding for notificationsEnabled
             saveEvent: {} // Provide a dummy implementation for the saveEvent parameter
         )
         .environmentObject(AppData())

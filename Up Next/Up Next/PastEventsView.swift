@@ -24,6 +24,7 @@ struct PastEventsView: View {
     var saveEvents: () -> Void
     @EnvironmentObject var appData: AppData
     @State private var isEditSheetPresented = false
+    @State private var notificationsEnabled: Bool = true // New state for notificationsEnabled
 
     var body: some View {
         NavigationView {
@@ -37,6 +38,7 @@ struct PastEventsView: View {
                         showEndDate = event.endDate != nil
                         selectedCategory = event.category
                         selectedColor = event.color
+                        notificationsEnabled = event.notificationsEnabled // Set notificationsEnabled from the event
                         isEditSheetPresented = true
                     }) {
                         VStack {
@@ -63,15 +65,16 @@ struct PastEventsView: View {
                 self.showPastEventsSheet = false
             })
             .sheet(isPresented: $isEditSheetPresented) {
-                EditEventView(events: $events, 
-                              selectedEvent: $selectedEvent, 
-                              newEventTitle: $newEventTitle, 
-                              newEventDate: $newEventDate, 
-                              newEventEndDate: $newEventEndDate, 
-                              showEndDate: $showEndDate, 
-                              showEditSheet: $showEditSheet, 
-                              selectedCategory: $selectedCategory, 
+                EditEventView(events: $events,
+                              selectedEvent: $selectedEvent,
+                              newEventTitle: $newEventTitle,
+                              newEventDate: $newEventDate,
+                              newEventEndDate: $newEventEndDate,
+                              showEndDate: $showEndDate,
+                              showEditSheet: $showEditSheet,
+                              selectedCategory: $selectedCategory,
                               selectedColor: $selectedColor,
+                              notificationsEnabled: $notificationsEnabled,
                               saveEvent: saveEvent)
             }
         }
@@ -117,6 +120,7 @@ struct PastEventsView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
+            events[index].notificationsEnabled = notificationsEnabled // Set notificationsEnabled for the event
             saveEvents()
         }
         isEditSheetPresented = false

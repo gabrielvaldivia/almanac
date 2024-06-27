@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UserNotifications
 
 struct AddEventView: View {
     @Binding var events: [Event]
@@ -18,6 +19,7 @@ struct AddEventView: View {
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor // Use CodableColor to store color
+    @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
 
@@ -60,6 +62,9 @@ struct AddEventView: View {
                             }
                         }
                     }
+                    Section() {
+                        Toggle("Notify me", isOn: $notificationsEnabled)
+                    }
                 }
                 .navigationTitle("Add Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -90,7 +95,7 @@ struct AddEventView: View {
 
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory) // Handle nil category
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory, notificationsEnabled: notificationsEnabled)
         if let index = events.firstIndex(where: { $0.date > newEvent.date }) {
             events.insert(newEvent, at: index)
         } else {
@@ -98,6 +103,9 @@ struct AddEventView: View {
         }
         
         saveEvents()
+        if newEvent.notificationsEnabled {
+            scheduleNotification(for: newEvent) // Schedule notification if enabled
+        }
         newEventTitle = ""
         newEventDate = Date()
         newEventEndDate = Date()
@@ -113,6 +121,26 @@ struct AddEventView: View {
             print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")
+        }
+    }
+    
+    func scheduleNotification(for event: Event) {
+        let content = UNMutableNotificationContent()
+        content.title = "Event Reminder"
+        content.body = "Your event \(event.title) is happening now!"
+        content.sound = .default
+
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: event.date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            } else {
+                print("Notification scheduled successfully for event: \(event.title).")
+            }
         }
     }
 }

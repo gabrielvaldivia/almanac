@@ -8,7 +8,7 @@
 import SwiftUI
 import Foundation
 import WidgetKit
-
+import UserNotifications
 
 struct ContentView: View {
     @State private var events: [Event] = []
@@ -24,6 +24,7 @@ struct ContentView: View {
     @State private var showCategoryManagementView: Bool = false // State to show category management view
     @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
+    @State private var notificationsEnabled: Bool = true // New state to track notification status
 
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
@@ -135,12 +136,14 @@ struct ContentView: View {
                 // Navigation Bar
                 .navigationTitle("Up Next")
                 .navigationBarItems(
-                    leading: Button(action: {
-                        self.showPastEventsSheet = true
-                    }) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .bold()
-                            .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
+                    leading: HStack {
+                        Button(action: {
+                            self.showPastEventsSheet = true
+                        }) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .bold()
+                                .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
+                        }
                     },
                     trailing: Button(action: {
                         self.showCategoryManagementView = true
@@ -180,7 +183,7 @@ struct ContentView: View {
 
         // Add Event Sheet
         .sheet(isPresented: $showAddEventSheet) {
-            AddEventView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, showAddEventSheet: $showAddEventSheet, selectedCategory: $selectedCategory, selectedColor: $selectedColor, appData: _appData)
+            AddEventView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, showAddEventSheet: $showAddEventSheet, selectedCategory: $selectedCategory, selectedColor: $selectedColor, notificationsEnabled: $notificationsEnabled, appData: _appData)
         }
 
         // Edit Event Sheet
@@ -195,7 +198,8 @@ struct ContentView: View {
                 showEditSheet: $showEditSheet,
                 selectedCategory: $selectedCategory,
                 selectedColor: $selectedColor,
-                saveEvent: saveEvent // Provide the saveEvent function
+                notificationsEnabled: $notificationsEnabled,
+                saveEvent: saveEvent
             )
         }
 
@@ -239,7 +243,6 @@ struct ContentView: View {
         }
     }
 
-      
     // Load events from UserDefaults
     func loadEvents() {
         let decoder = JSONDecoder()
@@ -276,10 +279,68 @@ struct ContentView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
+            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
+            if events[index].notificationsEnabled {
+                scheduleNotification(for: events[index]) // Schedule notification if enabled
+            } else {
+                removeNotification(for: events[index]) // Remove notification if disabled
+            }
         }
         showEditSheet = false
     }
+    
+    func addNewEvent() {
+        let defaultEndDate = showEndDate ? newEventEndDate : nil
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory, notificationsEnabled: notificationsEnabled)
+        if let index = events.firstIndex(where: { $0.date > newEvent.date }) {
+            events.insert(newEvent, at: index)
+        } else {
+            events.append(newEvent)
+        }
+        saveEvents()
+        if newEvent.notificationsEnabled {
+            scheduleNotification(for: newEvent) // Schedule notification if enabled
+        }
+        newEventTitle = ""
+        newEventDate = Date()
+        newEventEndDate = Date()
+        showEndDate = false
+    }
+    
+    func removeNotification(for event: Event) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [event.id.uuidString])
+        print("Notification removed for event: \(event.title).")
+    }
+    
+    // Function to schedule notification for a specific event
+    func scheduleNotification(for event: Event) {
+        let content = UNMutableNotificationContent()
+        let eventsToday = events.filter { Calendar.current.isDate($0.date, inSameDayAs: event.date) }
+        let eventCount = eventsToday.count
+        content.title = "\(eventCount) \(eventCount == 1 ? "event" : "events") today"
+        content.body = eventsToday.map { $0.title }.joined(separator: ", ")
+        content.sound = .default
+
+        // Use the configured notification time
+        var triggerDate = Calendar.current.dateComponents([.year, .month, .day], from: event.date)
+        let notificationTime = Calendar.current.dateComponents([.hour, .minute], from: appData.notificationTime)
+        triggerDate.hour = notificationTime.hour
+        triggerDate.minute = notificationTime.minute
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            } else {
+                print("Notification scheduled successfully for event: \(event.title).")
+            }
+        }
+    }
+
 }
 
 // Preview Provider
@@ -290,7 +351,4 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
-
-
-
 

@@ -29,6 +29,12 @@ struct EventRow: View {
                         .font(.headline)
                         .foregroundColor(colorForCategory(event.category)) // Use category color
                     Spacer()
+                    if event.notificationsEnabled {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set bell icon color to match category color
+                            .font(.caption)
+                            .padding(.trailing)
+                    }
                 }
                 if let endDate = event.endDate {
                     let today = Date()
