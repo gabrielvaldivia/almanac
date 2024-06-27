@@ -67,7 +67,7 @@ struct UpNextWidgetEntryView : View {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.dateFormat = "MMMM d" // Updated date format to show full month name
         return formatter
     }()
 
@@ -91,10 +91,12 @@ struct UpNextWidgetEntryView : View {
                 .bold()
                 .foregroundColor(.red)
                 .font(.caption)
-            Spacer()
             
             switch widgetFamily {
+            
+            // Small widget
             case .systemSmall:
+                Spacer()
                 let visibleEvents = entry.events.prefix(2)
                 ForEach(visibleEvents) { event in
                     VStack(alignment: .leading) {
@@ -110,9 +112,12 @@ struct UpNextWidgetEntryView : View {
                     .padding(.bottom, 4)
                 }
 
+            // Medium widget
             case .systemMedium:
+                Spacer()
                 let visibleEvents = entry.events.prefix(2)
                 ForEach(visibleEvents) { event in
+                    Spacer()
                     HStack(alignment: .top) {
                         Text(event.date.relativeDate().capitalized)
                             .foregroundColor(.gray)
@@ -143,9 +148,11 @@ struct UpNextWidgetEntryView : View {
                         .padding(.bottom, 6)
                     }
                 }
-
+            
+            // Large widget
             case .systemLarge:
-                let visibleEvents = entry.events.prefix(5)
+                let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(5)
+
                 ForEach(visibleEvents) { event in
                     HStack(alignment: .top) {
                         Text(event.date.relativeDate().capitalized)
@@ -154,9 +161,9 @@ struct UpNextWidgetEntryView : View {
                             .frame(width: 70, alignment: .leading)
                             .padding(.vertical, 1)
                         HStack {
-                            RoundedRectangle(cornerRadius: 5)
+                            RoundedRectangle(cornerRadius: 4)
                                 .fill(categoryColors[event.category ?? ""] ?? .gray)
-                                .frame(width: 5)
+                                .frame(width: 4)
                                 .padding(.vertical, 1)
                             VStack(alignment: .leading) {
                                 Text(event.title)
@@ -174,10 +181,11 @@ struct UpNextWidgetEntryView : View {
                                 }
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.bottom, 10)
+                        .frame(maxWidth: .infinity, maxHeight: 30, alignment: .leading)
+                        
+                    } .padding(.bottom, 10)
                 }
+                Spacer()
 
             case .accessoryRectangular:
                 let visibleEvents = entry.events.prefix(1)
@@ -187,7 +195,6 @@ struct UpNextWidgetEntryView : View {
                             .font(.subheadline)
                             .lineLimit(1)
                             .padding(.bottom, 1)
-                        
                         if let endDate = event.endDate {
                             Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
                                 .foregroundColor(.gray)
@@ -236,4 +243,3 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
-
