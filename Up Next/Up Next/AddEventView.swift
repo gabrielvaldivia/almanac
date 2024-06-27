@@ -95,7 +95,6 @@ struct AddEventView: View {
 
     func saveNewEvent() {
         let newEvent = Event(
-            id: UUID(),
             title: newEventTitle,
             date: newEventDate,
             endDate: showEndDate ? newEventEndDate : nil,

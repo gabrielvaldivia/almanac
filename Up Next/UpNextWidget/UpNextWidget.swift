@@ -159,8 +159,6 @@ struct UpNextWidgetEntryView : View {
                     return date1 < date2
                 }
 
-                let remainingEventsCount = entry.events.count - visibleEvents.count
-
                 ForEach(sortedKeys, id: \.self) { key in
                     HStack(alignment: .top) {
                         Text(key)

@@ -1,4 +1,4 @@
- // !$*UTF8*$!
+// !$*UTF8*$!
 {
 	archiveVersion = 1;
 	classes = {
@@ -23,6 +23,7 @@
 		40790D832C23286C005DDC65 /* Up_NextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D822C23286C005DDC65 /* Up_NextTests.swift */; };
 		40790D8D2C23286C005DDC65 /* Up_NextUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */; };
 		40790D8F2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */; };
+		409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409726472C2DE2CB0050988E /* CategoryPillsView.swift */; };
 		40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
 		40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
@@ -95,6 +96,7 @@
 		40790D882C23286C005DDC65 /* Up NextUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Up NextUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITests.swift; sourceTree = "<group>"; };
 		40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		409726472C2DE2CB0050988E /* CategoryPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPillsView.swift; sourceTree = "<group>"; };
 		40FEEC462C2911DD008AA61D /* CategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesView.swift; sourceTree = "<group>"; };
 		40FEEC482C291558008AA61D /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
 		40FEEC4A2C2919E0008AA61D /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 				405920F12C23B87A008A9CF2 /* Up Next.entitlements */,
 				40790D712C23286B005DDC65 /* Up_NextApp.swift */,
 				40790D732C23286B005DDC65 /* ContentView.swift */,
+				409726472C2DE2CB0050988E /* CategoryPillsView.swift */,
 				40FEEC502C292612008AA61D /* AddEventView.swift */,
 				40FEEC522C292617008AA61D /* EditEventView.swift */,
 				40FEEC482C291558008AA61D /* AppData.swift */,
@@ -409,6 +412,7 @@
 				40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */,
 				40FEEC512C292612008AA61D /* AddEventView.swift in Sources */,
 				40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */,
+				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
 				40790D722C23286B005DDC65 /* Up_NextApp.swift in Sources */,
 				40FEEC492C291558008AA61D /* AppData.swift in Sources */,
 			);
@@ -457,6 +461,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_ENTITLEMENTS = UpNextWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -477,7 +482,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -486,6 +490,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_ENTITLEMENTS = UpNextWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -506,7 +511,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -543,6 +547,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -570,7 +575,6 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -607,6 +611,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -627,7 +632,6 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -637,6 +641,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_ENTITLEMENTS = "Up Next/Up Next.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -659,7 +664,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -669,6 +673,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_ENTITLEMENTS = "Up Next/Up Next.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -691,7 +696,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
@@ -699,6 +703,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
@@ -711,7 +716,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
@@ -719,6 +723,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
@@ -731,13 +736,13 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};
 		40790D992C23286C005DDC65 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
@@ -749,13 +754,13 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "Up Next";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Debug;
 		};
 		40790D9A2C23286C005DDC65 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
@@ -767,7 +772,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "Up Next";
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = NO;
 			};
 			name = Release;
 		};

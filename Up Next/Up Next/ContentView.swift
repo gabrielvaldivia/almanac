@@ -39,7 +39,7 @@ struct ContentView: View {
     var body: some View {
          NavigationView {
             ZStack(alignment: .bottom) {
-                VStack {
+                VStack(spacing: 0) { // Remove vertical padding by setting spacing to 0
                     // List of events
                     let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -101,10 +101,9 @@ struct ContentView: View {
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
-                        
                     } 
                 }
-
+               
                 // Navigation Bar
                 .navigationTitle("Up Next")
                 .navigationBarItems(
@@ -129,8 +128,6 @@ struct ContentView: View {
                     print("ContentView appeared")
                     loadEvents()
                     appData.loadCategories() // Load categories from UserDefaults
-                    print("Events loaded: \(events)")
-                    print("Categories loaded: \(appData.categories)")
                 }
 
                 // Add event Button
@@ -241,7 +238,7 @@ struct ContentView: View {
            let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             events = decoded
-            print("Loaded events: \(events)")
+            // print("Loaded events: \(events)")
         } else {
             print("No events found in shared UserDefaults.")
         }
@@ -271,11 +268,7 @@ struct ContentView: View {
             events[index].color = selectedColor
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
-            if events[index].notificationsEnabled {
-                appData.scheduleNotification(for: events[index]) // Call centralized function
-            } else {
-                appData.removeNotification(for: events[index]) // Call centralized function
-            }
+            handleNotification(for: events[index])
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         }
         showEditSheet = false
@@ -290,14 +283,20 @@ struct ContentView: View {
             events.append(newEvent)
         }
         saveEvents()
-        if newEvent.notificationsEnabled {
-            appData.scheduleNotification(for: newEvent) // Call centralized function
-        }
+        handleNotification(for: newEvent)
         newEventTitle = ""
         newEventDate = Date()
         newEventEndDate = Date()
         showEndDate = false
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+    }
+    
+    func handleNotification(for event: Event) {
+        if event.notificationsEnabled {
+            appData.scheduleNotification(for: event) // Call centralized function
+        } else {
+            appData.removeNotification(for: event) // Call centralized function
+        }
     }
 }
 
@@ -344,4 +343,3 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
-

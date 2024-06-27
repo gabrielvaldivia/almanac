@@ -16,6 +16,16 @@ struct Event: Identifiable, Codable {
     var color: CodableColor
     var category: String?
     var notificationsEnabled: Bool = true
+
+    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true) {
+        self.title = title
+        self.date = date
+        self.endDate = endDate
+        self.color = color
+        self.category = category
+        self.notificationsEnabled = notificationsEnabled
+        print("Event initialized: \(self)")
+    }
 }
 
 struct CategoryData: Codable {
@@ -110,6 +120,7 @@ class AppData: NSObject, ObservableObject {
             notificationTime = savedTime
             print("Notification time loaded: \(notificationTime)")
         }
+        loadEvents()  // Add this line to load events
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
     }
@@ -124,7 +135,7 @@ class AppData: NSObject, ObservableObject {
             self.categories = decoded.map { categoryData in
                 return (name: categoryData.name, color: categoryData.color.color)
             }
-            print("Decoded categories: \(self.categories)")
+            // print("Decoded categories: \(self.categories)")
         } else {
             self.categories = [
                 ("Work", .blue),
@@ -132,16 +143,50 @@ class AppData: NSObject, ObservableObject {
                 ("Birthdays", .red),
                 ("Movies", .purple)
             ]
-            print("Default categories set: \(self.categories)")
+            // print("Default categories set: \(self.categories)")
         }
         
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
-            print("Notification time loaded: \(notificationTime)")
+            // print("Notification time loaded: \(notificationTime)")
+        }
+    }
+
+    func filteredEvents(events: [Event], selectedCategoryFilter: String?) -> [Event] {
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        return events.filter { event in
+            (selectedCategoryFilter == nil || event.category == selectedCategoryFilter) && event.date >= startOfToday
+        }
+    }
+
+    func loadEvents() {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "events"),
+           let decoded = try? decoder.decode([Event].self, from: data) {
+            events = decoded
+            print("Loaded events: \(events)")
+        } else {
+            print("No events found in shared UserDefaults.")
+        }
+    }
+
+    func saveEvents() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        if let encoded = try? encoder.encode(events),
+           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
+            sharedDefaults.set(encoded, forKey: "events")
+            print("Saved events: \(events)")
+        } else {
+            print("Failed to encode events.")
         }
     }
 
     func scheduleDailyNotification() {
+        print("scheduleDailyNotification called")
         let content = UNMutableNotificationContent()
         content.title = "Today's Events"
         
@@ -181,9 +226,22 @@ class AppData: NSObject, ObservableObject {
     }
 
     private func getTodayEvents() -> [Event] {
-        let today = Calendar.current.startOfDay(for: Date())
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-        return events.filter { $0.date >= today && $0.date < tomorrow }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+
+        let todayEvents = events.filter { event in
+            let eventStartOfDay = calendar.startOfDay(for: event.date)
+            print("Event date: \(event.date), Event start of day: \(eventStartOfDay), Today: \(today), Tomorrow: \(tomorrow)")
+            return eventStartOfDay >= today && eventStartOfDay < tomorrow
+        }
+
+        // Debug prints
+        print("Today's date: \(today)")
+        print("Tomorrow's date: \(tomorrow)")
+        print("Events for today: \(todayEvents)")
+
+        return todayEvents
     }
     
     func saveState() {
