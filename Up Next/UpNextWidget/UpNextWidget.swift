@@ -181,7 +181,7 @@ struct UpNextWidgetEntryView : View {
                                 }
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: 30, alignment: .leading)
+                        .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
                         
                     } .padding(.bottom, 10)
                 }
