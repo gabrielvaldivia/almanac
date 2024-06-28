@@ -70,7 +70,6 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
-    @ObservedObject var appData = AppData.shared // Use the singleton instance
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -90,9 +89,19 @@ struct UpNextWidgetEntryView : View {
         return categoryColors
     }
 
+    func fetchDefaultCategoryColor() -> Color {
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "categories"),
+           let decoded = try? JSONDecoder().decode([CategoryData].self, from: data),
+           let defaultCategory = sharedDefaults.string(forKey: "defaultCategory") {
+            return decoded.first(where: { $0.name == defaultCategory })?.color.color ?? .blue
+        }
+        return .blue
+    }
+
     var body: some View {
         let categoryColors = fetchCategoryColors()
-        let defaultCategoryColor = appData.defaultCategoryColor
+        let defaultCategoryColor = fetchDefaultCategoryColor()
         
         VStack(alignment: .leading) {
             HStack {
@@ -103,7 +112,7 @@ struct UpNextWidgetEntryView : View {
                 Spacer()
                 Link(destination: URL(string: "upnext://addEvent")!) {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundColor(defaultCategoryColor) // Updated to use the latest default category color
+                        .foregroundColor(defaultCategoryColor) // Use default category color
                         .font(.title3)
                 }
             }
@@ -155,7 +164,7 @@ struct UpNextWidgetEntryView : View {
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
                         } else {
-                            return event.date.relativeDate().capitalized 
+                            return event.date.relativeDate()
                         }
                     })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -166,7 +175,7 @@ struct UpNextWidgetEntryView : View {
 
                     ForEach(sortedKeys, id: \.self) { key in
                         HStack(alignment: .top) {
-                            Text(key)
+                            Text(key.capitalized)
                                 .frame(width: 70, alignment: .leading)
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -211,7 +220,7 @@ struct UpNextWidgetEntryView : View {
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
                         } else {
-                            return event.date.relativeDate().capitalized // Ensure title case
+                            return event.date.relativeDate()
                         }
                     })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -222,7 +231,7 @@ struct UpNextWidgetEntryView : View {
 
                     ForEach(sortedKeys, id: \.self) { key in
                         HStack(alignment: .top) {
-                            Text(key)
+                            Text(key.capitalized)
                                 .frame(width: 70, alignment: .leading)
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -322,4 +331,7 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
+
+
 
