@@ -7,6 +7,8 @@
 
 import Foundation
 import SwiftUI
+import WidgetKit // Add this import
+import UserNotifications
 
 struct Event: Identifiable, Codable {
     var id = UUID()
@@ -79,6 +81,8 @@ struct CodableColor: Codable {
 }
 
 class AppData: NSObject, ObservableObject {
+    static let shared = AppData() // Singleton instance
+
     @Published var events: [Event] = []
     @Published var categories: [(name: String, color: Color)] = [
         ("Work", .blue),
@@ -96,6 +100,7 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
+                objectWillChange.send() // Notify observers
             }
         }
     }
@@ -112,15 +117,22 @@ class AppData: NSObject, ObservableObject {
 
     private var isDataLoaded = false
 
+    var defaultCategoryColor: Color {
+        if let category = categories.first(where: { $0.name == defaultCategory }) {
+            return category.color
+        }
+        return .blue
+    }
+
     override init() {
         super.init()
         loadCategories()
-        defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? ""
+        defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? categories.first?.name ?? ""
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
             print("Notification time loaded: \(notificationTime)")
         }
-        loadEvents()  // Add this line to load events
+        loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
     }
@@ -180,6 +192,7 @@ class AppData: NSObject, ObservableObject {
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         } else {
             print("Failed to encode events.")
         }
@@ -286,5 +299,23 @@ extension AppData: UNUserNotificationCenterDelegate {
             print("Notification action triggered: \(response.actionIdentifier)")
         }
         completionHandler()
+    }
+}
+
+private func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, suiteName: String) -> T? {
+    if let sharedDefaults = UserDefaults(suiteName: suiteName),
+       let data = sharedDefaults.data(forKey: key) {
+        let decoder = JSONDecoder()
+        return try? decoder.decode(type, from: data)
+    }
+    return nil
+}
+
+private func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, suiteName: String) {
+    if let sharedDefaults = UserDefaults(suiteName: suiteName) {
+        let encoder = JSONEncoder()
+        if let encoded = try? encoder.encode(value) {
+            sharedDefaults.set(encoded, forKey: key)
+        }
     }
 }

@@ -70,6 +70,7 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
+    @ObservedObject var appData = AppData.shared // Use the singleton instance
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -91,12 +92,21 @@ struct UpNextWidgetEntryView : View {
 
     var body: some View {
         let categoryColors = fetchCategoryColors()
+        let defaultCategoryColor = appData.defaultCategoryColor
         
         VStack(alignment: .leading) {
-            Text("UP NEXT")
-                .bold()
-                .foregroundColor(.red)
-                .font(.caption)
+            HStack {
+                Text("UP NEXT")
+                    .bold()
+                    .foregroundColor(.red)
+                    .font(.caption)
+                Spacer()
+                Link(destination: URL(string: "upnext://addEvent")!) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(defaultCategoryColor) // Updated to use the latest default category color
+                        .font(.title3)
+                }
+            }
             
             if entry.events.isEmpty {
                 Spacer()
@@ -145,7 +155,7 @@ struct UpNextWidgetEntryView : View {
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
                         } else {
-                            return event.date.relativeDate()
+                            return event.date.relativeDate().capitalized 
                         }
                     })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -201,7 +211,7 @@ struct UpNextWidgetEntryView : View {
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
                         } else {
-                            return event.date.relativeDate()
+                            return event.date.relativeDate().capitalized // Ensure title case
                         }
                     })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
@@ -312,7 +322,4 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
-
-
-
 

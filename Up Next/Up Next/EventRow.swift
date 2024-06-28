@@ -45,16 +45,16 @@ struct EventRow: View {
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .font(.subheadline)
-                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
+                            .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                     } else {
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .font(.subheadline)
-                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
+                            .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
                         .font(.subheadline)
-                        .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set color to category color at 50% opacity
+                        .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                 }
             }
             .padding(.vertical, 10)

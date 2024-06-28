@@ -109,6 +109,16 @@ struct ContentView: View {
                         .listRowSeparator(.hidden)
                     } 
                 }
+                .onOpenURL { url in
+                    if url.scheme == "upnext" && url.host == "addEvent" {
+                        self.newEventTitle = ""
+                        self.newEventDate = Date()
+                        self.newEventEndDate = Date()
+                        self.showEndDate = false
+                        self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
+                        self.showAddEventSheet = true
+                    }
+                }
                
                 // Navigation Bar
                 .navigationTitle("Up Next")
