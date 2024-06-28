@@ -114,13 +114,24 @@ struct UpNextWidgetEntryView : View {
                     let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     VStack(alignment: .leading) {
                         ForEach(visibleEvents) { event in
-                            Text(event.date.relativeDate(to: event.endDate))
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(event.title)
-                                .font(.subheadline)
-                                .lineLimit(2)
-                                .padding(.bottom, 4)
+                            HStack {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                    .frame(width: 4)
+                                    .padding(.vertical, 1)
+                                VStack {
+                                    Text(event.date.relativeDate(to: event.endDate))
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Text(event.title)
+                                        .fontWeight(.medium)
+                                        .font(.footnote)
+                                        .lineLimit(2)
+                                        .padding(.bottom, 4)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -153,17 +164,18 @@ struct UpNextWidgetEntryView : View {
                             VStack(alignment: .leading) {
                                 ForEach(groupedEvents[key]!) { event in 
                                     HStack {
-                                        RoundedRectangle(cornerRadius: 5)
+                                        RoundedRectangle(cornerRadius: 4)
                                             .fill(categoryColors[event.category ?? ""] ?? .gray)
-                                            .frame(width: 5)
+                                            .frame(width: 4)
                                             .padding(.vertical, 1)
                                         VStack(alignment: .leading) {
                                             Text(event.title)
                                                 .font(.subheadline)
+                                                .fontWeight(.medium)
                                                 .lineLimit(2)
                                                 .padding(.bottom, 0)
                                             if let endDate = event.endDate {
-                                                let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day!
+                                                let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
                                                 let dayText = daysRemaining == 1 ? "day" : "days"
                                                 Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
                                                     .foregroundColor(.gray)
@@ -216,10 +228,11 @@ struct UpNextWidgetEntryView : View {
                                             VStack(alignment: .leading) {
                                                 Text(event.title)
                                                     .font(.subheadline)
+                                                    .fontWeight(.medium)
                                                     .lineLimit(2)
                                                     .padding(.bottom, 1)
                                                 if let endDate = event.endDate {
-                                                    let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day!
+                                                    let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
                                                     let dayText = daysRemaining == 1 ? "day" : "days"
                                                     Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
                                                         .foregroundColor(.gray)
@@ -248,9 +261,9 @@ struct UpNextWidgetEntryView : View {
                                 .lineLimit(1)
                                 .padding(.bottom, 1)
                             if let endDate = event.endDate {
-                                let daysRemaining = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day!
+                                let daysRemaining = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
                                 let dayText = daysRemaining == 1 ? "day" : "days"
-                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText))")
+                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
                                     .foregroundColor(.gray)
                                     .font(.caption)
                             } else {
@@ -299,5 +312,7 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
+
 
 
