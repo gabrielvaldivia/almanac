@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403EA2F22C2F69EE003207ED /* FontModifier.swift */; };
 		40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40549BC12C290E9300DA0EB6 /* PastEventsView.swift */; };
 		405920DD2C23B862008A9CF2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 405920A72C236123008A9CF2 /* WidgetKit.framework */; };
 		405920DE2C23B862008A9CF2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 405920A92C236123008A9CF2 /* SwiftUI.framework */; };
@@ -74,6 +75,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		403EA2F22C2F69EE003207ED /* FontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontModifier.swift; sourceTree = "<group>"; };
 		40549BC12C290E9300DA0EB6 /* PastEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastEventsView.swift; sourceTree = "<group>"; };
 		405920A72C236123008A9CF2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		405920A92C236123008A9CF2 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -191,6 +193,7 @@
 				405920F12C23B87A008A9CF2 /* Up Next.entitlements */,
 				40790D712C23286B005DDC65 /* Up_NextApp.swift */,
 				40790D732C23286B005DDC65 /* ContentView.swift */,
+				403EA2F22C2F69EE003207ED /* FontModifier.swift */,
 				409726472C2DE2CB0050988E /* CategoryPillsView.swift */,
 				40FEEC502C292612008AA61D /* AddEventView.swift */,
 				40FEEC522C292617008AA61D /* EditEventView.swift */,
@@ -408,6 +411,7 @@
 				40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */,
 				40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */,
 				40790D742C23286B005DDC65 /* ContentView.swift in Sources */,
+				403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */,
 				40FEEC532C292617008AA61D /* EditEventView.swift in Sources */,
 				40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */,
 				40FEEC512C292612008AA61D /* AddEventView.swift in Sources */,

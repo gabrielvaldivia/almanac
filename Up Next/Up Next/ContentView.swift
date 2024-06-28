@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var notificationsEnabled: Bool = true // New state to track notification status
+    @GestureState private var isButtonPressed: Bool = false // Use GestureState for button press state
 
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
@@ -57,9 +58,9 @@ struct ContentView: View {
                         VStack {
                             Spacer()
                             Text("No upcoming events")
-                                .font(.headline)
+                                .roundedFont(.headline)
                             Text("Add something you're looking forward to")
-                                .font(.subheadline)
+                                .roundedFont(.subheadline)
                                 .foregroundColor(.gray)
                             Spacer()
                         }
@@ -73,8 +74,8 @@ struct ContentView: View {
                             ) {
                                 ForEach(sortedKeys, id: \.self) { key in
                                     HStack(alignment: .top) {
-                                        Text(key.uppercased())
-                                            .font(.system(.footnote, design: .monospaced))
+                                        Text(key.uppercased()).monospaced()
+                                            .roundedFont(.footnote)
                                             .foregroundColor(.gray) 
                                             .frame(width: 100, alignment: .leading) 
                                             .padding(.vertical, 14)
@@ -100,45 +101,34 @@ struct ContentView: View {
                                                     .listRowSeparator(.hidden) // Hide dividers
                                             }
                                         }
-                                    }
-                                    .listRowSeparator(.hidden)
-                                }
+                                    } 
+                                    
+                                } 
+                                .listRowSeparator(.hidden)
                             }
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
+                        .background(Color.clear) 
                     } 
                 }
-                .onOpenURL { url in
-                    if url.scheme == "upnext" && url.host == "addEvent" {
-                        self.newEventTitle = ""
-                        self.newEventDate = Date()
-                        self.newEventEndDate = Date()
-                        self.showEndDate = false
-                        self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
-                        self.showAddEventSheet = true
-                    }
-                }
-               
-                // Navigation Bar
                 .navigationTitle("Up Next")
+                // .navigationBarTitleDisplayMode(.inline) // Set the title display mode to inline
                 .navigationBarItems(
                     leading: HStack {
-                        Button(action: {
-                            self.showPastEventsSheet = true
-                        }) {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .bold()
-                                .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
-                        }
+                        CircleButton(
+                            iconName: "clock.arrow.circlepath",
+                            action: {
+                                self.showPastEventsSheet = true
+                            }
+                        )
                     },
-                    trailing: Button(action: {
-                        self.showCategoryManagementView = true
-                    }) {
-                        Image(systemName: "slider.horizontal.3")
-                            .bold()
-                            .foregroundColor(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.blue : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change icon color based on selected category or default category
-                    }
+                    trailing: CircleButton(
+                        iconName: "gearshape.fill",
+                        action: {
+                            self.showCategoryManagementView = true
+                        }
+                    )
                 )
                 .onAppear {
                     print("ContentView appeared")
@@ -146,26 +136,10 @@ struct ContentView: View {
                     appData.loadCategories() // Load categories from UserDefaults
                 }
 
-                // Add event Button
-                Button(action: {
-                    self.newEventTitle = ""
-                    self.newEventDate = Date()
-                    self.newEventEndDate = Date()
-                    self.showEndDate = false
-                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory) // Set the selected category or default category
-                    self.showAddEventSheet = true // This will now trigger the bottom sheet
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title)
-                        .bold() // Make the icon thicker
-                        .foregroundColor(.white) // Always white
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 16)
-                        .background(self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue) // Change background color based on selected category and color scheme
-                        .cornerRadius(40)
-                }
-                .padding(0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                // Custom Add Event Button
+                addEventButton()
+                    .padding(0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
 
@@ -217,6 +191,7 @@ struct ContentView: View {
         }
     }
 
+    // Filtered events
     func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
@@ -314,14 +289,50 @@ struct ContentView: View {
             appData.removeNotification(for: event) // Call centralized function
         }
     }
+    
+    @ViewBuilder
+    private func addEventButton() -> some View {
+        let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
+
+        ZStack {
+            RoundedRectangle(cornerRadius: 40)
+                .fill(buttonColor)
+                .frame(width: 80, height: 60)
+                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
+                .scaleEffect(isButtonPressed ? 0.9 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
+
+            Image(systemName: "plus")
+                .font(.title)
+                .bold()
+                .foregroundColor(.white)
+        }
+        .gesture(
+            LongPressGesture(minimumDuration: 0.1)
+                .updating($isButtonPressed) { currentState, gestureState, transaction in
+                    gestureState = currentState
+                }
+                .onEnded { _ in
+                    self.newEventTitle = ""
+                    self.newEventDate = Date()
+                    self.newEventEndDate = Date()
+                    self.showEndDate = false
+                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
+                    self.showAddEventSheet = true
+                }
+        )
+    }
 }
 
+// Category Pills View
 @ViewBuilder
 private func categoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter: Binding<String?>, colorScheme: ColorScheme) -> some View {
     let filteredCategories = appData.categories.filter { category in
-        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
         return events.contains { event in
-            event.category == category.name && event.date >= startOfToday
+            event.category == category.name && 
+            (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday))
         }
     }
     
@@ -347,6 +358,26 @@ private func categoryPillsView(appData: AppData, events: [Event], selectedCatego
                 }
             }
             .padding(.horizontal)
+            .padding(.top, 0) // Remove top padding
+        }
+    }
+}
+
+// Circle Button
+struct CircleButton: View {
+    var iconName: String
+    var action: () -> Void
+    @EnvironmentObject var appData: AppData
+
+    var body: some View {
+        let defaultColor = appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
+
+        Button(action: action) {
+            ZStack {
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .bold)) // Adjust the size of the icon
+                    .foregroundColor(defaultColor) // Set icon color to the default category color
+            }
         }
     }
 }
@@ -359,3 +390,8 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
+
+
+
+
+

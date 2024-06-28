@@ -70,6 +70,7 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
+    @EnvironmentObject var appData: AppData
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -89,19 +90,9 @@ struct UpNextWidgetEntryView : View {
         return categoryColors
     }
 
-    func fetchDefaultCategoryColor() -> Color {
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "categories"),
-           let decoded = try? JSONDecoder().decode([CategoryData].self, from: data),
-           let defaultCategory = sharedDefaults.string(forKey: "defaultCategory") {
-            return decoded.first(where: { $0.name == defaultCategory })?.color.color ?? .blue
-        }
-        return .blue
-    }
-
     var body: some View {
         let categoryColors = fetchCategoryColors()
-        let defaultCategoryColor = fetchDefaultCategoryColor()
+        let defaultCategoryColor = appData.defaultCategoryColor
         
         VStack(alignment: .leading) {
             HStack {
@@ -318,6 +309,7 @@ struct UpNextWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
             UpNextWidgetEntryView(entry: entry)
+                .environmentObject(AppData.shared) // Pass appData as environment object
                 .containerBackground(.fill.tertiary, for: .widget)
         }
     }
@@ -331,6 +323,7 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
 
 
 

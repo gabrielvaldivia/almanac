@@ -26,7 +26,7 @@ struct EventRow: View {
             VStack(alignment: .leading) {
                 HStack {
                     Text(event.title)
-                        .font(.headline)
+                        .roundedFont(.headline)
                         .fontWeight(.medium)
                         .foregroundColor(colorForCategory(event.category)) // Use category color
                     Spacer()
@@ -44,16 +44,16 @@ struct EventRow: View {
                         let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
-                            .font(.subheadline)
+                            .roundedFont(.subheadline)
                             .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                     } else {
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
-                            .font(.subheadline)
+                            .roundedFont(.subheadline)
                             .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
-                        .font(.subheadline)
+                        .roundedFont(.subheadline)
                         .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
                 }
             }
