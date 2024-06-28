@@ -102,7 +102,9 @@ struct UpNextWidgetEntryView : View {
                 Spacer()
                 Text("No upcoming events")
                     .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .font(.caption)
+                Spacer ()
             } else {
                 switch widgetFamily {
                 
@@ -297,4 +299,5 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
+
 
