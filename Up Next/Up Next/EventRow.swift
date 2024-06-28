@@ -27,6 +27,7 @@ struct EventRow: View {
                 HStack {
                     Text(event.title)
                         .font(.headline)
+                        .fontWeight(.medium)
                         .foregroundColor(colorForCategory(event.category)) // Use category color
                     Spacer()
                     if event.notificationsEnabled {
