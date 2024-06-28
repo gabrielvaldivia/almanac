@@ -161,15 +161,16 @@ struct CategoriesView: View {
     }
 
     private func updateDailyNotificationTime(_ time: Date) {
-        // Logic to update the daily notification time
-        // This could involve scheduling a local notification or updating a server
-        // For example:
         let content = UNMutableNotificationContent()
-        content.title = "Daily Reminder"
-        content.body = "This is your daily reminder."
+        content.title = "Today's events"
+        
+        // Ensure appData is accessed correctly
+        let todayEvents = appData.getTodayEvents()  // Corrected method name
+        let eventTitles = todayEvents.map { $0.title }.joined(separator: ", ")
+        content.body = eventTitles.isEmpty ? "No events due today." : eventTitles
         content.sound = .default
 
-        var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
+        let dateComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
         let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)

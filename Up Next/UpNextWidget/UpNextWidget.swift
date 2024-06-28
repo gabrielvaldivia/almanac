@@ -47,11 +47,17 @@ struct Provider: AppIntentTimelineProvider {
             if category == "All Categories" {
                 return upcomingEvents
             } else {
-                return upcomingEvents.filter { $0.category == category }
+                return upcomingEvents.filter { event in
+                    safeStringCompare(event.category, category)
+                }
             }
         } else {
             return []
         }
+    }
+
+    private func safeStringCompare(_ str1: String?, _ str2: String?) -> Bool {
+        return str1?.caseInsensitiveCompare(str2 ?? "") == .orderedSame
     }
 }
 
@@ -67,7 +73,7 @@ struct UpNextWidgetEntryView : View {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d" // Updated date format to show full month name
+        formatter.dateFormat = "MMM d" // Updated date format to show full month name
         return formatter
     }()
 
@@ -92,95 +98,72 @@ struct UpNextWidgetEntryView : View {
                 .foregroundColor(.red)
                 .font(.caption)
             
-            switch widgetFamily {
-            
-            // Small widget
-            case .systemSmall:
+            if entry.events.isEmpty {
                 Spacer()
-                let visibleEvents = entry.events.prefix(2)
-                ForEach(visibleEvents) { event in
+                Text("No upcoming events")
+                    .foregroundColor(.gray)
+                    .font(.caption)
+            } else {
+                switch widgetFamily {
+                
+                // Small widget
+                case .systemSmall:
+                    Spacer()
+                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     VStack(alignment: .leading) {
-                        Text(event.date.relativeDate().capitalized)
-                            .foregroundColor(.gray)
-                            .font(.caption)
-                        Text(event.title)
-                            .font(.subheadline)
-                            .lineLimit(2)
-                            .padding(.bottom, 1)
+                        ForEach(visibleEvents) { event in
+                            Text(event.date.relativeDate(to: event.endDate))
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Text(event.title)
+                                .font(.subheadline)
+                                .lineLimit(2)
+                                .padding(.bottom, 4)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
-                }
 
-            // Medium widget
-            case .systemMedium:
-                Spacer()
-                let visibleEvents = entry.events.prefix(2)
-                ForEach(visibleEvents) { event in
+                // Medium widget
+                case .systemMedium:
                     Spacer()
-                    HStack(alignment: .top) {
-                        Text(event.date.relativeDate().capitalized)
-                            .foregroundColor(.gray)
-                            .font(.caption)
-                            .frame(width: 70, alignment: .leading)
-                        HStack {
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(categoryColors[event.category ?? ""] ?? .gray)
-                                .frame(width: 5)
-                                .padding(.vertical, 1)
-                            VStack(alignment: .leading) {
-                                Text(event.title)
-                                    .font(.subheadline)
-                                    .lineLimit(2)
-                                    .padding(.bottom, 0)
-                                if let endDate = event.endDate {
-                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                } else {
-                                    Text(event.date, formatter: dateFormatter)
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                }
-                            }
+                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
+                    let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
+                        if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                            return "Today"
+                        } else {
+                            return event.date.relativeDate()
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 6)
+                    })
+                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
+                        let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                        let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                        return date1 < date2
                     }
-                }
-            
-            // Large widget
-            case .systemLarge:
-                let visibleEvents = entry.events.prefix(5) // Limit the number of events to 5
-                let groupedEvents = Dictionary(grouping: visibleEvents.sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
-                let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                    let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
-                    let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
-                    return date1 < date2
-                }
 
-                ForEach(sortedKeys, id: \.self) { key in
-                    HStack(alignment: .top) {
-                        Text(key)
-                            .frame(width: 70, alignment: .leading)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .padding(.vertical, 4)
-                        VStack(alignment: .leading) {
-                            ForEach(groupedEvents[key]!) { event in 
-                                VStack(alignment: .leading) {
+                    ForEach(sortedKeys, id: \.self) { key in
+                        HStack(alignment: .top) {
+                            Text(key)
+                                .frame(width: 70, alignment: .leading)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.vertical, 4)
+                            VStack(alignment: .leading) {
+                                ForEach(groupedEvents[key]!) { event in 
                                     HStack {
-                                        RoundedRectangle(cornerRadius: 4)
+                                        RoundedRectangle(cornerRadius: 5)
                                             .fill(categoryColors[event.category ?? ""] ?? .gray)
-                                            .frame(width: 4)
+                                            .frame(width: 5)
                                             .padding(.vertical, 1)
                                         VStack(alignment: .leading) {
                                             Text(event.title)
                                                 .font(.subheadline)
                                                 .lineLimit(2)
-                                                .padding(.bottom, 1)
+                                                .padding(.bottom, 0)
                                             if let endDate = event.endDate {
-                                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
+                                                let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day!
+                                                let dayText = daysRemaining == 1 ? "day" : "days"
+                                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
                                                     .foregroundColor(.gray)
                                                     .font(.caption)
                                             } else {
@@ -190,44 +173,105 @@ struct UpNextWidgetEntryView : View {
                                             }
                                         }
                                     }
-                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.bottom, 6)
                                 }
-                            } 
-                        } .padding(.bottom, 10)
-                    }
-                }
-
-            case .accessoryRectangular:
-                let visibleEvents = entry.events.prefix(1)
-                ForEach(visibleEvents) { event in
-                    VStack(alignment: .leading) {
-                        Text(event.title)
-                            .font(.subheadline)
-                            .lineLimit(1)
-                            .padding(.bottom, 1)
-                        if let endDate = event.endDate {
-                            Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1) days)")
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                        } else {
-                            Text(event.date, formatter: dateFormatter)
-                                .foregroundColor(.gray)
-                                .font(.caption)
+                            }
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 4)
+
+                // Large widget
+                case .systemLarge:
+                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(5) // Sort events by date
+                    let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
+                        if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                            return "Today"
+                        } else {
+                            return event.date.relativeDate()
+                        }
+                    })
+                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
+                        let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                        let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                        return date1 < date2
+                    }
+
+                    ForEach(sortedKeys, id: \.self) { key in
+                        HStack(alignment: .top) {
+                            Text(key)
+                                .frame(width: 70, alignment: .leading)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.vertical, 4)
+                            VStack(alignment: .leading) {
+                                ForEach(groupedEvents[key]!) { event in 
+                                    VStack(alignment: .leading) {
+                                        HStack {
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                                .frame(width: 4)
+                                                .padding(.vertical, 1)
+                                            VStack(alignment: .leading) {
+                                                Text(event.title)
+                                                    .font(.subheadline)
+                                                    .lineLimit(2)
+                                                    .padding(.bottom, 1)
+                                                if let endDate = event.endDate {
+                                                    let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day!
+                                                    let dayText = daysRemaining == 1 ? "day" : "days"
+                                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
+                                                        .foregroundColor(.gray)
+                                                        .font(.caption)
+                                                } else {
+                                                    Text(event.date, formatter: dateFormatter)
+                                                        .foregroundColor(.gray)
+                                                        .font(.caption)
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
+                                    }
+                                } 
+                            } .padding(.bottom, 10)
+                        }
+                    } 
+                    Spacer ()
+
+                case .accessoryRectangular:
+                    let visibleEvents = entry.events.prefix(1)
+                    ForEach(visibleEvents) { event in
+                        VStack(alignment: .leading) {
+                            Text(event.title)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                                .padding(.bottom, 1)
+                            if let endDate = event.endDate {
+                                let daysRemaining = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day!
+                                let dayText = daysRemaining == 1 ? "day" : "days"
+                                Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText))")
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            } else {
+                                Text(event.date, formatter: dateFormatter)
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 4)
+                    }
+                    
+                default:
+                    Text("Unsupported widget size")
                 }
                 
-            default:
-                Text("Unsupported widget size")
-            }
-            
-            if entry.events.count > (widgetFamily == .systemLarge ? 5 : widgetFamily == .systemMedium ? 2 : 2) {
-                Spacer()
-                Text("\(entry.events.count - (widgetFamily == .systemLarge ? 5 : widgetFamily == .systemMedium ? 2 : 2)) more events")
-                    .foregroundColor(.gray)
-                    .font(.caption)
+                let remainingEventsCount = entry.events.count - (widgetFamily == .systemLarge ? 5 : widgetFamily == .systemMedium ? 2 : 2)
+                if remainingEventsCount > 0 {
+                    Spacer()
+                    Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -253,7 +297,4 @@ extension ConfigurationAppIntent {
         return intent
     }
 }
-
-
-
 

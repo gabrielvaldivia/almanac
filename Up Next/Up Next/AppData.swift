@@ -225,7 +225,7 @@ class AppData: NSObject, ObservableObject {
         UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
-    private func getTodayEvents() -> [Event] {
+    func getTodayEvents() -> [Event] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!

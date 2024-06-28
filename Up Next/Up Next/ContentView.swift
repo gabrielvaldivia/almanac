@@ -41,7 +41,13 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) { // Remove vertical padding by setting spacing to 0
                     // List of events
-                    let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { $0.date.relativeDate() })
+                    let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
+                        if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                            return "Today"
+                        } else {
+                            return event.date.relativeDate()
+                        }
+                    })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
                         let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
                         let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
