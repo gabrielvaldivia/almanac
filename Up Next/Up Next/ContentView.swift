@@ -32,8 +32,7 @@ struct ContentView: View {
 
     let itemDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
+        formatter.dateFormat = "EEE, MMMM d" // Updated format to include day of the week
         return formatter
     }()
 
@@ -43,7 +42,7 @@ struct ContentView: View {
                 VStack(spacing: 0) { // Remove vertical padding by setting spacing to 0
                     // List of events
                     let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
-                        if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                        if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
                             return "Today"
                         } else {
                             return event.date.relativeDate()
@@ -67,7 +66,6 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         List {
-                            // Sticky Category Pills
                             Section(header: categoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                                         .padding(.leading, -20) // Remove left padding
                                         .padding(.trailing, -20) // Remove right padding
@@ -75,8 +73,8 @@ struct ContentView: View {
                                 ForEach(sortedKeys, id: \.self) { key in
                                     HStack(alignment: .top) {
                                         Text(key.uppercased()).monospaced()
-                                            .roundedFont(.footnote)
-                                            .foregroundColor(.gray) 
+                                            .roundedFont(.caption)
+                                            .foregroundColor(.gray)
                                             .frame(width: 100, alignment: .leading) 
                                             .padding(.vertical, 14)
                                         VStack(alignment: .leading) {
@@ -283,13 +281,22 @@ struct ContentView: View {
     }
     
     func handleNotification(for event: Event) {
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)!
+
         if event.notificationsEnabled {
-            appData.scheduleNotification(for: event) // Call centralized function
+            if event.date <= endOfToday && (event.endDate ?? event.date) >= startOfToday {
+                appData.scheduleNotification(for: event) // Call centralized function
+            } else {
+                appData.removeNotification(for: event) // Call centralized function
+            }
         } else {
             appData.removeNotification(for: event) // Call centralized function
         }
     }
     
+    // Add Event Button
     @ViewBuilder
     private func addEventButton() -> some View {
         let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
@@ -298,19 +305,21 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 40)
                 .fill(buttonColor)
                 .frame(width: 80, height: 60)
-                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
-                .scaleEffect(isButtonPressed ? 0.9 : 1.0)
+                .shadow(color: buttonColor.opacity(colorScheme == .dark ? 0.7 : 0.3), radius: 10, x: 0, y: 5) // Adjust shadow opacity based on color scheme
+                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
 
             Image(systemName: "plus")
                 .font(.title)
                 .bold()
                 .foregroundColor(.white)
+                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
         }
         .gesture(
-            LongPressGesture(minimumDuration: 0.1)
-                .updating($isButtonPressed) { currentState, gestureState, transaction in
-                    gestureState = currentState
+            DragGesture(minimumDistance: 0)
+                .updating($isButtonPressed) { _, isPressed, _ in
+                    isPressed = true
                 }
                 .onEnded { _ in
                     self.newEventTitle = ""
@@ -390,6 +399,7 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
+
 
 
 

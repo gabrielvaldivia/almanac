@@ -245,14 +245,8 @@ class AppData: NSObject, ObservableObject {
 
         let todayEvents = events.filter { event in
             let eventStartOfDay = calendar.startOfDay(for: event.date)
-            print("Event date: \(event.date), Event start of day: \(eventStartOfDay), Today: \(today), Tomorrow: \(tomorrow)")
             return eventStartOfDay >= today && eventStartOfDay < tomorrow
         }
-
-        // Debug prints
-        print("Today's date: \(today)")
-        print("Tomorrow's date: \(tomorrow)")
-        print("Events for today: \(todayEvents)")
 
         return todayEvents
     }

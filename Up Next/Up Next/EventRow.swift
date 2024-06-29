@@ -28,11 +28,11 @@ struct EventRow: View {
                     Text(event.title)
                         .roundedFont(.headline)
                         .fontWeight(.medium)
-                        .foregroundColor(colorForCategory(event.category)) // Use category color
+                        .foregroundColor(colorScheme == .dark ? .white : colorForCategory(event.category)) // Set title color based on color scheme
                     Spacer()
                     if event.notificationsEnabled {
                         Image(systemName: "bell.fill")
-                            .foregroundColor(colorForCategory(event.category).opacity(0.5)) // Set bell icon color to match category color
+                            .foregroundColor(colorForCategory(event.category).opacity(0.9)) // Set bell icon color to match category color
                             .font(.caption)
                             .padding(.trailing)
                     }
@@ -45,22 +45,28 @@ struct EventRow: View {
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .roundedFont(.subheadline)
-                            .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
+                    } else if Calendar.current.isDateInToday(endDate) {
+                        let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
+                        let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
+                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
+                            .roundedFont(.subheadline)
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                     } else {
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .roundedFont(.subheadline)
-                            .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
                         .roundedFont(.subheadline)
-                        .foregroundColor(colorForCategory(event.category).opacity(0.7)) // Set color to category color at 50% opacity
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                 }
             }
             .padding(.vertical, 10)
             .padding(.leading, 10)
             .background(
-                colorForCategory(event.category).opacity(colorScheme == .light ? 0.05 : 0.2) // Use the injected color scheme here
+                colorForCategory(event.category).opacity(colorScheme == .light ? 0.1 : 0.3) // Use the injected color scheme here
             )
             .cornerRadius(10) // Apply rounded corners
         }

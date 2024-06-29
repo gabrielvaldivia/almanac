@@ -154,6 +154,8 @@ struct UpNextWidgetEntryView : View {
                     let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
+                        } else if let endDate = event.endDate, Calendar.current.isDateInToday(endDate) {
+                            return "Today"
                         } else {
                             return event.date.relativeDate()
                         }
@@ -170,7 +172,7 @@ struct UpNextWidgetEntryView : View {
                                 .frame(width: 70, alignment: .leading)
                                 .font(.caption)
                                 .foregroundColor(.gray)
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 2)
                             VStack(alignment: .leading) {
                                 ForEach(groupedEvents[key]!) { event in 
                                     HStack {
@@ -210,6 +212,8 @@ struct UpNextWidgetEntryView : View {
                     let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
+                        } else if let endDate = event.endDate, Calendar.current.isDateInToday(endDate) {
+                            return "Today"
                         } else {
                             return event.date.relativeDate()
                         }
@@ -226,7 +230,7 @@ struct UpNextWidgetEntryView : View {
                                 .frame(width: 70, alignment: .leading)
                                 .font(.caption)
                                 .foregroundColor(.gray)
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 2)
                             VStack(alignment: .leading) {
                                 ForEach(groupedEvents[key]!) { event in 
                                     VStack(alignment: .leading) {
