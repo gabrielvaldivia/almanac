@@ -296,7 +296,6 @@ struct ContentView: View {
         }
     }
     
-    // Add Event Button
     @ViewBuilder
     private func addEventButton() -> some View {
         let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
@@ -305,7 +304,7 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 40)
                 .fill(buttonColor)
                 .frame(width: 80, height: 60)
-                .shadow(color: buttonColor.opacity(colorScheme == .dark ? 0.7 : 0.3), radius: 10, x: 0, y: 5) // Adjust shadow opacity based on color scheme
+                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
                 .scaleEffect(isButtonPressed ? 0.7 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
 
@@ -399,9 +398,4 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
-
-
-
-
-
 

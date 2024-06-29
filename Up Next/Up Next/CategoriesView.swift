@@ -41,7 +41,9 @@ struct CategoriesView: View {
                             },
                             set: { 
                                 if self.appData.categories.indices.contains(index) {
+                                    let oldName = self.appData.categories[index].name
                                     self.appData.categories[index].name = $0
+                                    updateEventsForCategoryChange(oldName: oldName, newName: $0)  // Update events
                                 }
                             }
                         ))
@@ -67,7 +69,7 @@ struct CategoriesView: View {
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)
                 
-                // Add Category button\
+                // Add Category button
                 HStack {
                     Button(action: {
                         showingAddCategorySheet = true
@@ -179,5 +181,15 @@ struct CategoriesView: View {
                 print("Error scheduling notification: \(error)")
             }
         }
+    }
+    
+    private func updateEventsForCategoryChange(oldName: String, newName: String) {
+        for i in 0..<appData.events.count {
+            if appData.events[i].category == oldName {
+                appData.events[i].category = newName
+            }
+        }
+        appData.saveEvents()  // Save the updated events
+        appData.objectWillChange.send()  // Notify the view of changes
     }
 }

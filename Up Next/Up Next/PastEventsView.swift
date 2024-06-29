@@ -96,7 +96,7 @@ struct PastEventsView: View {
             if endDate1 == endDate2 {
                 return event1.date > event2.date
             } else {
-                return endDate1 < endDate2
+                return endDate1 > endDate2 // Change to sort in descending order
             }
         }
     }

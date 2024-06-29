@@ -167,3 +167,4 @@ struct EditEventView_Previews: PreviewProvider {
         .environmentObject(AppData())
     }
 }
+

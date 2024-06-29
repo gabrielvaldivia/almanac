@@ -313,3 +313,4 @@ private func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, 
         }
     }
 }
+
