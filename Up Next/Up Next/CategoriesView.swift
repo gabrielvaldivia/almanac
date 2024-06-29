@@ -159,7 +159,9 @@ struct CategoriesView: View {
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
-        appData.categories.move(fromOffsets: source, toOffset: destination)
+        DispatchQueue.main.async {
+            appData.categories.move(fromOffsets: source, toOffset: destination)
+        }
     }
 
     private func updateDailyNotificationTime(_ time: Date) {
@@ -189,7 +191,6 @@ struct CategoriesView: View {
                 appData.events[i].category = newName
             }
         }
-        appData.saveEvents()  // Save the updated events
         appData.objectWillChange.send()  // Notify the view of changes
     }
 }
