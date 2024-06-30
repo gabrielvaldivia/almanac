@@ -120,7 +120,6 @@ struct UpNextWidgetEntryView : View {
                 
                 // Small widget
                 case .systemSmall:
-                    Spacer()
                     let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     VStack(alignment: .leading) {
                         ForEach(visibleEvents) { event in
@@ -142,14 +141,15 @@ struct UpNextWidgetEntryView : View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading) // Set max height
                         }
                     }
+                    Spacer()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
 
                 // Medium widget
                 case .systemMedium:
-                    Spacer()
                     let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
@@ -199,12 +199,13 @@ struct UpNextWidgetEntryView : View {
                                             }
                                         }
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading) // Set max height
                                     .padding(.bottom, 6)
                                 }
                             }
                         }
                     }
+                    Spacer()
 
                 // Large widget
                 case .systemLarge:
@@ -264,7 +265,7 @@ struct UpNextWidgetEntryView : View {
                                                 }
                                             }
                                         }
-                                        .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
+                                        .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading) // Set max height
                                     }
                                 } 
                             } .padding(.bottom, 10)
