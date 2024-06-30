@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import UIKit  // Ensure UIKit is imported for UIColor
+import WidgetKit  // Add this import
 
 extension Color {
     func toHex() -> String? {
@@ -25,10 +26,11 @@ struct CategoriesView: View {
     @State private var newCategoryName = ""
     @State private var newCategoryColor = Color.blue  // Default color for new category
     @FocusState private var isCategoryNameFieldFocused: Bool  // Add this line
+    @State private var showingDeleteAllAlert = false
 
     var body: some View {
         NavigationView {
-            List {
+            Form {  // Change List to Form
                 // Categories section 
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
@@ -83,10 +85,10 @@ struct CategoriesView: View {
                     }
                 }
                 
-                // Default category section
+                // Default Category Picker
                 Section() {
                     Picker("Default Category", selection: Binding(
-                        get: { 
+                        get: {
                             if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
                                 return firstCategory
                             }
@@ -111,8 +113,29 @@ struct CategoriesView: View {
                         }
                     ), displayedComponents: .hourAndMinute)
                 }
+
+                // Delete All Events Button
+                    Button(action: {
+                        showingDeleteAllAlert = true
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Delete All Events")
+                        }
+                        .foregroundColor(.red)
+                    }
+                    .alert(isPresented: $showingDeleteAllAlert) {
+                        Alert(
+                            title: Text("Delete All Events"),
+                            message: Text("Are you sure you want to delete all events? This action cannot be undone."),
+                            primaryButton: .destructive(Text("Delete")) {
+                                deleteAllEvents()
+                            },
+                            secondaryButton: .cancel()
+                        )
+                    }
             }
-            .listStyle(GroupedListStyle())
+            .formStyle(GroupedFormStyle()) 
             .navigationBarTitle("Settings", displayMode: .inline)
             .navigationBarItems(leading: EditButton())
             
@@ -124,6 +147,7 @@ struct CategoriesView: View {
                             .focused($isCategoryNameFieldFocused)  // Add this line
                         ColorPicker("Choose Color", selection: $newCategoryColor)
                     }
+                    .formStyle(GroupedFormStyle())  // Add this line
                     .navigationBarItems(
                         leading: Button("Cancel") {
                             showingAddCategorySheet = false
@@ -192,5 +216,11 @@ struct CategoriesView: View {
             }
         }
         appData.objectWillChange.send()  // Notify the view of changes
+    }
+    
+    private func deleteAllEvents() {
+        appData.events.removeAll()
+        appData.saveEvents()
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 }

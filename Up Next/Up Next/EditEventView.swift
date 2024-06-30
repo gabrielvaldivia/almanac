@@ -16,6 +16,8 @@ struct EditEventView: View {
         didSet {
             if let event = selectedEvent {
                 notificationsEnabled = event.notificationsEnabled
+                repeatOption = event.repeatOption
+                repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
             }
         }
     }
@@ -25,8 +27,10 @@ struct EditEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: CodableColor // Use CodableColor to store color
-    @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
+    @Binding var selectedColor: CodableColor
+    @Binding var notificationsEnabled: Bool
+    @State private var repeatOption: RepeatOption = .never
+    @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -38,20 +42,31 @@ struct EditEventView: View {
                     }
                     Section() {
                         DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
-                            .datePickerStyle(DefaultDatePickerStyle()) // Set to WheelDatePickerStyle for expanded view
+                            .datePickerStyle(DefaultDatePickerStyle())
                         if showEndDate {
                             DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle()) // Set to WheelDatePickerStyle for expanded view
+                                .datePickerStyle(DefaultDatePickerStyle())
                             Button("Remove End Date") {
                                 showEndDate = false
-                                newEventEndDate = Date() // Reset end date to default
+                                newEventEndDate = Date()
                             }
-                            .foregroundColor(.red) // Set button text color to red
+                            .foregroundColor(.red)
                         } else {
                             Button("Add End Date") {
                                 showEndDate = true
-                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
+                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
                             }
+                        }
+                    }
+                    Section() {
+                        Picker("Repeat", selection: $repeatOption) {
+                            ForEach(RepeatOption.allCases, id: \.self) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                        if repeatOption != .never {
+                            DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
+                                .datePickerStyle(DefaultDatePickerStyle())
                         }
                     }
                     Section() {
@@ -77,6 +92,7 @@ struct EditEventView: View {
                     Section() {
                         Toggle("Notify me", isOn: $notificationsEnabled)
                     }
+                    
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -85,14 +101,14 @@ struct EditEventView: View {
                         Button("Save") {
                             saveEvent()
                         }
-                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
+                        .disabled(newEventTitle.isEmpty)
                     }
-                    ToolbarItem(placement: .bottomBar) { // Add this ToolbarItem for delete button
+                    ToolbarItem(placement: .bottomBar) {
                         Button("Delete Event") {
                             if let event = selectedEvent {
                                 deleteEvent(at: event)
                             }
-                            showEditSheet = false // Dismiss the sheet
+                            showEditSheet = false
                         }
                         .foregroundColor(.red)
                     }
@@ -101,6 +117,8 @@ struct EditEventView: View {
             .onAppear {
                 if let event = selectedEvent {
                     notificationsEnabled = event.notificationsEnabled
+                    repeatOption = event.repeatOption
+                    repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
                 }
             }
     }
@@ -108,7 +126,7 @@ struct EditEventView: View {
     func deleteEvent(at event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
-            saveEvents()  // Save after deleting
+            saveEvents()
         }
     }
 
@@ -120,13 +138,50 @@ struct EditEventView: View {
             events[index].color = selectedColor
             events[index].category = selectedCategory
             events[index].notificationsEnabled = notificationsEnabled
+            events[index].repeatOption = repeatOption
+            events[index].repeatUntil = repeatOption != .never ? repeatUntil : nil
             saveEvents()
             if events[index].notificationsEnabled {
-                appData.scheduleNotification(for: events[index]) // Call centralized function
+                appData.scheduleNotification(for: events[index])
             } else {
-                appData.removeNotification(for: events[index]) // Call centralized function
+                appData.removeNotification(for: events[index])
             }
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        }
+    }
+
+    func generateRepeatingEvents(for event: Event) -> [Event] {
+        var repeatingEvents = [Event]()
+        var currentEvent = event
+        repeatingEvents.append(currentEvent)
+        while let nextDate = getNextRepeatDate(for: currentEvent), nextDate <= (event.repeatUntil ?? Date()) {
+            currentEvent = Event(
+                title: event.title,
+                date: nextDate,
+                endDate: event.endDate,
+                color: event.color,
+                category: event.category,
+                notificationsEnabled: event.notificationsEnabled,
+                repeatOption: event.repeatOption,
+                repeatUntil: event.repeatUntil
+            )
+            repeatingEvents.append(currentEvent)
+        }
+        return repeatingEvents
+    }
+
+    func getNextRepeatDate(for event: Event) -> Date? {
+        switch event.repeatOption {
+        case .never:
+            return nil
+        case .daily:
+            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+        case .weekly:
+            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
+        case .monthly:
+            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
+        case .yearly:
+            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
         }
     }
 
@@ -141,7 +196,7 @@ struct EditEventView: View {
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         } else {
             print("Failed to encode events.")
         }
@@ -160,11 +215,10 @@ struct EditEventView_Previews: PreviewProvider {
             showEndDate: .constant(false),
             showEditSheet: .constant(false),
             selectedCategory: .constant(nil),
-            selectedColor: .constant(CodableColor(color: .black)), // Use CodableColor for selectedColor
-            notificationsEnabled: .constant(true), // New binding for notificationsEnabled
-            saveEvent: {} // Provide a dummy implementation for the saveEvent parameter
+            selectedColor: .constant(CodableColor(color: .black)),
+            notificationsEnabled: .constant(true),
+            saveEvent: {}
         )
         .environmentObject(AppData())
     }
 }
-

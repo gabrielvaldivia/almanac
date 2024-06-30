@@ -23,6 +23,8 @@ struct AddEventView: View {
     @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
+    @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
+    @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
 
     var body: some View {
             NavigationView {
@@ -50,6 +52,17 @@ struct AddEventView: View {
                         }
                     }
                     Section() {
+                        Picker("Repeat", selection: $repeatOption) {
+                            ForEach(RepeatOption.allCases, id: \.self) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                        if repeatOption != .never {
+                            DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
+                                .datePickerStyle(DefaultDatePickerStyle())
+                        }
+                    }
+                    Section() {
                         HStack {
                             Picker("Category", selection: $selectedCategory) {
                                 ForEach(appData.categories, id: \.name) { category in
@@ -66,6 +79,7 @@ struct AddEventView: View {
                     Section() {
                         Toggle("Notify me", isOn: $notificationsEnabled)
                     }
+                    
                 }
                 .navigationTitle("Add Event")
                 .navigationBarTitleDisplayMode(.inline)
@@ -100,14 +114,51 @@ struct AddEventView: View {
             endDate: showEndDate ? newEventEndDate : nil,
             color: selectedColor,
             category: selectedCategory,
-            notificationsEnabled: notificationsEnabled
+            notificationsEnabled: notificationsEnabled,
+            repeatOption: repeatOption,
+            repeatUntil: repeatOption != .never ? repeatUntil : nil
         )
-        events.append(newEvent)
+        events.append(contentsOf: generateRepeatingEvents(for: newEvent))
         saveEvents()
         if newEvent.notificationsEnabled {
             appData.scheduleNotification(for: newEvent) // Call centralized function
         }
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+    }
+
+    func generateRepeatingEvents(for event: Event) -> [Event] {
+        var repeatingEvents = [Event]()
+        var currentEvent = event
+        repeatingEvents.append(currentEvent)
+        while let nextDate = getNextRepeatDate(for: currentEvent), nextDate <= (event.repeatUntil ?? Date()) {
+            currentEvent = Event(
+                title: event.title,
+                date: nextDate,
+                endDate: event.endDate,
+                color: event.color,
+                category: event.category,
+                notificationsEnabled: event.notificationsEnabled,
+                repeatOption: event.repeatOption,
+                repeatUntil: event.repeatUntil
+            )
+            repeatingEvents.append(currentEvent)
+        }
+        return repeatingEvents
+    }
+
+    func getNextRepeatDate(for event: Event) -> Date? {
+        switch event.repeatOption {
+        case .never:
+            return nil
+        case .daily:
+            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+        case .weekly:
+            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
+        case .monthly:
+            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
+        case .yearly:
+            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
+        }
     }
 
     func saveEvents() {
@@ -116,7 +167,7 @@ struct AddEventView: View {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            print("Saved events: \(events)")
+            // print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")
         }

@@ -18,16 +18,28 @@ struct Event: Identifiable, Codable {
     var color: CodableColor
     var category: String?
     var notificationsEnabled: Bool = true
+    var repeatOption: RepeatOption = .never
+    var repeatUntil: Date?
 
-    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true) {
+    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil) {
         self.title = title
         self.date = date
         self.endDate = endDate
         self.color = color
         self.category = category
         self.notificationsEnabled = notificationsEnabled
+        self.repeatOption = repeatOption
+        self.repeatUntil = repeatUntil
         print("Event initialized: \(self)")
     }
+}
+
+enum RepeatOption: String, Codable, CaseIterable {
+    case never = "Never"
+    case daily = "Daily"
+    case weekly = "Weekly"
+    case monthly = "Monthly"
+    case yearly = "Yearly"
 }
 
 struct CategoryData: Codable {
@@ -108,7 +120,7 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
-                print("Notification time saved: \(notificationTime)")
+                // print("Notification time saved: \(notificationTime)")
                 scheduleDailyNotification()
                 saveState()
             }
@@ -126,11 +138,12 @@ class AppData: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        migrateUserDefaults() // Call the migration function
         loadCategories()
         defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? categories.first?.name ?? ""
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
-            print("Notification time loaded: \(notificationTime)")
+            // print("Notification time loaded: \(notificationTime)")
         }
         loadEvents()
         isDataLoaded = true
@@ -176,10 +189,20 @@ class AppData: NSObject, ObservableObject {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "events"),
-           let decoded = try? decoder.decode([Event].self, from: data) {
-            events = decoded
-            print("Loaded events: \(events)")
+           let data = sharedDefaults.data(forKey: "events") {
+            do {
+                var decodedEvents = try decoder.decode([Event].self, from: data)
+                // Ensure all events have the new properties
+                for i in 0..<decodedEvents.count {
+                    if decodedEvents[i].repeatUntil == nil {
+                        decodedEvents[i].repeatUntil = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+                    }
+                }
+                events = decodedEvents
+                // print("Loaded events: \(events)")
+            } catch {
+                print("Failed to decode events: \(error)")
+            }
         } else {
             print("No events found in shared UserDefaults.")
         }
@@ -191,10 +214,10 @@ class AppData: NSObject, ObservableObject {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            print("Saved events: \(events)")
+            // print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         } else {
-            print("Failed to encode events.")
+            // print("Failed to encode events.")
         }
     }
 
@@ -314,3 +337,35 @@ private func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, 
     }
 }
 
+func migrateUserDefaults() {
+    let defaults = UserDefaults.standard
+    let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
+
+    // Migrate events
+    if let oldEventsData = defaults.data(forKey: "events"), sharedDefaults?.data(forKey: "events") == nil {
+        sharedDefaults?.set(oldEventsData, forKey: "events")
+        defaults.removeObject(forKey: "events")
+        print("Migrated events to shared UserDefaults.")
+    }
+
+    // Migrate categories
+    if let oldCategoriesData = defaults.data(forKey: "categories"), sharedDefaults?.data(forKey: "categories") == nil {
+        sharedDefaults?.set(oldCategoriesData, forKey: "categories")
+        defaults.removeObject(forKey: "categories")
+        print("Migrated categories to shared UserDefaults.")
+    }
+
+    // Migrate notification time
+    if let oldNotificationTime = defaults.object(forKey: "notificationTime") as? Date, sharedDefaults?.object(forKey: "notificationTime") == nil {
+        sharedDefaults?.set(oldNotificationTime, forKey: "notificationTime")
+        defaults.removeObject(forKey: "notificationTime")
+        print("Migrated notification time to shared UserDefaults.")
+    }
+
+    // Migrate default category
+    if let oldDefaultCategory = defaults.string(forKey: "defaultCategory"), sharedDefaults?.string(forKey: "defaultCategory") == nil {
+        sharedDefaults?.set(oldDefaultCategory, forKey: "defaultCategory")
+        defaults.removeObject(forKey: "defaultCategory")
+        print("Migrated default category to shared UserDefaults.")
+    }
+}

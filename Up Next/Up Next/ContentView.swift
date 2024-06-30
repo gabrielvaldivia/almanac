@@ -136,12 +136,14 @@ struct ContentView: View {
 
                 .onOpenURL { url in
                     if url.scheme == "upnext" && url.host == "addEvent" {
-                        self.newEventTitle = ""
-                        self.newEventDate = Date()
-                        self.newEventEndDate = Date()
-                        self.showEndDate = false
-                        self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
-                        self.showAddEventSheet = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Add a 0.5 second delay
+                            self.newEventTitle = ""
+                            self.newEventDate = Date()
+                            self.newEventEndDate = Date()
+                            self.showEndDate = false
+                            self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
+                            self.showAddEventSheet = true
+                        }
                     }
                 }
 
@@ -252,7 +254,7 @@ struct ContentView: View {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            print("Saved events: \(events)")
+            // print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         } else {
             print("Failed to encode events.")

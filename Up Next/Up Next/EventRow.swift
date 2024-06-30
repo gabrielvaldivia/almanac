@@ -56,6 +56,11 @@ struct EventRow: View {
                         .roundedFont(.subheadline)
                         .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                 }
+                if event.repeatOption != .never {
+                    Text("Repeats \(event.repeatOption.rawValue.lowercased())")
+                        .roundedFont(.subheadline)
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
+                }
             }
             .padding(.vertical, 10)
             .padding(.leading, 10)
