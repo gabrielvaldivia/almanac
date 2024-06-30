@@ -21,6 +21,8 @@ func CategoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter
             HStack {
                 ForEach(filteredCategories, id: \.name) { category in
                     Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
                         selectedCategoryFilter.wrappedValue = selectedCategoryFilter.wrappedValue == category.name ? nil : category.name
                     }) {
                         Text(category.name)

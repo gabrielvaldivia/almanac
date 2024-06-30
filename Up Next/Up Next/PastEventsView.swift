@@ -49,6 +49,7 @@ struct PastEventsView: View {
                                      newEventEndDate: $newEventEndDate,
                                      showEndDate: $showEndDate,
                                      selectedCategory: $selectedCategory,
+                                     showEditSheet: $showEditSheet, // Add this line
                                      categories: categories)
                         }
                         .listRowSeparator(.hidden) // Remove dividers for each row

@@ -86,6 +86,7 @@ struct ContentView: View {
                                                          newEventEndDate: $newEventEndDate,
                                                          showEndDate: $showEndDate,
                                                          selectedCategory: $selectedCategory,
+                                                         showEditSheet: $showEditSheet, // Add this line
                                                          categories: appData.categories)
                                                     .onTapGesture { // Add tap gesture to open EditEventView
                                                         self.selectedEvent = event
@@ -117,6 +118,8 @@ struct ContentView: View {
                         CircleButton(
                             iconName: "clock.arrow.circlepath",
                             action: {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
                                 self.showPastEventsSheet = true
                             }
                         )
@@ -124,6 +127,8 @@ struct ContentView: View {
                     trailing: CircleButton(
                         iconName: "gearshape.fill",
                         action: {
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
                             self.showCategoryManagementView = true
                         }
                     )
@@ -335,6 +340,8 @@ struct ContentView: View {
                     isPressed = true
                 }
                 .onEnded { _ in
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
                     self.newEventTitle = ""
                     self.newEventDate = Date()
                     self.newEventEndDate = Date()
