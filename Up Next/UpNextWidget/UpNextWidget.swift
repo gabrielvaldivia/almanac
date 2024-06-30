@@ -74,7 +74,7 @@ struct UpNextWidgetEntryView : View {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d" // Updated date format to show full month name
+        formatter.dateFormat = "EEE, MMM d" // Updated date format to show full month name
         return formatter
     }()
 
