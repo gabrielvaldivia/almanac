@@ -100,7 +100,7 @@ class AppData: NSObject, ObservableObject {
         ("Work", .blue),
         ("Social", .green),
         ("Birthdays", .red),
-        ("Movies", .purple)
+        ("Holidays", .purple)
     ] {
         didSet {
             if isDataLoaded {
@@ -166,7 +166,7 @@ class AppData: NSObject, ObservableObject {
                 ("Work", .blue),
                 ("Social", .green),
                 ("Birthdays", .red),
-                ("Movies", .purple)
+                ("Holidays", .purple)
             ]
             // print("Default categories set: \(self.categories)")
         }

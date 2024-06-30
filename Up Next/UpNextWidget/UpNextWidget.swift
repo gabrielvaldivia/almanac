@@ -130,7 +130,7 @@ struct UpNextWidgetEntryView : View {
                                     .frame(width: 4)
                                     .padding(.vertical, 1)
                                 VStack {
-                                    Text(event.date.relativeDate(to: event.endDate))
+                                    Text(event.date.relativeDate(to: event.endDate).capitalized)
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                         .frame(maxWidth: .infinity, alignment: .leading)
