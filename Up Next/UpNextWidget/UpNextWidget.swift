@@ -246,11 +246,17 @@ struct UpNextWidgetEntryView : View {
                                                     .lineLimit(2)
                                                     .padding(.bottom, 1)
                                                 if let endDate = event.endDate {
-                                                    let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
-                                                    let dayText = daysRemaining == 1 ? "day" : "days"
-                                                    Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysRemaining) \(dayText) left)")
-                                                        .foregroundColor(.gray)
-                                                        .font(.caption)
+                                                    let daysDuration = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
+                                                    let dayText = daysDuration == 1 ? "day" : "days"
+                                                    if event.date > Date() {
+                                                        Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysDuration) \(dayText))")
+                                                            .foregroundColor(.gray)
+                                                            .font(.caption)
+                                                    } else {
+                                                        Text("\(event.date, formatter: dateFormatter) — \(endDate, formatter: dateFormatter) (\(daysDuration) \(dayText) left)")
+                                                            .foregroundColor(.gray)
+                                                            .font(.caption)
+                                                    }
                                                 } else {
                                                     Text(event.date, formatter: dateFormatter)
                                                         .foregroundColor(.gray)

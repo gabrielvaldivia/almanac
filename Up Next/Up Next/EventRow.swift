@@ -44,21 +44,21 @@ struct EventRow: View {
                         let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
-                            .roundedFont(.subheadline)
+                            .roundedFont(.footnote)
                             .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                     } else {
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
-                            .roundedFont(.subheadline)
+                            .roundedFont(.footnote)
                             .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
-                        .roundedFont(.subheadline)
+                        .roundedFont(.footnote)
                         .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
                 }
                 if event.repeatOption != .never {
                     Text("Repeats \(event.repeatOption.rawValue.lowercased())")
-                        .roundedFont(.subheadline)
+                        .roundedFont(.footnote)
                         .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
                 }
             }
@@ -80,7 +80,7 @@ struct EventRow: View {
     // New DateFormatter for month and day
     private var monthDayFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d"
+        formatter.dateFormat = "EEE, MMM d"
         return formatter
     }
 }
