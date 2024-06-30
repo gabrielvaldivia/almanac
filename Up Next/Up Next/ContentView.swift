@@ -134,6 +134,18 @@ struct ContentView: View {
                     appData.loadCategories() // Load categories from UserDefaults
                 }
 
+                .onOpenURL { url in
+                    if url.scheme == "upnext" && url.host == "addEvent" {
+                        self.newEventTitle = ""
+                        self.newEventDate = Date()
+                        self.newEventEndDate = Date()
+                        self.showEndDate = false
+                        self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
+                        self.showAddEventSheet = true
+                    }
+                }
+
+
                 // Custom Add Event Button
                 addEventButton()
                     .padding(0)
