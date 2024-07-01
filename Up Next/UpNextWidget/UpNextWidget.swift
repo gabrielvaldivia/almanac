@@ -475,27 +475,40 @@ struct ThisYearEntry: TimelineEntry {
 struct ThisYearWidgetEntryView : View {
     var entry: ThisYearProvider.Entry
 
+    private let yearFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy" // Format to display year without comma
+        return formatter
+    }()
+
     var body: some View {
         let monthInitials = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]
         let lightGray = Color(UIColor.systemGray5) // Lighter gray color
         let currentDate = Date()
 
         GeometryReader { geometry in
-            let spacing: CGFloat = 2.5
+            let spacing: CGFloat = 6
             let columnCount = 12
             let rowCount = 4
             let totalSpacing = spacing * CGFloat(columnCount - 1)
             let itemWidth = (geometry.size.width - totalSpacing) / CGFloat(columnCount)
-            let itemHeight = (geometry.size.height - totalSpacing) / CGFloat(rowCount)
 
             VStack {
+                Text("\(currentDate, formatter: yearFormatter)") // Use date formatter for year
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    // .frame(maxWidth: .infinity, alignment: .leading) // Align text to the left
+                
+                Spacer ()
                 // Month initials header
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columnCount), spacing: spacing) {
                     ForEach(0..<columnCount) { index in
                         Text(monthInitials[index])
                             .foregroundColor(.gray)
+                            .font(.system(size: 8))
                             .font(.caption)
                             .frame(maxWidth: .infinity)
+                            .padding(.bottom, 0)
                     }
                 }
 
@@ -516,7 +529,7 @@ struct ThisYearWidgetEntryView : View {
 
                         Rectangle()
                             .fill(hasEvent ? Color.blue : lightGray) // Use lighter gray color
-                            .frame(width: itemWidth, height: itemHeight)
+                            .aspectRatio(1, contentMode: .fit) // Ensure square aspect ratio
                             .cornerRadius(4) // Added corner radius
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
