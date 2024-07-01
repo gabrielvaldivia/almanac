@@ -273,6 +273,7 @@ struct UpNextWidgetEntryView : View {
                     } 
                     Spacer ()
 
+                // Next Event widget
                 case .accessoryRectangular:
                     let visibleEvents = entry.events.prefix(1)
                     ForEach(visibleEvents) { event in
@@ -323,6 +324,8 @@ struct UpNextWidget: Widget {
                 .environmentObject(AppData.shared) // Pass appData as environment object
                 .containerBackground(.fill.tertiary, for: .widget)
         }
+        .configurationDisplayName("Up Next")
+        .description("Shows upcoming events.")
     }
 }
 
@@ -335,7 +338,212 @@ extension ConfigurationAppIntent {
     }
 }
 
+// New Next Event Widget
+struct NextEventProvider: TimelineProvider {
+    func placeholder(in context: Context) -> NextEventEntry {
+        NextEventEntry(date: Date(), event: Event(title: "Sample Event", date: Date(), color: CodableColor(color: .blue)))
+    }
 
+    func getSnapshot(in context: Context, completion: @escaping (NextEventEntry) -> ()) {
+        let entry = NextEventEntry(date: Date(), event: Event(title: "Sample Event", date: Date(), color: CodableColor(color: .blue)))
+        completion(entry)
+    }
 
+    func getTimeline(in context: Context, completion: @escaping (Timeline<NextEventEntry>) -> ()) {
+        var entries: [NextEventEntry] = []
 
+        // Fetch events from UserDefaults or your data source
+        let events = loadEvents()
+        if let nextEvent = events.filter({ $0.date > Date() }).sorted(by: { $0.date < $1.date }).first {
+            let entry = NextEventEntry(date: Date(), event: nextEvent)
+            entries.append(entry)
+        }
 
+        let timeline = Timeline(entries: entries, policy: .atEnd)
+        completion(timeline)
+    }
+
+    private func loadEvents() -> [Event] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "events"),
+           let decoded = try? decoder.decode([Event].self, from: data) {
+            return decoded
+        } else {
+            return []
+        }
+    }
+}
+
+struct NextEventEntry: TimelineEntry {
+    let date: Date
+    let event: Event
+}
+
+struct NextEventWidgetEntryView : View {
+    var entry: NextEventProvider.Entry
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, MMM d"
+        return formatter
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text(entry.event.date.relativeDate(to: entry.event.endDate).capitalized)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer()
+                Link(destination: URL(string: "upnext://addEvent")!) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                }
+            }
+            Spacer()
+            Text(entry.event.title)
+                .font(.headline)
+                .fontWeight(.medium)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 1) 
+            Text(entry.event.date, formatter: dateFormatter)
+                .font(.caption)
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+struct NextEventWidget: Widget {
+    let kind: String = "NextEventWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: NextEventProvider()) { entry in
+            NextEventWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("Next Event")
+        .description("Shows the next upcoming event.")
+        .supportedFamilies([.systemSmall])
+    }
+}
+
+// New This Year Widget
+struct ThisYearProvider: TimelineProvider {
+    func placeholder(in context: Context) -> ThisYearEntry {
+        ThisYearEntry(date: Date(), events: [])
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (ThisYearEntry) -> ()) {
+        let entry = ThisYearEntry(date: Date(), events: [])
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ThisYearEntry>) -> ()) {
+        var entries: [ThisYearEntry] = []
+
+        // Fetch events from UserDefaults or your data source
+        let events = loadEvents()
+        let entry = ThisYearEntry(date: Date(), events: events)
+        entries.append(entry)
+
+        let timeline = Timeline(entries: entries, policy: .atEnd)
+        completion(timeline)
+    }
+
+    private func loadEvents() -> [Event] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "events"),
+           let decoded = try? decoder.decode([Event].self, from: data) {
+            return decoded
+        } else {
+            return []
+        }
+    }
+}
+
+struct ThisYearEntry: TimelineEntry {
+    let date: Date
+    let events: [Event]
+}
+
+struct ThisYearWidgetEntryView : View {
+    var entry: ThisYearProvider.Entry
+
+    var body: some View {
+        let monthInitials = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]
+        let lightGray = Color(UIColor.systemGray5) // Lighter gray color
+        let currentDate = Date()
+
+        GeometryReader { geometry in
+            let spacing: CGFloat = 2.5
+            let columnCount = 12
+            let rowCount = 4
+            let totalSpacing = spacing * CGFloat(columnCount - 1)
+            let itemWidth = (geometry.size.width - totalSpacing) / CGFloat(columnCount)
+            let itemHeight = (geometry.size.height - totalSpacing) / CGFloat(rowCount)
+
+            VStack {
+                // Month initials header
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columnCount), spacing: spacing) {
+                    ForEach(0..<columnCount) { index in
+                        Text(monthInitials[index])
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+
+                // Adjusted grid layout
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columnCount), spacing: spacing) {
+                    ForEach(0..<48, id: \.self) { index in
+                        let month = index % 12
+                        let quarter = index / 12
+                        let startOfMonth = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: month + 1, day: 1))!
+                        let startOfQuarter = Calendar.current.date(byAdding: .day, value: quarter * 7, to: startOfMonth)!
+
+                        let hasEvent = entry.events.contains { event in
+                            let eventDate = event.date
+                            return eventDate >= startOfQuarter && eventDate < Calendar.current.date(byAdding: .day, value: 7, to: startOfQuarter)!
+                        }
+
+                        let isCurrentDate = currentDate >= startOfQuarter && currentDate < Calendar.current.date(byAdding: .day, value: 7, to: startOfQuarter)!
+
+                        Rectangle()
+                            .fill(hasEvent ? Color.blue : lightGray) // Use lighter gray color
+                            .frame(width: itemWidth, height: itemHeight)
+                            .cornerRadius(4) // Added corner radius
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(isCurrentDate ? Color.red : Color.clear, lineWidth: 2)
+                            )
+                    }
+                }
+            }
+        }
+    }
+}
+
+extension Int {
+    func optionalBounded(by range: Range<Int>) -> Int? {
+        return range.contains(self) ? self : nil
+    }
+}
+
+struct ThisYearWidget: Widget {
+    let kind: String = "ThisYearWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: ThisYearProvider()) { entry in
+            ThisYearWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("This Year")
+        .description("A grid representing your availability year.")
+        .supportedFamilies([.systemMedium]) // Updated to support medium size
+    }
+}

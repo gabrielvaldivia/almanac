@@ -13,5 +13,7 @@ struct UpNextWidgetBundle: WidgetBundle {
     var body: some Widget {
         UpNextWidget()
         UpNextWidgetLiveActivity()
+        NextEventWidget()
+        ThisYearWidget()
     }
 }

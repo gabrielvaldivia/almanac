@@ -146,7 +146,8 @@ struct EditEventView: View {
             } else {
                 appData.removeNotification(for: events[index])
             }
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify UpNextWidget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Notify NextEventWidget to reload
         }
     }
 
@@ -197,6 +198,7 @@ struct EditEventView: View {
             sharedDefaults.set(encoded, forKey: "events")
             print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         } else {
             print("Failed to encode events.")
         }
