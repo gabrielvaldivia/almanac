@@ -122,7 +122,7 @@ struct UpNextWidgetEntryView : View {
                 case .systemSmall:
                     let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     VStack(alignment: .leading) {
-                        ForEach(visibleEvents) { event in
+                        ForEach(Array(visibleEvents.enumerated()), id: \.offset) { index, event in
                             HStack {
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(categoryColors[event.category ?? ""] ?? .gray)
@@ -174,7 +174,7 @@ struct UpNextWidgetEntryView : View {
                                 .foregroundColor(.gray)
                                 .padding(.vertical, 2)
                             VStack(alignment: .leading) {
-                                ForEach(groupedEvents[key]!) { event in 
+                                ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) { index, event in
                                     HStack {
                                         RoundedRectangle(cornerRadius: 4)
                                             .fill(categoryColors[event.category ?? ""] ?? .gray)
@@ -233,7 +233,7 @@ struct UpNextWidgetEntryView : View {
                                 .foregroundColor(.gray)
                                 .padding(.vertical, 2)
                             VStack(alignment: .leading) {
-                                ForEach(groupedEvents[key]!) { event in 
+                                ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) { index, event in
                                     VStack(alignment: .leading) {
                                         HStack {
                                             RoundedRectangle(cornerRadius: 4)
@@ -267,11 +267,11 @@ struct UpNextWidgetEntryView : View {
                                         }
                                         .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading) // Set max height
                                     }
-                                } 
+                                }
                             } .padding(.bottom, 10)
                         }
-                    } 
-                    Spacer ()
+                    }
+                    Spacer()
 
                 // Next Event widget
                 case .accessoryRectangular:
@@ -354,7 +354,10 @@ struct NextEventProvider: TimelineProvider {
 
         // Fetch events from UserDefaults or your data source
         let events = loadEvents()
-        if let nextEvent = events.filter({ $0.date > Date() }).sorted(by: { $0.date < $1.date }).first {
+        if let nextEvent = events.filter({ event in
+            let now = Date()
+            return event.date <= now && (event.endDate ?? event.date) >= now
+        }).sorted(by: { $0.date < $1.date }).first {
             let entry = NextEventEntry(date: Date(), event: nextEvent)
             entries.append(entry)
         }
@@ -392,18 +395,11 @@ struct NextEventWidgetEntryView : View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            HStack {
-                Text(entry.event.date.relativeDate(to: entry.event.endDate).capitalized)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Spacer()
-                Link(destination: URL(string: "upnext://addEvent")!) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.blue)
-                        .font(.title3)
-                }
-            }
+            Text(entry.event.date.relativeDate(to: entry.event.endDate).capitalized)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Spacer()
             Text(entry.event.title)
                 .font(.headline)
@@ -487,34 +483,33 @@ struct ThisYearWidgetEntryView : View {
         let currentDate = Date()
 
         GeometryReader { geometry in
-            let spacing: CGFloat = 6
+            let itemSize: CGFloat = 20 // Fixed size for each square
             let columnCount = 12
-            let rowCount = 4
-            let totalSpacing = spacing * CGFloat(columnCount - 1)
-            let itemWidth = (geometry.size.width - totalSpacing) / CGFloat(columnCount)
+            let totalItemWidth = itemSize * CGFloat(columnCount)
+            let totalSpacing = geometry.size.width - totalItemWidth
+            let spacing = totalSpacing / CGFloat(columnCount - 1)
 
             VStack {
-                Text("\(currentDate, formatter: yearFormatter)") // Use date formatter for year
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    // .frame(maxWidth: .infinity, alignment: .leading) // Align text to the left
+                // Text("\(currentDate, formatter: yearFormatter)") // Use date formatter for year
+                //     .font(.caption2)
+                //     .fontWeight(.semibold)
                 
-                Spacer ()
+                Spacer()
                 // Month initials header
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columnCount), spacing: spacing) {
-                    ForEach(0..<columnCount) { index in
-                        Text(monthInitials[index])
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(itemSize), spacing: spacing), count: columnCount), spacing: spacing) {
+                    ForEach(Array(monthInitials.enumerated()), id: \.offset) { index, initial in
+                        Text(initial)
                             .foregroundColor(.gray)
                             .font(.system(size: 8))
-                            .font(.caption)
+                            .font(.caption).fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding(.bottom, 0)
                     }
                 }
 
                 // Adjusted grid layout
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columnCount), spacing: spacing) {
-                    ForEach(0..<48, id: \.self) { index in
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(itemSize), spacing: spacing), count: columnCount), spacing: spacing) {
+                    ForEach(0..<48, id: \.self) { index in // Use a constant integer literal for the range
                         let month = index % 12
                         let quarter = index / 12
                         let startOfMonth = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: month + 1, day: 1))!
@@ -529,11 +524,11 @@ struct ThisYearWidgetEntryView : View {
 
                         Rectangle()
                             .fill(hasEvent ? Color.blue : lightGray) // Use lighter gray color
-                            .aspectRatio(1, contentMode: .fit) // Ensure square aspect ratio
+                            .frame(width: itemSize, height: itemSize) // Fixed size for each square
                             .cornerRadius(4) // Added corner radius
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(isCurrentDate ? Color.red : Color.clear, lineWidth: 2)
+                                    .stroke(isCurrentDate ? Color.black.opacity(0.3) : Color.clear, lineWidth: 1)
                             )
                     }
                 }
@@ -556,7 +551,162 @@ struct ThisYearWidget: Widget {
             ThisYearWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("This Year")
-        .description("A grid representing your availability year.")
+        .description("A grid representing your availability for this year.")
         .supportedFamilies([.systemMedium]) // Updated to support medium size
     }
 }
+
+// New Upcoming Quarter Widget
+struct UpcomingQuarterProvider: TimelineProvider {
+    func placeholder(in context: Context) -> UpcomingQuarterEntry {
+        UpcomingQuarterEntry(date: Date(), events: [])
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (UpcomingQuarterEntry) -> ()) {
+        let entry = UpcomingQuarterEntry(date: Date(), events: [])
+        completion(entry)
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<UpcomingQuarterEntry>) -> ()) {
+        var entries: [UpcomingQuarterEntry] = []
+
+        // Fetch events from UserDefaults or your data source
+        let events = loadEvents()
+        let entry = UpcomingQuarterEntry(date: Date(), events: events)
+        entries.append(entry)
+
+        let timeline = Timeline(entries: entries, policy: .atEnd)
+        completion(timeline)
+    }
+
+    private func loadEvents() -> [Event] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
+           let data = sharedDefaults.data(forKey: "events"),
+           let decoded = try? decoder.decode([Event].self, from: data) {
+            return decoded
+        } else {
+            return []
+        }
+    }
+}
+
+struct UpcomingQuarterEntry: TimelineEntry {
+    let date: Date
+    let events: [Event]
+}
+
+struct UpcomingQuarterWidgetEntryView : View {
+    var entry: UpcomingQuarterProvider.Entry
+
+    private let weekFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, MMM d"
+        return formatter
+    }()
+
+    var body: some View {
+        let currentDate = Date()
+        let daysOfWeek = ["M", "T", "W", "T", "F", "S", "S"]
+        let monthFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM"
+            return formatter
+        }()
+
+        GeometryReader { geometry in
+            let spacing: CGFloat = 1
+            let columnCount = 17
+
+            VStack(alignment: .leading) {
+                // Row for the title of the month
+                HStack(spacing: spacing) {
+                    Spacer().frame(width: 16) // Empty space for the days of the week column
+                    ForEach(0..<columnCount) { weekOffset in
+                        let startOfWeek = Calendar.current.date(byAdding: .weekOfYear, value: weekOffset, to: Calendar.current.startOfWeek(for: currentDate, startingOn: .monday))!
+                        let day = Calendar.current.component(.day, from: startOfWeek)
+                        if day <= 7 { // Show month only if the week contains the 1st of the month
+                            Text(monthFormatter.string(from: startOfWeek))
+                                .font(.system(size: 8, weight: .regular, design: .default))
+                                .foregroundColor(.gray)
+                                .frame(width: 16, height: 4) // Set fixed width and height
+                        } else {
+                            Spacer().frame(width: 16, height: 4)
+                        }
+                    }
+                }
+
+                HStack(alignment: .top) {
+                    // Column for days of the week
+                    VStack(spacing: spacing) {
+                        ForEach(daysOfWeek, id: \.self) { day in
+                            Text(day)
+                                .font(.system(size: 8, weight: .regular, design: .default)) // Corrected argument labels
+                                .foregroundColor(.gray)
+                                .frame(height: 16) // Set fixed height to match grid cells
+                        }
+                    }
+
+                    // Adjusted grid layout
+                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(16), spacing: spacing), count: columnCount), spacing: spacing) {
+                        ForEach(0..<columnCount * 7, id: \.self) { index in // Use a constant integer literal for the range
+                            let weekOffset = index % columnCount
+                            let dayOfWeek = index / columnCount
+                            let startOfWeek = Calendar.current.date(byAdding: .weekOfYear, value: weekOffset, to: Calendar.current.startOfWeek(for: currentDate, startingOn: .monday))!
+                            let date = Calendar.current.date(byAdding: .day, value: dayOfWeek, to: startOfWeek)!
+
+                            let hasEvent = entry.events.contains { event in
+                                let eventDate = event.date
+                                return Calendar.current.isDate(eventDate, inSameDayAs: date)
+                            }
+
+                            let isCurrentDate = Calendar.current.isDate(currentDate, inSameDayAs: date)
+
+                            ZStack {
+                                Rectangle()
+                                    .fill(hasEvent ? Color.blue : Color.clear) // Remove gray background
+                                    .frame(width: 16, height: 16) // Set fixed width and height
+                                    .cornerRadius(20) // Added corner radius
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(isCurrentDate ? Color.black.opacity(0.3) : Color.clear, lineWidth: 1)
+                                    )
+                                Text("\(Calendar.current.component(.day, from: date))")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(hasEvent ? .white : Color.primary) // Make font white if square is blue, otherwise adapt to color scheme
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct UpcomingQuarterWidget: Widget {
+    let kind: String = "UpcomingQuarterWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: UpcomingQuarterProvider()) { entry in
+            UpcomingQuarterWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("This Quarter")
+        .description("A grid representing your availability for the upcoming quarter.")
+        .supportedFamilies([.systemMedium]) // Supports medium size
+    }
+}
+
+// Helper extension to get the start of the week starting on a specific day
+extension Calendar {
+    func startOfWeek(for date: Date, startingOn weekday: Weekday) -> Date {
+        var components = dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+        components.weekday = weekday.rawValue
+        return self.date(from: components)!
+    }
+}
+
+enum Weekday: Int {
+    case sunday = 1, monday, tuesday, wednesday, thursday, friday, saturday
+}
+
+
