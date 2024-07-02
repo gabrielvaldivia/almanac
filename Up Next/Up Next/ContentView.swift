@@ -65,50 +65,55 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        List {
-                            Section(header: categoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
-                                        .padding(.leading, -20) // Remove left padding
-                                        .padding(.trailing, -20) // Remove right padding
-                            ) {
-                                ForEach(sortedKeys, id: \.self) { key in
-                                    HStack(alignment: .top) {
-                                        Text(key.uppercased()).monospaced()
-                                            .roundedFont(.caption)
-                                            .foregroundColor(.gray)
-                                            .frame(width: 100, alignment: .leading) 
-                                            .padding(.vertical, 14)
-                                        VStack(alignment: .leading) {
-                                            ForEach(groupedEvents[key]!, id: \.id) { event in
-                                                EventRow(event: event, formatter: itemDateFormatter,
-                                                         selectedEvent: $selectedEvent,
-                                                         newEventTitle: $newEventTitle,
-                                                         newEventDate: $newEventDate,
-                                                         newEventEndDate: $newEventEndDate,
-                                                         showEndDate: $showEndDate,
-                                                         selectedCategory: $selectedCategory,
-                                                         showEditSheet: $showEditSheet, // Add this line
-                                                         categories: appData.categories)
-                                                    .onTapGesture { // Add tap gesture to open EditEventView
-                                                        self.selectedEvent = event
-                                                        self.newEventTitle = event.title
-                                                        self.newEventDate = event.date
-                                                        self.newEventEndDate = event.endDate ?? Date()
-                                                        self.showEndDate = event.endDate != nil
-                                                        self.selectedCategory = event.category
-                                                        self.showEditSheet = true
-                                                    }
-                                                    .listRowSeparator(.hidden) // Hide dividers
+                        ScrollView {
+                            LazyVStack {
+                                Section(header: categoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+                                            // .padding(.leading, -16) // Remove left padding
+                                            // .padding(.trailing, -16) // Remove right padding
+                                            .padding(.vertical, 10)
+                                ) {
+                                    ForEach(sortedKeys, id: \.self) { key in
+                                        HStack(alignment: .top) {
+                                            Text(key.uppercased()).monospaced()
+                                                .roundedFont(.caption)
+                                                .foregroundColor(.gray)
+                                                .frame(width: 100, alignment: .leading) 
+                                                .padding(.vertical, 14)
+                                            VStack(alignment: .leading) {
+                                                ForEach(groupedEvents[key]!, id: \.id) { event in
+                                                    EventRow(event: event, formatter: itemDateFormatter,
+                                                             selectedEvent: $selectedEvent,
+                                                             newEventTitle: $newEventTitle,
+                                                             newEventDate: $newEventDate,
+                                                             newEventEndDate: $newEventEndDate,
+                                                             showEndDate: $showEndDate,
+                                                             selectedCategory: $selectedCategory,
+                                                             showEditSheet: $showEditSheet, // Add this line
+                                                             categories: appData.categories)
+                                                        .onTapGesture { // Add tap gesture to open EditEventView
+                                                            self.selectedEvent = event
+                                                            self.newEventTitle = event.title
+                                                            self.newEventDate = event.date
+                                                            self.newEventEndDate = event.endDate ?? Date()
+                                                            self.showEndDate = event.endDate != nil
+                                                            self.selectedCategory = event.category
+                                                            self.showEditSheet = true
+                                                        }
+                                                        .listRowSeparator(.hidden) // Hide dividers
+                                                }
                                             }
-                                        }
+                                        } 
+                                        
                                     } 
-                                    
-                                } 
-                                .listRowSeparator(.hidden)
+                                    .listRowSeparator(.hidden)
+                                    .padding(.horizontal)
+                                }
                             }
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
                         .background(Color.clear) 
+                        // .padding(.horizontal)
                     } 
                 }
                 .navigationTitle("Up Next")
@@ -417,4 +422,3 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
-

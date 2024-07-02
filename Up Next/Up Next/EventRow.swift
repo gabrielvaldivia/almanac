@@ -18,9 +18,10 @@ struct EventRow: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var selectedCategory: String?
-    @Binding var showEditSheet: Bool // Added this line
+    @Binding var showEditSheet: Bool
     var categories: [(name: String, color: Color)]
-    @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
+    @Environment(\.colorScheme) var colorScheme
+    @GestureState private var isPressed: Bool = false // Add this line
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
@@ -29,11 +30,11 @@ struct EventRow: View {
                     Text(event.title)
                         .roundedFont(.headline)
                         .fontWeight(.medium)
-                        .foregroundColor(colorScheme == .dark ? .white : colorForCategory(event.category)) // Set title color based on color scheme
+                        .foregroundColor(colorScheme == .dark ? .white : colorForCategory(event.category))
                     Spacer()
                     if event.notificationsEnabled {
                         Image(systemName: "bell.fill")
-                            .foregroundColor(colorForCategory(event.category).opacity(0.9)) // Set bell icon color to match category color
+                            .foregroundColor(colorForCategory(event.category).opacity(0.9))
                             .font(.caption)
                             .padding(.trailing)
                     }
@@ -46,16 +47,16 @@ struct EventRow: View {
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
                     } else {
                         Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
                         .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7)) // Set date color based on color scheme
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
                 }
                 if event.repeatOption != .never {
                     Text("Repeats \(event.repeatOption.rawValue.lowercased())")
@@ -66,21 +67,29 @@ struct EventRow: View {
             .padding(.vertical, 10)
             .padding(.leading, 10)
             .background(
-                colorForCategory(event.category).opacity(colorScheme == .light ? 0.1 : 0.3) // Use the injected color scheme here
+                colorForCategory(event.category).opacity(colorScheme == .light ? 0.1 : 0.3)
             )
-            .cornerRadius(10) // Apply rounded corners
+            .cornerRadius(10)
         }
-        .onTapGesture {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            self.selectedEvent = event
-            self.newEventTitle = event.title
-            self.newEventDate = event.date
-            self.newEventEndDate = event.endDate ?? Date()
-            self.showEndDate = event.endDate != nil
-            self.selectedCategory = event.category
-            self.showEditSheet = true
-        }
+        .scaleEffect(isPressed ? 0.95 : 1.0) // Add this line
+        .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isPressed) // Add this line
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .updating($isPressed) { _, isPressed, _ in
+                    isPressed = true
+                }
+                .onEnded { _ in
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    self.selectedEvent = event
+                    self.newEventTitle = event.title
+                    self.newEventDate = event.date
+                    self.newEventEndDate = event.endDate ?? Date()
+                    self.showEndDate = event.endDate != nil
+                    self.selectedCategory = event.category
+                    self.showEditSheet = true
+                }
+        )
     }
 
     // Function to determine color based on category
