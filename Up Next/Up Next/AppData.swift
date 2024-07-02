@@ -279,23 +279,7 @@ class AppData: NSObject, ObservableObject {
     }
     
     func scheduleNotification(for event: Event) {
-        let content = UNMutableNotificationContent()
-        content.title = event.title
-        content.body = "Event is starting soon!"
-        content.sound = .default
-
-        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
-
-        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error)")
-            } else {
-                print("Notification scheduled for event: \(event.title)")
-            }
-        }
+        // Remove the notification scheduling code
     }
 
     func removeNotification(for event: Event) {
