@@ -25,7 +25,6 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var notificationsEnabled: Bool = true // New state to track notification status
-    @GestureState private var isButtonPressed: Bool = false // Use GestureState for button press state
 
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
@@ -67,9 +66,7 @@ struct ContentView: View {
                     } else {
                         ScrollView {
                             LazyVStack {
-                                Section(header: categoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
-                                            // .padding(.leading, -16) // Remove left padding
-                                            // .padding(.trailing, -16) // Remove right padding
+                                Section(header: CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                                             .padding(.vertical, 10)
                                 ) {
                                     ForEach(sortedKeys, id: \.self) { key in
@@ -107,17 +104,16 @@ struct ContentView: View {
                                     } 
                                     .listRowSeparator(.hidden)
                                     .padding(.horizontal)
+                                    .padding(.bottom, 10)
                                 }
                             }
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
-                        .background(Color.clear) 
-                        // .padding(.horizontal)
+                        .background(Color.clear)
                     } 
                 }
                 .navigationTitle("Up Next")
-                // .navigationBarTitleDisplayMode(.inline) // Set the title display mode to inline
                 .navigationBarItems(
                     leading: HStack {
                         CircleButton(
@@ -157,11 +153,19 @@ struct ContentView: View {
                     }
                 }
 
-
                 // Custom Add Event Button
-                addEventButton()
-                    .padding(0)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                AddEventButton(
+                    selectedCategoryFilter: $selectedCategoryFilter,
+                    showAddEventSheet: $showAddEventSheet,
+                    newEventTitle: $newEventTitle,
+                    newEventDate: $newEventDate,
+                    newEventEndDate: $newEventEndDate,
+                    showEndDate: $showEndDate,
+                    selectedCategory: $selectedCategory
+                )
+                .padding(0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .environmentObject(appData) // Pass appData as an environment object
             }
         }
 
@@ -315,101 +319,6 @@ struct ContentView: View {
             }
         } else {
             appData.removeNotification(for: event) // Call centralized function
-        }
-    }
-    
-    @ViewBuilder
-    private func addEventButton() -> some View {
-        let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
-
-        ZStack {
-            RoundedRectangle(cornerRadius: 40)
-                .fill(buttonColor)
-                .frame(width: 80, height: 60)
-                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
-
-            Image(systemName: "plus")
-                .font(.title)
-                .bold()
-                .foregroundColor(.white)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isButtonPressed) { _, isPressed, _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    self.newEventTitle = ""
-                    self.newEventDate = Date()
-                    self.newEventEndDate = Date()
-                    self.showEndDate = false
-                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
-                    self.showAddEventSheet = true
-                }
-        )
-    }
-}
-
-// Category Pills View
-@ViewBuilder
-private func categoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter: Binding<String?>, colorScheme: ColorScheme) -> some View {
-    let filteredCategories = appData.categories.filter { category in
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        return events.contains { event in
-            event.category == category.name && 
-            (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday))
-        }
-    }
-    
-    if filteredCategories.count > 1 {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(filteredCategories, id: \.name) { category in
-                    Button(action: {
-                        selectedCategoryFilter.wrappedValue = selectedCategoryFilter.wrappedValue == category.name ? nil : category.name
-                    }) {
-                        Text(category.name)
-                            .font(.footnote)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(selectedCategoryFilter.wrappedValue == category.name ? category.color : Color.clear) // Change background color based on selection
-                            .foregroundColor(selectedCategoryFilter.wrappedValue == category.name ? .white : (colorScheme == .dark ? .white : .black)) // Adjust foreground color based on color scheme
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(selectedCategoryFilter.wrappedValue == category.name ? Color.clear : Color.gray, lineWidth: 1) // Conditionally apply border
-                            )
-                            .cornerRadius(20)
-                    }
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 0) // Remove top padding
-        }
-    }
-}
-
-// Circle Button
-struct CircleButton: View {
-    var iconName: String
-    var action: () -> Void
-    @EnvironmentObject var appData: AppData
-
-    var body: some View {
-        let defaultColor = appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
-
-        Button(action: action) {
-            ZStack {
-                Image(systemName: iconName)
-                    .font(.system(size: 16, weight: .bold)) // Adjust the size of the icon
-                    .foregroundColor(defaultColor) // Set icon color to the default category color
-            }
         }
     }
 }

@@ -119,7 +119,7 @@ struct CategoriesView: View {
                         showingDeleteAllAlert = true
                     }) {
                         HStack {
-                            Image(systemName: "trash")
+                            // Image(systemName: "trash")
                             Text("Delete All Events")
                         }
                         .foregroundColor(.red)

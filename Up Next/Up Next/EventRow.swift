@@ -21,7 +21,6 @@ struct EventRow: View {
     @Binding var showEditSheet: Bool
     var categories: [(name: String, color: Color)]
     @Environment(\.colorScheme) var colorScheme
-    @GestureState private var isPressed: Bool = false // Add this line
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
@@ -71,25 +70,6 @@ struct EventRow: View {
             )
             .cornerRadius(10)
         }
-        .scaleEffect(isPressed ? 0.95 : 1.0) // Add this line
-        .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isPressed) // Add this line
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isPressed) { _, isPressed, _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    self.selectedEvent = event
-                    self.newEventTitle = event.title
-                    self.newEventDate = event.date
-                    self.newEventEndDate = event.endDate ?? Date()
-                    self.showEndDate = event.endDate != nil
-                    self.selectedCategory = event.category
-                    self.showEditSheet = true
-                }
-        )
     }
 
     // Function to determine color based on category

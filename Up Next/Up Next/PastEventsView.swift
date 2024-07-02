@@ -18,48 +18,51 @@ struct PastEventsView: View {
     @Binding var selectedCategory: String?
     @Binding var showPastEventsSheet: Bool
     @Binding var showEditSheet: Bool
-    @Binding var selectedColor: CodableColor // Change this to CodableColor
+    @Binding var selectedColor: CodableColor
     var categories: [(name: String, color: Color)]
     var itemDateFormatter: DateFormatter
     var saveEvents: () -> Void
     @EnvironmentObject var appData: AppData
     @State private var isEditSheetPresented = false
-    @State private var notificationsEnabled: Bool = true // New state for notificationsEnabled
+    @State private var notificationsEnabled: Bool = true
 
     var body: some View {
         NavigationView {
-            List {
-                ForEach(pastEvents(), id: \.id) { event in
-                    Button(action: {
-                        selectedEvent = event
-                        newEventTitle = event.title
-                        newEventDate = event.date
-                        newEventEndDate = event.endDate ?? event.date
-                        showEndDate = event.endDate != nil
-                        selectedCategory = event.category
-                        selectedColor = event.color
-                        notificationsEnabled = event.notificationsEnabled // Set notificationsEnabled from the event
-                        isEditSheetPresented = true
-                    }) {
-                        VStack {
-                            EventRow(event: event, formatter: itemDateFormatter,
-                                     selectedEvent: $selectedEvent,
-                                     newEventTitle: $newEventTitle,
-                                     newEventDate: $newEventDate,
-                                     newEventEndDate: $newEventEndDate,
-                                     showEndDate: $showEndDate,
-                                     selectedCategory: $selectedCategory,
-                                     showEditSheet: $showEditSheet, // Add this line
-                                     categories: categories)
+            ScrollView {
+                LazyVStack {
+                    ForEach(pastEvents(), id: \.id) { event in
+                        Button(action: {
+                            selectedEvent = event
+                            newEventTitle = event.title
+                            newEventDate = event.date
+                            newEventEndDate = event.endDate ?? event.date
+                            showEndDate = event.endDate != nil
+                            selectedCategory = event.category
+                            selectedColor = event.color
+                            notificationsEnabled = event.notificationsEnabled
+                            isEditSheetPresented = true
+                        }) {
+                            VStack {
+                                EventRow(event: event, formatter: itemDateFormatter,
+                                         selectedEvent: $selectedEvent,
+                                         newEventTitle: $newEventTitle,
+                                         newEventDate: $newEventDate,
+                                         newEventEndDate: $newEventEndDate,
+                                         showEndDate: $showEndDate,
+                                         selectedCategory: $selectedCategory,
+                                         showEditSheet: $showEditSheet,
+                                         categories: categories)
+                            }
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowSeparator(.hidden) // Remove dividers for each row
+                        .listRowSeparator(.hidden)
                     }
-                    .listRowSeparator(.hidden) // Remove dividers for each row
+                    .onDelete(perform: deletePastEvent)
                 }
-                .onDelete(perform: deletePastEvent)
+                .listStyle(PlainListStyle())
+                .listRowSeparator(.hidden)
+                .padding()
             }
-            .listStyle(PlainListStyle())
-            .listRowSeparator(.hidden) // Remove dividers for the entire list
             .navigationTitle("Past Events")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") {
@@ -97,7 +100,7 @@ struct PastEventsView: View {
             if endDate1 == endDate2 {
                 return event1.date > event2.date
             } else {
-                return endDate1 > endDate2 // Change to sort in descending order
+                return endDate1 > endDate2
             }
         }
     }
@@ -121,7 +124,7 @@ struct PastEventsView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
-            events[index].notificationsEnabled = notificationsEnabled // Set notificationsEnabled for the event
+            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
         }
         isEditSheetPresented = false
@@ -130,18 +133,18 @@ struct PastEventsView: View {
 
 struct PastEventsView_Previews: PreviewProvider {
     static var previews: some View {
-        PastEventsView(events: .constant([]), 
-                       selectedEvent: .constant(nil), 
-                       newEventTitle: .constant(""), 
-                       newEventDate: .constant(Date()), 
-                       newEventEndDate: .constant(Date()), 
-                       showEndDate: .constant(false), 
-                       selectedCategory: .constant(nil), 
-                       showPastEventsSheet: .constant(false), 
-                       showEditSheet: .constant(false), 
-                       selectedColor: .constant(CodableColor(color: .black)), 
-                       categories: [], 
-                       itemDateFormatter: DateFormatter(), 
+        PastEventsView(events: .constant([]),
+                       selectedEvent: .constant(nil),
+                       newEventTitle: .constant(""),
+                       newEventDate: .constant(Date()),
+                       newEventEndDate: .constant(Date()),
+                       showEndDate: .constant(false),
+                       selectedCategory: .constant(nil),
+                       showPastEventsSheet: .constant(false),
+                       showEditSheet: .constant(false),
+                       selectedColor: .constant(CodableColor(color: .black)),
+                       categories: [],
+                       itemDateFormatter: DateFormatter(),
                        saveEvents: {})
             .environmentObject(AppData())
     }
