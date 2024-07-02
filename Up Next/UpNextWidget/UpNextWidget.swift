@@ -15,13 +15,13 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        let events = loadEvents(for: configuration.category)
+        let events = EventLoader.loadEvents(for: configuration.category)
         return SimpleEntry(date: Date(), configuration: configuration, events: events)
     }
     
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
         var entries: [SimpleEntry] = []
-        let events = loadEvents(for: configuration.category)
+        let events = EventLoader.loadEvents(for: configuration.category)
 
         let currentDate = Date()
         for hourOffset in 0 ..< 5 {
@@ -31,33 +31,6 @@ struct Provider: AppIntentTimelineProvider {
         }
 
         return Timeline(entries: entries, policy: .atEnd)
-    }
-
-    private func loadEvents(for category: String) -> [Event] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "events"),
-           let decoded = try? decoder.decode([Event].self, from: data) {
-            let today = Calendar.current.startOfDay(for: Date())
-            let upcomingEvents = decoded.filter { event in
-                let eventDate = event.endDate ?? event.date
-                return eventDate >= today
-            }
-            if category == "All Categories" {
-                return upcomingEvents
-            } else {
-                return upcomingEvents.filter { event in
-                    safeStringCompare(event.category, category)
-                }
-            }
-        } else {
-            return []
-        }
-    }
-
-    private func safeStringCompare(_ str1: String?, _ str2: String?) -> Bool {
-        return str1?.caseInsensitiveCompare(str2 ?? "") == .orderedSame
     }
 }
 
@@ -352,8 +325,8 @@ struct NextEventProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<NextEventEntry>) -> ()) {
         var entries: [NextEventEntry] = []
 
-        // Fetch events from UserDefaults or your data source
-        let events = loadEvents()
+        // Fetch events using the shared EventLoader
+        let events = EventLoader.loadEvents()
         if let nextEvent = events.filter({ event in
             let now = Date()
             let startOfDay = Calendar.current.startOfDay(for: now)
@@ -363,20 +336,20 @@ struct NextEventProvider: TimelineProvider {
             entries.append(entry)
         }
 
+        // Ensure an entry for today if no future events are found
+        if entries.isEmpty {
+            if let todayEvent = events.filter({ event in
+                let now = Date()
+                let startOfDay = Calendar.current.startOfDay(for: now)
+                return event.date >= startOfDay && event.date < Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
+            }).sorted(by: { $0.date < $1.date }).first {
+                let entry = NextEventEntry(date: Date(), event: todayEvent)
+                entries.append(entry)
+            }
+        }
+
         let timeline = Timeline(entries: entries, policy: .atEnd)
         completion(timeline)
-    }
-
-    private func loadEvents() -> [Event] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "events"),
-           let decoded = try? decoder.decode([Event].self, from: data) {
-            return decoded
-        } else {
-            return []
-        }
     }
 }
 

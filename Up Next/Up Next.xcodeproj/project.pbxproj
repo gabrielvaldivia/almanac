@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
+		4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403EA2F22C2F69EE003207ED /* FontModifier.swift */; };
 		40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40549BC12C290E9300DA0EB6 /* PastEventsView.swift */; };
 		405920DD2C23B862008A9CF2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 405920A72C236123008A9CF2 /* WidgetKit.framework */; };
@@ -75,6 +77,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4038EA9D2C33832400E0CE8E /* EventLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLoader.swift; sourceTree = "<group>"; };
 		403EA2F22C2F69EE003207ED /* FontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontModifier.swift; sourceTree = "<group>"; };
 		40549BC12C290E9300DA0EB6 /* PastEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastEventsView.swift; sourceTree = "<group>"; };
 		405920A72C236123008A9CF2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -156,6 +159,7 @@
 				405920E02C23B862008A9CF2 /* UpNextWidgetBundle.swift */,
 				405920E22C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift */,
 				405920E42C23B862008A9CF2 /* UpNextWidget.swift */,
+				4038EA9D2C33832400E0CE8E /* EventLoader.swift */,
 				405920E62C23B862008A9CF2 /* AppIntent.swift */,
 				405920E82C23B863008A9CF2 /* Assets.xcassets */,
 				405920EA2C23B863008A9CF2 /* Info.plist */,
@@ -399,6 +403,7 @@
 				405920E32C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift in Sources */,
 				405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */,
 				405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */,
+				4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */,
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
 				40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */,
 			);
@@ -417,6 +422,7 @@
 				40FEEC512C292612008AA61D /* AddEventView.swift in Sources */,
 				40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */,
 				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
+				4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */,
 				40790D722C23286B005DDC65 /* Up_NextApp.swift in Sources */,
 				40FEEC492C291558008AA61D /* AppData.swift in Sources */,
 			);
