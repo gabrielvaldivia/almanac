@@ -285,6 +285,7 @@ struct UpNextWidgetEntryView : View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .widgetURL(URL(string: "upnext://widgetTapped")) // Add this line to handle widget tap
     }
 }
 
@@ -385,6 +386,7 @@ struct NextEventWidgetEntryView : View {
                 .foregroundColor(.gray)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .widgetURL(URL(string: "upnext://editWidget"))
     }
 }
 

@@ -276,7 +276,6 @@ struct ContentView: View {
             events[index].color = selectedColor
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
-            handleNotification(for: events[index])
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         }
         showEditSheet = false
@@ -291,7 +290,6 @@ struct ContentView: View {
             events.append(newEvent)
         }
         saveEvents()
-        handleNotification(for: newEvent)
         newEventTitle = ""
         newEventDate = Date()
         newEventEndDate = Date()
