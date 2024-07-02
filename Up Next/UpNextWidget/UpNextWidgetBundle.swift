@@ -14,7 +14,7 @@ struct UpNextWidgetBundle: WidgetBundle {
         UpNextWidget()
         UpNextWidgetLiveActivity()
         NextEventWidget()
-        ThisYearWidget()
-        UpcomingQuarterWidget() // Ensure this is defined in the same module
+        // ThisYearWidget()
+        // UpcomingQuarterWidget() // Ensure this is defined in the same module
     }
 }
