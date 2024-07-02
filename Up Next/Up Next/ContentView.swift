@@ -244,6 +244,7 @@ struct ContentView: View {
             saveEvents()  // Save after deleting
             appData.removeNotification(for: event) // Call centralized function
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
         }
     }
 
@@ -268,8 +269,8 @@ struct ContentView: View {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            // print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
         } else {
             print("Failed to encode events.")
         }
@@ -286,6 +287,7 @@ struct ContentView: View {
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
         }
         showEditSheet = false
     }
@@ -304,6 +306,7 @@ struct ContentView: View {
         newEventEndDate = Date()
         showEndDate = false
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
     }
     
     func handleNotification(for event: Event) {
