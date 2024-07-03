@@ -26,175 +26,228 @@ struct AddEventView: View {
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
+    @State private var showRepeatOptions: Bool = false // New state variable to show/hide repeat options
 
     var body: some View {
-            NavigationView {
-                Form {
-                    Section() {
-                        TextField("Title", text: $newEventTitle)
+        NavigationView {
+            VStack {
+                // Name Section
+                VStack {
+                    HStack {
+                    Text("Name")
+                        .font(.headline)
+                        .padding(.top)
+                    Spacer()
                     }
-                    Section {
-                        HStack {
-                            DatePicker("", selection: $newEventDate, displayedComponents: .date)
+                
+                    HStack {
+                        TextField("Title", text: $newEventTitle)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                }
+                .padding (.horizontal)
+                
+                
+                // Date Section
+                VStack {
+                    HStack {
+                    Text("Date")
+                        .font(.headline)
+                        .padding(.top)
+                    Spacer()
+                    }
+                
+                    HStack {
+                        DatePicker("", selection: $newEventDate, displayedComponents: .date)
+                            .datePickerStyle(DefaultDatePickerStyle())
+                            .labelsHidden()
+                        
+                        if showEndDate {
+                            DatePicker("", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
                                 .datePickerStyle(DefaultDatePickerStyle())
                                 .labelsHidden()
-                            
-                            if showEndDate {
-                                DatePicker("", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                    .datePickerStyle(DefaultDatePickerStyle())
-                                    .labelsHidden()
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showEndDate.toggle()
+                            if !showEndDate {
+                                newEventEndDate = Date()
+                            } else {
+                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
                             }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showEndDate.toggle()
-                                if !showEndDate {
-                                    newEventEndDate = Date()
-                                } else {
-                                    newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
+                        }) {
+                            Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
+                                .font(.system(size: 24))
+                                .foregroundColor(getCategoryColor())
+                        }
+                        
+                        Menu {
+                            Picker("Repeat", selection: $repeatOption) {
+                                ForEach(RepeatOption.allCases, id: \.self) { option in
+                                    Text(option.rawValue).tag(option)
                                 }
-                            }) {
-                                Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(getCategoryColor())
                             }
+                        } label: {
+                            Image(systemName: "repeat")
+                                .font(.system(size: 24))
+                                .foregroundColor(getCategoryColor())
                         }
-                        .padding(.horizontal, 0) // Remove horizontal padding
                     }
-                    Section() {
-                        Picker("Repeat", selection: $repeatOption) {
-                            ForEach(RepeatOption.allCases, id: \.self) { option in
-                                Text(option.rawValue).tag(option)
+                    .padding(.horizontal, 0) // Remove horizontal padding
+                    
+                    if repeatOption != .never {
+                        VStack(alignment: .leading) {
+                            Button(action: { repeatUntilOption = .indefinitely }) {
+                                HStack {
+                                    Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 24))
+                                        .fontWeight(.light)
+                                        .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
+                                    Text("Forever")
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(height: 36) // Fixed height
                             }
-                        }
-
-                        if repeatOption != .never {
-                            Section() {
-                                List {
-                                    HStack {
-                                        Button(action: { repeatUntilOption = .indefinitely }) {
-                                            Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
-                                            Text("Forever")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                    .listRowSeparator(.hidden) // Hide the separator below "Forever"
-
-                                    HStack {
-                                        Button(action: { repeatUntilOption = .after }) {
-                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
-                                            Text("End after")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        if repeatUntilOption == .after {
-                                            HStack {
-                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                    .keyboardType(.numberPad)
-                                                    .frame(width: 24)
-                                                    .multilineTextAlignment(.center)
-                                                Stepper(value: $repeatCount, in: 1...100) {
-                                                    Text(" times")
-                                                }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Button(action: { repeatUntilOption = .after }) {
+                                HStack {
+                                    Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 24))
+                                        .fontWeight(.light)
+                                        .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
+                                    Text("End after")
+                                    if repeatUntilOption == .after {
+                                        HStack {
+                                            TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                                .keyboardType(.numberPad)
+                                                .frame(width: 24)
+                                                .multilineTextAlignment(.center)
+                                            Stepper(value: $repeatCount, in: 1...100) {
+                                                Text(" times")
                                             }
                                         }
                                     }
-                                    .listRowSeparator(.hidden) // Hide the separator below "End after"
-
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(height: 36) // Fixed height
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            HStack {
+                                Button(action: { repeatUntilOption = .onDate }) {
                                     HStack {
-                                        Button(action: { repeatUntilOption = .onDate }) {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
-                                            Text("Repeat until")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        Spacer()
-                                        if repeatUntilOption == .onDate {
-                                            DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                                .datePickerStyle(DefaultDatePickerStyle())
-                                                .labelsHidden()
-                                                .onChange(of: repeatUntil) { newDate in
-                                                    print("Selected date: \(dateFormatter.string(from: newDate))")
-                                                }
-                                        }
+                                        Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                            .font(.system(size: 24))
+                                            .fontWeight(.light)
+                                            .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
+                                        Text("Repeat until")
                                     }
-                                    .listRowSeparator(.hidden)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .frame(height: 36) // Fixed height
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                Spacer()
+                                if repeatUntilOption == .onDate {
+                                    DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                        .datePickerStyle(DefaultDatePickerStyle())
+                                        .labelsHidden()
+                                        .onChange(of: repeatUntil) { newDate in
+                                            print("Selected date: \(dateFormatter.string(from: newDate))")
+                                        }
                                 }
                             }
                         }
                     }
-                    
-                    Section() {
-                        HStack {
-                            Picker("Category", selection: $selectedCategory) {
-                                ForEach(appData.categories, id: \.name) { category in
-                                    Text(category.name).tag(category.name as String?)
-                                }
-                            }
-                            .onAppear {
-                                if selectedCategory == nil {
-                                    selectedCategory = appData.defaultCategory
-                                }
-                            }
-                        }
-                    }
-                    Section() {
-                        Toggle("Notify me", isOn: $notificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor())) // Change color based on category
-                    }
-                    
                 }
-                .navigationTitle("Add Event")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) { 
-                        Button(action: {
-                            showAddEventSheet = false
-                        }) {
+                .padding (.horizontal)
+                
+                
+                // Categories Section
+                VStack {
+                  HStack {
+                    Text("Categories")
+                        .font(.headline)
+                        .padding(.top)
+                        .padding(.horizontal)
+                    Spacer()
+                }
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        ForEach(appData.categories, id: \.name) { category in
+                            Text(category.name)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(selectedCategory == category.name ? getCategoryColor() : Color.gray.opacity(0.2))
+                                .cornerRadius(20)
+                                .foregroundColor(selectedCategory == category.name ? .white : .primary)
+                                .onTapGesture {
+                                    selectedCategory = category.name
+                                }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                HStack {
+                    Toggle("Notify me", isOn: $notificationsEnabled)
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor())) // Change color based on category
+                }
+                .padding()
+                
+                Spacer()  
+                }
+                
+            }
+            .navigationTitle("Add Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { 
+                    Button(action: {
+                        showAddEventSheet = false
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        saveNewEvent()
+                        showAddEventSheet = false
+                    }) {
+                        Group {
                             ZStack {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .heavy))
-                                    .foregroundColor(.primary)
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(getCategoryColor())
+                                    .frame(width: 60, height: 32)
+                                Text("Add")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
                             }
                         }
+                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0) // Adjust opacity based on title
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            saveNewEvent()
-                            showAddEventSheet = false
-                        }) {
-                            Group {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(getCategoryColor())
-                                        .frame(width: 60, height: 32)
-                                    Text("Add")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .opacity(newEventTitle.isEmpty ? 0.3 : 1.0) // Adjust opacity based on title
-                        }
-                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
-                    }
+                    .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
                 }
             }
-            .onAppear {
-                if selectedCategory == nil {
-                    selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
-                }
+        }
+        .onAppear {
+            if selectedCategory == nil {
+                selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
             }
+        }
     }
 
     func deleteEvent(at event: Event) {
@@ -351,3 +404,6 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
+
+
+
