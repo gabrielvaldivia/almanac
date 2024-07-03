@@ -25,6 +25,8 @@ struct AddEventView: View {
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
     @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
+    @State private var repeatCount: Int = 1 // New state variable for number of repetitions
 
     var body: some View {
             NavigationView {
@@ -59,8 +61,48 @@ struct AddEventView: View {
                             }
                         }
                         if repeatOption != .never {
-                            DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle())
+                            Section() {
+                                List {
+                                    HStack {
+                                        Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
+                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
+                                            .onTapGesture { repeatUntilOption = .indefinitely }
+                                        Text("Forever")
+                                    }
+                                    HStack {
+                                        Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                            .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
+                                            .onTapGesture { repeatUntilOption = .after }
+                                        Text("End after")
+                                        if repeatUntilOption == .after {
+                                            HStack {
+                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                                    .keyboardType(.numberPad)
+                                                    .frame(width: 20)
+                                                    .multilineTextAlignment(.center)
+                                                Stepper(value: $repeatCount, in: 1...100) {
+                                                    Text(" times")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    HStack {
+                                        Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                            .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
+                                            .onTapGesture { repeatUntilOption = .onDate }
+                                        Text("Repeat until")
+                                        Spacer()
+                                        if repeatUntilOption == .onDate {
+                                            DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                                .datePickerStyle(DefaultDatePickerStyle())
+                                                .labelsHidden()
+                                                .onChange { newValue in
+                                                    print("Selected date: \(dateFormatter.string(from: newValue))")
+                                                }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     Section() {
@@ -136,6 +178,16 @@ struct AddEventView: View {
     }
 
     func saveNewEvent() {
+        let repeatUntilDate: Date?
+        switch repeatUntilOption {
+        case .indefinitely:
+            repeatUntilDate = nil
+        case .after:
+            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatCount)
+        case .onDate:
+            repeatUntilDate = repeatUntil
+        }
+
         let newEvent = Event(
             title: newEventTitle,
             date: newEventDate,
@@ -144,7 +196,7 @@ struct AddEventView: View {
             category: selectedCategory,
             notificationsEnabled: notificationsEnabled,
             repeatOption: repeatOption,
-            repeatUntil: repeatOption != .never ? repeatUntil : nil
+            repeatUntil: repeatUntilDate
         )
         events.append(contentsOf: generateRepeatingEvents(for: newEvent))
         saveEvents()
@@ -154,11 +206,46 @@ struct AddEventView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 
+    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
+        switch option {
+        case .never:
+            return nil
+        case .daily:
+            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
+        case .weekly:
+            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
+        case .monthly:
+            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
+        case .yearly:
+            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+        }
+    }
+
     func generateRepeatingEvents(for event: Event) -> [Event] {
         var repeatingEvents = [Event]()
         var currentEvent = event
         repeatingEvents.append(currentEvent)
-        while let nextDate = getNextRepeatDate(for: currentEvent), nextDate <= (event.repeatUntil ?? Date()) {
+        
+        var repetitionCount = 1
+        let maxRepetitions: Int
+        
+        switch repeatUntilOption {
+        case .indefinitely:
+            maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
+        case .after:
+            maxRepetitions = repeatCount
+        case .onDate:
+            maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
+        }
+        
+        print("Generating repeating events for \(event.title)")
+        print("Repeat option: \(event.repeatOption)")
+        print("Repeat until: \(String(describing: event.repeatUntil))")
+        print("Max repetitions: \(maxRepetitions)")
+        
+        while let nextDate = getNextRepeatDate(for: currentEvent), 
+              nextDate <= (event.repeatUntil ?? Date.distantFuture), 
+              repetitionCount < maxRepetitions {
             currentEvent = Event(
                 title: event.title,
                 date: nextDate,
@@ -170,7 +257,12 @@ struct AddEventView: View {
                 repeatUntil: event.repeatUntil
             )
             repeatingEvents.append(currentEvent)
+            repetitionCount += 1
+            
+            print("Added event on \(nextDate)")
         }
+        
+        print("Generated \(repeatingEvents.count) events")
         return repeatingEvents
     }
 
@@ -209,4 +301,18 @@ struct AddEventView: View {
         }
         return Color.blue // Default color if no category is selected
     }
+    
+}
+
+enum RepeatUntilOption: String, CaseIterable {
+    case indefinitely = "Indefinitely"
+    case after = "After"
+    case onDate = "On"
+}
+
+// Custom date formatter
+private var dateFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "MMM, d, yyyy"
+    return formatter
 }

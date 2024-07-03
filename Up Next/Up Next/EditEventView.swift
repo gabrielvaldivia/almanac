@@ -71,6 +71,7 @@ struct EditEventView: View {
                         }
                         if repeatOption != .never {
                             Toggle("Repeat Indefinitely", isOn: $repeatIndefinitely)
+                                .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                             if !repeatIndefinitely {
                                 DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
                                     .datePickerStyle(DefaultDatePickerStyle())
@@ -150,15 +151,15 @@ struct EditEventView: View {
                         title: Text("Delete Event"),
                         message: Text("Are you sure you want to delete this event?"),
                         buttons: [
-                            .destructive(Text("Delete This Event")) {
+                            .destructive(Text("Delete this event")) {
                                 deleteOption = .thisEvent
                                 deleteEvent()
                             },
-                            .destructive(Text("Delete This and Upcoming Events")) {
+                            .destructive(Text("Delete this and all upcoming events")) {
                                 deleteOption = .thisAndUpcoming
                                 deleteEvent()
                             },
-                            .destructive(Text("Delete All Events in Series")) {
+                            .destructive(Text("Delete all events in this series")) {
                                 deleteOption = .allEvents
                                 deleteEvent()
                             },
