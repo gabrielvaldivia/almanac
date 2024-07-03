@@ -182,11 +182,19 @@ struct AddEventView: View {
                     }
                 }
             }
+            .onTapGesture {
+                hideKeyboard()
+            }
             .onAppear {
-                isTitleFocused = true // Set focus to true when the view appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isTitleFocused = true // Set focus to true when the view appears with a delay
+                }
                 if selectedCategory == nil {
                     selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
                 }
+            }
+            .onDisappear {
+                isTitleFocused = false // Reset focus state when the view disappears
             }
     }
 
@@ -330,6 +338,11 @@ struct AddEventView: View {
         return Color.blue // Default color if no category is selected
     }
     
+}
+
+// Helper function to hide the keyboard
+private func hideKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
 enum RepeatUntilOption: String, CaseIterable {
