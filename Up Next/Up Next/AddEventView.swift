@@ -22,7 +22,6 @@ struct AddEventView: View {
     @Binding var selectedColor: CodableColor // Use CodableColor to store color
     @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
     @EnvironmentObject var appData: AppData
-    @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
     @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
@@ -33,26 +32,35 @@ struct AddEventView: View {
                 Form {
                     Section() {
                         TextField("Title", text: $newEventTitle)
-                            .focused($isTitleFocused) // Apply focused state to the TextField
                     }
-                    Section() {
-                        DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
-                            .datePickerStyle(DefaultDatePickerStyle())
-                        if showEndDate {
-                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle()) 
-                            Button("Remove End Date") {
-                                showEndDate = false
-                                newEventEndDate = Date() 
+                    Section {
+                        HStack {
+                            DatePicker("", selection: $newEventDate, displayedComponents: .date)
+                                .datePickerStyle(DefaultDatePickerStyle())
+                                .labelsHidden()
+                            
+                            if showEndDate {
+                                DatePicker("", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                                    .datePickerStyle(DefaultDatePickerStyle())
+                                    .labelsHidden()
                             }
-                            .foregroundColor(.red)
-                        } else {
-                            Button("Add End Date") {
-                                showEndDate = true
-                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                showEndDate.toggle()
+                                if !showEndDate {
+                                    newEventEndDate = Date()
+                                } else {
+                                    newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
+                                }
+                            }) {
+                                Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(getCategoryColor())
                             }
-                            .foregroundColor(getCategoryColor()) // Change color based on category
                         }
+                        .padding(.horizontal, 0) // Remove horizontal padding
                     }
                     Section() {
                         Picker("Repeat", selection: $repeatOption) {
@@ -182,19 +190,10 @@ struct AddEventView: View {
                     }
                 }
             }
-            .onTapGesture {
-                hideKeyboard()
-            }
             .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isTitleFocused = true // Set focus to true when the view appears with a delay
-                }
                 if selectedCategory == nil {
                     selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
                 }
-            }
-            .onDisappear {
-                isTitleFocused = false // Reset focus state when the view disappears
             }
     }
 
@@ -340,11 +339,6 @@ struct AddEventView: View {
     
 }
 
-// Helper function to hide the keyboard
-private func hideKeyboard() {
-    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-}
-
 enum RepeatUntilOption: String, CaseIterable {
     case indefinitely = "Indefinitely"
     case after = "After"
@@ -357,6 +351,3 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
-
-
-
