@@ -18,6 +18,7 @@ struct EditEventView: View {
                 notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+                repeatIndefinitely = event.repeatUntil == nil // Adjust logic
             }
         }
     }
@@ -31,6 +32,9 @@ struct EditEventView: View {
     @Binding var notificationsEnabled: Bool
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+    @State private var repeatIndefinitely: Bool = false // New state variable
+    @State private var showDeleteActionSheet = false
+    @State private var deleteOption: DeleteOption = .thisEvent
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -66,8 +70,11 @@ struct EditEventView: View {
                             }
                         }
                         if repeatOption != .never {
-                            DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle())
+                            Toggle("Repeat Indefinitely", isOn: $repeatIndefinitely)
+                            if !repeatIndefinitely {
+                                DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
+                                    .datePickerStyle(DefaultDatePickerStyle())
+                            }
                         }
                     }
                     Section() {
@@ -133,13 +140,31 @@ struct EditEventView: View {
                     }
                     ToolbarItem(placement: .bottomBar) {
                         Button("Delete Event") {
-                            if let event = selectedEvent {
-                                deleteEvent(at: event)
-                            }
-                            showEditSheet = false
+                            showDeleteActionSheet = true
                         }
                         .foregroundColor(.red)
                     }
+                }
+                .actionSheet(isPresented: $showDeleteActionSheet) {
+                    ActionSheet(
+                        title: Text("Delete Event"),
+                        message: Text("Are you sure you want to delete this event?"),
+                        buttons: [
+                            .destructive(Text("Delete This Event")) {
+                                deleteOption = .thisEvent
+                                deleteEvent()
+                            },
+                            .destructive(Text("Delete This and Upcoming Events")) {
+                                deleteOption = .thisAndUpcoming
+                                deleteEvent()
+                            },
+                            .destructive(Text("Delete All Events in Series")) {
+                                deleteOption = .allEvents
+                                deleteEvent()
+                            },
+                            .cancel()
+                        ]
+                    )
                 }
             }
             .onAppear {
@@ -147,75 +172,35 @@ struct EditEventView: View {
                     notificationsEnabled = event.notificationsEnabled
                     repeatOption = event.repeatOption
                     repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+                    repeatIndefinitely = event.repeatUntil == nil // Adjust logic
                 }
             }
     }
 
-    func deleteEvent(at event: Event) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
-            saveEvents()
-        }
-    }
-
-    func saveChanges() {
-        if let selectedEvent = selectedEvent, let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
-            events[index].title = newEventTitle
-            events[index].date = newEventDate
-            events[index].endDate = showEndDate ? newEventEndDate : nil
-            events[index].color = selectedColor
-            events[index].category = selectedCategory
-            events[index].notificationsEnabled = notificationsEnabled
-            events[index].repeatOption = repeatOption
-            events[index].repeatUntil = repeatOption != .never ? repeatUntil : nil
-            saveEvents()
-            if events[index].notificationsEnabled {
-                appData.scheduleNotification(for: events[index])
-            } else {
-                appData.removeNotification(for: events[index])
+    func deleteEvent() {
+        guard let event = selectedEvent else { return }
+        
+        switch deleteOption {
+        case .thisEvent:
+            if let index = events.firstIndex(where: { $0.id == event.id }) {
+                events.remove(at: index)
             }
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify UpNextWidget to reload
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Notify NextEventWidget to reload
+        case .thisAndUpcoming:
+            events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
+        case .allEvents:
+            events.removeAll { $0.id == event.id || $0.repeatOption == event.repeatOption }
         }
+        
+        saveEvents()
+        showEditSheet = false
     }
 
-    func generateRepeatingEvents(for event: Event) -> [Event] {
-        var repeatingEvents = [Event]()
-        var currentEvent = event
-        repeatingEvents.append(currentEvent)
-        while let nextDate = getNextRepeatDate(for: currentEvent), nextDate <= (event.repeatUntil ?? Date()) {
-            currentEvent = Event(
-                title: event.title,
-                date: nextDate,
-                endDate: event.endDate,
-                color: event.color,
-                category: event.category,
-                notificationsEnabled: event.notificationsEnabled,
-                repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil
-            )
-            repeatingEvents.append(currentEvent)
+    func getCategoryColor() -> Color {
+        if let selectedCategory = selectedCategory,
+           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
+            return category.color // Assuming category.color is of type Color
         }
-        return repeatingEvents
-    }
-
-    func getNextRepeatDate(for event: Event) -> Date? {
-        switch event.repeatOption {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
-        }
-    }
-
-    func sortEvents() {
-        events.sort { $0.date < $1.date }
+        return Color.blue // Default color if no category is selected
     }
 
     func saveEvents() {
@@ -224,20 +209,11 @@ struct EditEventView: View {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         } else {
             print("Failed to encode events.")
         }
-    }
-    
-    func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color // Assuming category.color is of type Color
-        }
-        return Color.blue // Default color if no category is selected
     }
 }
 
@@ -259,4 +235,10 @@ struct EditEventView_Previews: PreviewProvider {
         )
         .environmentObject(AppData())
     }
+}
+
+enum DeleteOption {
+    case thisEvent
+    case thisAndUpcoming
+    case allEvents
 }
