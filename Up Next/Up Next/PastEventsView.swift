@@ -30,40 +30,49 @@ struct PastEventsView: View {
         NavigationView {
             ScrollView {
                 LazyVStack {
-                    ForEach(pastEvents(), id: \.id) { event in
-                        Button(action: {
-                            selectedEvent = event
-                            newEventTitle = event.title
-                            newEventDate = event.date
-                            newEventEndDate = event.endDate ?? event.date
-                            showEndDate = event.endDate != nil
-                            selectedCategory = event.category
-                            selectedColor = event.color
-                            notificationsEnabled = event.notificationsEnabled
-                            isEditSheetPresented = true
-                        }) {
-                            VStack {
-                                EventRow(event: event, formatter: itemDateFormatter,
-                                         selectedEvent: $selectedEvent,
-                                         newEventTitle: $newEventTitle,
-                                         newEventDate: $newEventDate,
-                                         newEventEndDate: $newEventEndDate,
-                                         showEndDate: $showEndDate,
-                                         selectedCategory: $selectedCategory,
-                                         showEditSheet: $showEditSheet,
-                                         categories: categories)
+                    ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+                        Section(header: Text(monthYear)
+                                    .roundedFont(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .padding(.top, 20)
+                                    .frame(maxWidth: .infinity, alignment: .leading)) {
+                            ForEach(events, id: \.id) { event in
+                                Button(action: {
+                                    selectedEvent = event
+                                    newEventTitle = event.title
+                                    newEventDate = event.date
+                                    newEventEndDate = event.endDate ?? event.date
+                                    showEndDate = event.endDate != nil
+                                    selectedCategory = event.category
+                                    selectedColor = event.color
+                                    notificationsEnabled = event.notificationsEnabled
+                                    isEditSheetPresented = true
+                                }) {
+                                    VStack {
+                                        EventRow(event: event, formatter: itemDateFormatter,
+                                                 selectedEvent: $selectedEvent,
+                                                 newEventTitle: $newEventTitle,
+                                                 newEventDate: $newEventDate,
+                                                 newEventEndDate: $newEventEndDate,
+                                                 showEndDate: $showEndDate,
+                                                 selectedCategory: $selectedCategory,
+                                                 showEditSheet: $showEditSheet,
+                                                 categories: categories)
+                                    }
+                                    .listRowSeparator(.hidden)
+                                }
+                                .listRowSeparator(.hidden)
                             }
-                            .listRowSeparator(.hidden)
+                            .onDelete(perform: deletePastEvent)
                         }
-                        .listRowSeparator(.hidden)
                     }
-                    .onDelete(perform: deletePastEvent)
                 }
                 .listStyle(PlainListStyle())
                 .listRowSeparator(.hidden)
                 .padding()
             }
             .navigationTitle("Past Events")
+            .roundedFont(.title)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") {
                 self.showPastEventsSheet = false
@@ -82,6 +91,25 @@ struct PastEventsView: View {
                               saveEvent: saveEvent)
             }
         }
+    }
+
+    func groupedPastEvents() -> [String: [Event]] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMMM yyyy"
+        
+        let pastEvents = self.pastEvents()
+        var groupedEvents = [String: [Event]]()
+        
+        for event in pastEvents {
+            let monthYear = dateFormatter.string(from: event.date)
+            if groupedEvents[monthYear] != nil {
+                groupedEvents[monthYear]?.append(event)
+            } else {
+                groupedEvents[monthYear] = [event]
+            }
+        }
+        
+        return groupedEvents
     }
 
     func pastEvents() -> [Event] {

@@ -85,9 +85,9 @@ struct ContentView: View {
                                                              newEventEndDate: $newEventEndDate,
                                                              showEndDate: $showEndDate,
                                                              selectedCategory: $selectedCategory,
-                                                             showEditSheet: $showEditSheet, // Add this line
+                                                             showEditSheet: $showEditSheet,
                                                              categories: appData.categories)
-                                                        .onTapGesture { // Add tap gesture to open EditEventView
+                                                        .onTapGesture {
                                                             self.selectedEvent = event
                                                             self.newEventTitle = event.title
                                                             self.newEventDate = event.date
@@ -96,7 +96,7 @@ struct ContentView: View {
                                                             self.selectedCategory = event.category
                                                             self.showEditSheet = true
                                                         }
-                                                        .listRowSeparator(.hidden) // Hide dividers
+                                                        .listRowSeparator(.hidden)
                                                 }
                                             }
                                         } 
@@ -114,6 +114,7 @@ struct ContentView: View {
                     } 
                 }
                 .navigationTitle("Up Next")
+                .roundedFont(.title)
                 .navigationBarItems(
                     leading: HStack {
                         CircleButton(
