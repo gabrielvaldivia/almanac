@@ -32,6 +32,8 @@ struct EditEventView: View {
     @Binding var notificationsEnabled: Bool
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
+    @State private var repeatCount: Int = 1
     @State private var repeatIndefinitely: Bool = false // New state variable
     @State private var showDeleteActionSheet = false
     @State private var deleteOption: DeleteOption = .thisEvent
@@ -69,12 +71,66 @@ struct EditEventView: View {
                                 Text(option.rawValue).tag(option)
                             }
                         }
+
                         if repeatOption != .never {
-                            Toggle("Repeat Indefinitely", isOn: $repeatIndefinitely)
-                                .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                            if !repeatIndefinitely {
-                                DatePicker("Repeat Until", selection: $repeatUntil, displayedComponents: .date)
-                                    .datePickerStyle(DefaultDatePickerStyle())
+                            Section() {
+                                List {
+                                    Button(action: { repeatUntilOption = .indefinitely }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
+                                            Text("Forever")
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .listRowSeparator(.hidden)
+
+                                    Button(action: { repeatUntilOption = .after }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
+                                            Text("End after")
+                                            if repeatUntilOption == .after {
+                                                HStack {
+                                                    TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                                        .keyboardType(.numberPad)
+                                                        .frame(width: 24)
+                                                        .multilineTextAlignment(.center)
+                                                    Stepper(value: $repeatCount, in: 1...100) {
+                                                        Text(" times")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .listRowSeparator(.hidden)
+
+                                    Button(action: { repeatUntilOption = .onDate }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
+                                            Text("Repeat until")
+                                            Spacer()
+                                            if repeatUntilOption == .onDate {
+                                                DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                                    .datePickerStyle(DefaultDatePickerStyle())
+                                                    .labelsHidden()
+                                                    .onChange(of: repeatUntil) { newDate in
+                                                        print("Selected date: \(dateFormatter.string(from: newDate))")
+                                                    }
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .listRowSeparator(.hidden)
+                                }
                             }
                         }
                     }
@@ -215,6 +271,79 @@ struct EditEventView: View {
         } else {
             print("Failed to encode events.")
         }
+    }
+    
+    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
+        switch option {
+        case .never:
+            return nil
+        case .daily:
+            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
+        case .weekly:
+            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
+        case .monthly:
+            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
+        case .yearly:
+            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+        }
+    }
+    
+    func generateRepeatingEvents(for event: Event) -> [Event] {
+        var repeatingEvents = [Event]()
+        var currentEvent = event
+        repeatingEvents.append(currentEvent)
+        
+        var repetitionCount = 1
+        let maxRepetitions: Int
+        
+        switch repeatUntilOption {
+        case .indefinitely:
+            maxRepetitions = 100
+        case .after:
+            maxRepetitions = repeatCount
+        case .onDate:
+            maxRepetitions = 100
+        }
+        
+        while let nextDate = getNextRepeatDate(for: currentEvent), 
+              nextDate <= (event.repeatUntil ?? Date.distantFuture), 
+              repetitionCount < maxRepetitions {
+            currentEvent = Event(
+                title: event.title,
+                date: nextDate,
+                endDate: event.endDate,
+                color: event.color,
+                category: event.category,
+                notificationsEnabled: event.notificationsEnabled,
+                repeatOption: event.repeatOption,
+                repeatUntil: event.repeatUntil
+            )
+            repeatingEvents.append(currentEvent)
+            repetitionCount += 1
+        }
+        
+        return repeatingEvents
+    }
+    
+    func getNextRepeatDate(for event: Event) -> Date? {
+        switch event.repeatOption {
+        case .never:
+            return nil
+        case .daily:
+            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+        case .weekly:
+            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
+        case .monthly:
+            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
+        case .yearly:
+            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
+        }
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM, d, yyyy"
+        return formatter
     }
 }
 

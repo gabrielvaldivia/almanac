@@ -219,6 +219,7 @@ struct CategoriesView: View {
     }
     
     private func deleteAllEvents() {
+        appData.objectWillChange.send()  // Notify the view of changes
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload

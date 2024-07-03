@@ -60,51 +60,70 @@ struct AddEventView: View {
                                 Text(option.rawValue).tag(option)
                             }
                         }
+
                         if repeatOption != .never {
                             Section() {
                                 List {
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
-                                            .onTapGesture { repeatUntilOption = .indefinitely }
-                                        Text("Forever")
+                                    Button(action: { repeatUntilOption = .indefinitely }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
+                                            Text("Forever")
+                                        }
                                     }
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                            .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
-                                            .onTapGesture { repeatUntilOption = .after }
-                                        Text("End after")
-                                        if repeatUntilOption == .after {
-                                            HStack {
-                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                    .keyboardType(.numberPad)
-                                                    .frame(width: 20)
-                                                    .multilineTextAlignment(.center)
-                                                Stepper(value: $repeatCount, in: 1...100) {
-                                                    Text(" times")
+                                    .buttonStyle(PlainButtonStyle()) 
+                                    .listRowSeparator(.hidden)
+
+                                    Button(action: { repeatUntilOption = .after }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light) 
+                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
+                                            Text("End after")
+                                            if repeatUntilOption == .after {
+                                                HStack {
+                                                    TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                                        .keyboardType(.numberPad)
+                                                        .frame(width: 24)
+                                                        .multilineTextAlignment(.center)
+                                                    Stepper(value: $repeatCount, in: 1...100) {
+                                                        Text(" times")
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                            .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
-                                            .onTapGesture { repeatUntilOption = .onDate }
-                                        Text("Repeat until")
-                                        Spacer()
-                                        if repeatUntilOption == .onDate {
-                                            DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                                .datePickerStyle(DefaultDatePickerStyle())
-                                                .labelsHidden()
-                                                .onChange { newValue in
-                                                    print("Selected date: \(dateFormatter.string(from: newValue))")
-                                                }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .listRowSeparator(.hidden)
+
+                                    Button(action: { repeatUntilOption = .onDate }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
+                                            Text("Repeat until")
+                                            Spacer()
+                                            if repeatUntilOption == .onDate {
+                                                DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                                    .datePickerStyle(DefaultDatePickerStyle())
+                                                    .labelsHidden()
+                                                    .onChange(of: repeatUntil) { newDate in
+                                                        print("Selected date: \(dateFormatter.string(from: newDate))")
+                                                    }
+                                            }
                                         }
                                     }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .listRowSeparator(.hidden)
                                 }
                             }
                         }
                     }
+                    
                     Section() {
                         HStack {
                             Picker("Category", selection: $selectedCategory) {
@@ -198,10 +217,19 @@ struct AddEventView: View {
             repeatOption: repeatOption,
             repeatUntil: repeatUntilDate
         )
-        events.append(contentsOf: generateRepeatingEvents(for: newEvent))
+
+        // Remove existing events in the series if editing an existing event
+        if let selectedEvent = selectedEvent {
+            events.removeAll { $0.id == selectedEvent.id || $0.repeatOption == selectedEvent.repeatOption }
+        }
+
+        // Create new events based on the repeat options
+        let newEvents = generateRepeatingEvents(for: newEvent)
+        events.append(contentsOf: newEvents)
+
         saveEvents()
         if newEvent.notificationsEnabled {
-            appData.scheduleNotification(for: newEvent) // Call centralized function
+            appData.scheduleNotification(for: newEvent)
         }
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
@@ -316,3 +344,6 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
+
+
+
