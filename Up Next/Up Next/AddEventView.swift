@@ -64,60 +64,60 @@ struct AddEventView: View {
                         if repeatOption != .never {
                             Section() {
                                 List {
-                                    Button(action: { repeatUntilOption = .indefinitely }) {
-                                        HStack {
+                                    HStack {
+                                        Button(action: { repeatUntilOption = .indefinitely }) {
                                             Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
                                                 .font(.system(size: 24))
                                                 .fontWeight(.light)
                                                 .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
                                             Text("Forever")
                                         }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
-                                    .buttonStyle(PlainButtonStyle()) 
-                                    .listRowSeparator(.hidden)
+                                    .listRowSeparator(.hidden) // Hide the separator below "Forever"
 
-                                    Button(action: { repeatUntilOption = .after }) {
-                                        HStack {
+                                    HStack {
+                                        Button(action: { repeatUntilOption = .after }) {
                                             Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
                                                 .font(.system(size: 24))
-                                                .fontWeight(.light) 
+                                                .fontWeight(.light)
                                                 .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
                                             Text("End after")
-                                            if repeatUntilOption == .after {
-                                                HStack {
-                                                    TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                        .keyboardType(.numberPad)
-                                                        .frame(width: 24)
-                                                        .multilineTextAlignment(.center)
-                                                    Stepper(value: $repeatCount, in: 1...100) {
-                                                        Text(" times")
-                                                    }
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        if repeatUntilOption == .after {
+                                            HStack {
+                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                                    .keyboardType(.numberPad)
+                                                    .frame(width: 24)
+                                                    .multilineTextAlignment(.center)
+                                                Stepper(value: $repeatCount, in: 1...100) {
+                                                    Text(" times")
                                                 }
                                             }
                                         }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .listRowSeparator(.hidden)
+                                    .listRowSeparator(.hidden) // Hide the separator below "End after"
 
-                                    Button(action: { repeatUntilOption = .onDate }) {
-                                        HStack {
+                                    HStack {
+                                        Button(action: { repeatUntilOption = .onDate }) {
                                             Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
                                                 .font(.system(size: 24))
                                                 .fontWeight(.light)
                                                 .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
                                             Text("Repeat until")
-                                            Spacer()
-                                            if repeatUntilOption == .onDate {
-                                                DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                                    .datePickerStyle(DefaultDatePickerStyle())
-                                                    .labelsHidden()
-                                                    .onChange(of: repeatUntil) { newDate in
-                                                        print("Selected date: \(dateFormatter.string(from: newDate))")
-                                                    }
-                                            }
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        Spacer()
+                                        if repeatUntilOption == .onDate {
+                                            DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                                .datePickerStyle(DefaultDatePickerStyle())
+                                                .labelsHidden()
+                                                .onChange(of: repeatUntil) { newDate in
+                                                    print("Selected date: \(dateFormatter.string(from: newDate))")
+                                                }
                                         }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
                                     .listRowSeparator(.hidden)
                                 }
                             }
