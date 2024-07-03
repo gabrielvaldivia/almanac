@@ -49,6 +49,7 @@ struct AddEventView: View {
                                 showEndDate = true
                                 newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
                             }
+                            .foregroundColor(getCategoryColor()) // Change color based on category
                         }
                     }
                     Section() {
@@ -78,7 +79,7 @@ struct AddEventView: View {
                     }
                     Section() {
                         Toggle("Notify me", isOn: $notificationsEnabled)
-                            .tint(getCategoryColor()) // Use the category color for the toggle
+                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor())) // Change color based on category
                     }
                     
                 }
@@ -209,4 +210,3 @@ struct AddEventView: View {
         return Color.blue // Default color if no category is selected
     }
 }
-

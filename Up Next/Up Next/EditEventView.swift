@@ -56,6 +56,7 @@ struct EditEventView: View {
                                 showEndDate = true
                                 newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
                             }
+                            .foregroundColor(getCategoryColor()) // Change color based on category
                         }
                     }
                     Section() {
@@ -91,15 +92,42 @@ struct EditEventView: View {
                     }
                     Section() {
                         Toggle("Notify me", isOn: $notificationsEnabled)
+                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                     }
                     
                 }
                 .navigationTitle("Edit Event")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) { 
+                        Button(action: {
+                            showEditSheet = false
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.2))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10, weight: .heavy))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Save") {
+                        Button(action: {
                             saveEvent()
+                        }) {
+                            Group {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(getCategoryColor())
+                                        .frame(width: 60, height: 32)
+                                    Text("Save")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
                         }
                         .disabled(newEventTitle.isEmpty)
                     }
@@ -202,6 +230,14 @@ struct EditEventView: View {
         } else {
             print("Failed to encode events.")
         }
+    }
+    
+    func getCategoryColor() -> Color {
+        if let selectedCategory = selectedCategory,
+           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
+            return category.color // Assuming category.color is of type Color
+        }
+        return Color.blue // Default color if no category is selected
     }
 }
 
