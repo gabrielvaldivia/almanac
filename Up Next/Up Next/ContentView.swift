@@ -71,8 +71,9 @@ struct ContentView: View {
                                 ) {
                                     ForEach(sortedKeys, id: \.self) { key in
                                         HStack(alignment: .top) {
-                                            Text(key.uppercased()).monospaced()
-                                                .roundedFont(.caption)
+                                            Text(key.uppercased())
+                                                .font(.system(.caption, design: .monospaced, weight: .medium))
+                                                // .font(.system(.footnote, design: .rounded, weight: .medium))
                                                 .foregroundColor(.gray)
                                                 .frame(width: 100, alignment: .leading) 
                                                 .padding(.vertical, 14)
