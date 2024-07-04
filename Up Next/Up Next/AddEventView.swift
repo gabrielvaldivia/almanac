@@ -29,6 +29,7 @@ struct AddEventView: View {
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
     @State private var showRepeatOptions: Bool = false // New state variable to show/hide repeat options
     @StateObject private var keyboardResponder = KeyboardResponder()
+    @State private var isNameFieldFocused: Bool = false // New state variable
 
     var body: some View {
         NavigationView {
@@ -40,15 +41,23 @@ struct AddEventView: View {
                             Text("Name")
                                 .font(.headline)
                                 .padding(.top)
+                                .foregroundColor(.gray)
                             Spacer()
                         }
                         
                         HStack {
-                            TextField("Title", text: $newEventTitle)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(8)
+                            TextField("Title", text: $newEventTitle, onEditingChanged: { isEditing in
+                                isNameFieldFocused = isEditing
+                            })
+                            .padding(.vertical, 10)
+                            .padding(.horizontal)
+                            .background(isNameFieldFocused ? Color(UIColor.systemBackground) : Color(UIColor.secondarySystemBackground)) // Change background color based on focus
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(isNameFieldFocused ? getCategoryColor() : Color.clear, lineWidth: 1) // Add stroke based on focus
+                            )
+                            .shadow(color: isNameFieldFocused ? getCategoryColor().opacity(0.2) : Color.clear, radius: 4) // Add subtle glow
                         }
                     }
                     .padding (.horizontal)
@@ -59,6 +68,7 @@ struct AddEventView: View {
                         HStack {
                             Text("Date")
                                 .font(.headline)
+                                .foregroundColor(.gray)
                                 .padding(.top)
                             Spacer()
                         }
@@ -84,9 +94,14 @@ struct AddEventView: View {
                                     newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
                                 }
                             }) {
-                                Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(getCategoryColor())
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(showEndDate ? getCategoryColor() : Color.gray.opacity(0.2)) // Change background color based on state
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
+                                        .font(.system(size: 16, weight: .semibold)) // Smaller and thicker icon
+                                        .foregroundColor(showEndDate ? .white : .gray) // Change icon color based on state
+                                }
                             }
                             
                             Menu {
@@ -96,12 +111,17 @@ struct AddEventView: View {
                                     }
                                 }
                             } label: {
-                                Image(systemName: "repeat")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(getCategoryColor())
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(repeatOption == .never ? Color.gray.opacity(0.2) : getCategoryColor()) // Change background color based on state
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: "repeat")
+                                        .font(.system(size: 16, weight: .semibold)) // Smaller and thicker icon
+                                        .foregroundColor(repeatOption == .never ? .gray : .white) // Change icon color based on state
+                                }
                             }
                         }
-                        .padding(.horizontal, 0) // Remove horizontal padding
+                        .padding(.horizontal, 0)
                         
                         if repeatOption != .never {
                             VStack(alignment: .leading) {
@@ -111,7 +131,7 @@ struct AddEventView: View {
                                             .font(.system(size: 24))
                                             .fontWeight(.light)
                                             .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
-                                        Text("Forever")
+                                        Text("Repeat \(repeatOption.rawValue.lowercased()) indefinitely") // Updated text
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .frame(height: 36) 
@@ -120,6 +140,30 @@ struct AddEventView: View {
                                 .buttonStyle(PlainButtonStyle())
                                 
                                 HStack {
+                                    Button(action: { repeatUntilOption = .onDate }) {
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
+                                            Text("Repeat \(repeatOption.rawValue.lowercased()) until")
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .frame(height: 36) 
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    Spacer()
+                                    if repeatUntilOption == .onDate {
+                                        DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                            .datePickerStyle(DefaultDatePickerStyle())
+                                            .labelsHidden()
+                                            .onChange(of: repeatUntil) { newDate in
+                                                print("Selected date: \(dateFormatter.string(from: newDate))")
+                                            }
+                                    }
+                                }
+
+                                HStack (alignment: .center) {
                                     Button(action: { repeatUntilOption = .after }) {
                                     HStack {
                                         Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
@@ -136,41 +180,18 @@ struct AddEventView: View {
                                     if repeatUntilOption == .after {
                                         HStack {
                                             TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                            .keyboardType(.numberPad)
-                                            .frame(width: 24)
-                                            .multilineTextAlignment(.center)
-                                        Text("times")
-                                        Spacer()
-                                        Stepper("", value: $repeatCount, in: 1...100)
+                                                .keyboardType(.numberPad)
+                                                .frame(width: 24)
+                                                .frame(height: 36)
+                                                .padding(.vertical,0)
+                                                .multilineTextAlignment(.center)
+                                            Text(getRepeatCadenceText())
+                                            Spacer()
+                                            Stepper("", value: $repeatCount, in: 1...100)
+                                            .frame(height: 36)
+                                            .padding(.vertical,0)
                                         }
                                         
-                                    }
-                                }
-                                
-                                
-                                
-                                
-                                HStack {
-                                    Button(action: { repeatUntilOption = .onDate }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
-                                            Text("Repeat until")
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .frame(height: 36) 
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    Spacer()
-                                    if repeatUntilOption == .onDate {
-                                        DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                            .datePickerStyle(DefaultDatePickerStyle())
-                                            .labelsHidden()
-                                            .onChange(of: repeatUntil) { newDate in
-                                                print("Selected date: \(dateFormatter.string(from: newDate))")
-                                            }
                                     }
                                 }
                             }
@@ -179,11 +200,12 @@ struct AddEventView: View {
                     .padding (.horizontal)
                     
                     
-                    // Categories Section
+                    // Category Section
                     VStack {
                         HStack {
-                            Text("Categories")
+                            Text("Category")
                                 .font(.headline)
+                                .foregroundColor(.gray) 
                                 .padding(.top)
                                 .padding(.horizontal)
                             Spacer()
@@ -195,7 +217,7 @@ struct AddEventView: View {
                                     Text(category.name)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(selectedCategory == category.name ? getCategoryColor() : Color.gray.opacity(0.2))
+                                        .background(selectedCategory == category.name ? getCategoryColor() : Color.gray.opacity(0.15))
                                         .cornerRadius(20)
                                         .foregroundColor(selectedCategory == category.name ? .white : .primary)
                                         .onTapGesture {
@@ -210,6 +232,7 @@ struct AddEventView: View {
                             Toggle(isOn: $notificationsEnabled) {
                                 Text("Notify me")
                                     .fontWeight(.semibold) // Make the text bold
+                                    .foregroundColor(.gray) // Set text color to light gray
                             }
                             .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                         }
@@ -404,6 +427,22 @@ struct AddEventView: View {
         return Color.blue // Default color if no category is selected
     }
     
+    func getRepeatCadenceText() -> String {
+        let cadence: String
+        switch repeatOption {
+        case .daily:
+            cadence = repeatCount == 1 ? "day" : "days"
+        case .weekly:
+            cadence = repeatCount == 1 ? "week" : "weeks"
+        case .monthly:
+            cadence = repeatCount == 1 ? "month" : "months"
+        case .yearly:
+            cadence = repeatCount == 1 ? "year" : "years"
+        case .never:
+            cadence = repeatCount == 1 ? "time" : "times"
+        }
+        return cadence
+    }
 }
 
 enum RepeatUntilOption: String, CaseIterable {
@@ -439,6 +478,8 @@ final class KeyboardResponder: ObservableObject {
         cancellable?.cancel()
     }
 }
+
+
 
 
 
