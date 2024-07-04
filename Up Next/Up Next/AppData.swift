@@ -42,6 +42,12 @@ enum RepeatOption: String, Codable, CaseIterable {
     case yearly = "Yearly"
 }
 
+enum DeleteOption {
+    case thisEvent
+    case thisAndUpcoming
+    case allEvents
+}
+
 struct CategoryData: Codable {
     let name: String
     let color: CodableColor

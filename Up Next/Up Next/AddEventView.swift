@@ -8,8 +8,8 @@
 import Foundation
 import SwiftUI
 import UserNotifications
-import WidgetKit // Add this import
-import Combine // Add this import
+import WidgetKit
+import Combine
 
 struct AddEventView: View {
     @Binding var events: [Event]
@@ -20,23 +20,23 @@ struct AddEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: CodableColor // Use CodableColor to store color
-    @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
+    @Binding var selectedColor: CodableColor
+    @Binding var notificationsEnabled: Bool
     @EnvironmentObject var appData: AppData
-    @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
+    @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
-    @State private var repeatCount: Int = 1 // New state variable for number of repetitions
-    @State private var showRepeatOptions: Bool = false // New state variable to show/hide repeat options
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
+    @State private var repeatCount: Int = 1
+    @State private var showRepeatOptions: Bool = false
     @StateObject private var keyboardResponder = KeyboardResponder()
-    @State private var isNameFieldFocused: Bool = false // New state variable
-    @State private var showAddCategorySheet: Bool = false // New state variable
-    @State private var newCategoryName: String = "" // New state variable
-    @State private var newCategoryColor: Color = .blue // New state variable
+    @FocusState private var isNameFieldFocused: Bool // Change to FocusState
+    @State private var showAddCategorySheet: Bool = false
+    @State private var newCategoryName: String = ""
+    @State private var newCategoryColor: Color = .blue
 
     var body: some View {
         NavigationView {
-            ScrollView { // Wrap the content in a ScrollView
+            ScrollView {
                 VStack {
                     // Name Section
                     VStack {
@@ -54,17 +54,17 @@ struct AddEventView: View {
                             })
                             .padding(.vertical, 10)
                             .padding(.horizontal)
-                            .background(isNameFieldFocused ? Color(UIColor.systemBackground) : Color(UIColor.secondarySystemBackground)) // Change background color based on focus
+                            .background(isNameFieldFocused ? Color(UIColor.systemBackground) : Color(UIColor.secondarySystemBackground))
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isNameFieldFocused ? getCategoryColor() : Color.clear, lineWidth: 1) // Add stroke based on focus
+                                    .stroke(isNameFieldFocused ? getCategoryColor() : Color.clear, lineWidth: 1)
                             )
-                            .shadow(color: isNameFieldFocused ? getCategoryColor().opacity(0.2) : Color.clear, radius: 4) // Add subtle glow
+                            .shadow(color: isNameFieldFocused ? getCategoryColor().opacity(0.2) : Color.clear, radius: 4)
+                            .focused($isNameFieldFocused) // Use FocusState binding
                         }
                     }
-                    .padding (.horizontal)
-                    
+                    .padding(.horizontal)
                     
                     // Date Section
                     VStack {
@@ -99,11 +99,11 @@ struct AddEventView: View {
                             }) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(showEndDate ? getCategoryColor() : Color.gray.opacity(0.2)) // Change background color based on state
+                                        .fill(showEndDate ? getCategoryColor() : Color.gray.opacity(0.2))
                                         .frame(width: 36, height: 36)
                                     Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
-                                        .font(.system(size: 16, weight: .semibold)) // Smaller and thicker icon
-                                        .foregroundColor(showEndDate ? .white : .gray) // Change icon color based on state
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(showEndDate ? .white : .gray)
                                 }
                             }
                             
@@ -116,11 +116,11 @@ struct AddEventView: View {
                             } label: {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(repeatOption == .never ? Color.gray.opacity(0.2) : getCategoryColor()) // Change background color based on state
+                                        .fill(repeatOption == .never ? Color.gray.opacity(0.2) : getCategoryColor())
                                         .frame(width: 36, height: 36)
                                     Image(systemName: "repeat")
-                                        .font(.system(size: 16, weight: .semibold)) // Smaller and thicker icon
-                                        .foregroundColor(repeatOption == .never ? .gray : .white) // Change icon color based on state
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(repeatOption == .never ? .gray : .white)
                                 }
                             }
                         }
@@ -133,11 +133,11 @@ struct AddEventView: View {
                                         Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
                                             .font(.system(size: 24))
                                             .fontWeight(.light)
-                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
-                                        Text("Repeat \(repeatOption.rawValue.lowercased()) indefinitely") // Updated text
+                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
+                                        Text("Repeat \(repeatOption.rawValue.lowercased()) indefinitely")
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: 36) 
+                                    .frame(height: 36)
                                     .padding(.top, 10)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -148,11 +148,11 @@ struct AddEventView: View {
                                             Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
                                                 .font(.system(size: 24))
                                                 .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
+                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
                                             Text("Repeat \(repeatOption.rawValue.lowercased()) until")
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .frame(height: 36) 
+                                        .frame(height: 36)
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     Spacer()
@@ -160,55 +160,46 @@ struct AddEventView: View {
                                         DatePicker("", selection: $repeatUntil, displayedComponents: .date)
                                             .datePickerStyle(DefaultDatePickerStyle())
                                             .labelsHidden()
-                                            .onChange(of: repeatUntil) { newDate in
-                                                print("Selected date: \(dateFormatter.string(from: newDate))")
-                                            }
                                     }
                                 }
-
-                                HStack (alignment: .center) {
+                                
+                                HStack {
                                     Button(action: { repeatUntilOption = .after }) {
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                            .font(.system(size: 24))
-                                            .fontWeight(.light)
-                                            .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
-                                        Text("End after")
-                                    }
-                                    .frame(alignment: .leading)
-                                    .frame(height: 36)
+                                        HStack {
+                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                                .font(.system(size: 24))
+                                                .fontWeight(.light)
+                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
+                                            Text("End after")
+                                        }
+                                        .frame(alignment: .leading)
+                                        .frame(height: 36)
                                     }
                                     .buttonStyle(PlainButtonStyle())
-
+                                    
                                     if repeatUntilOption == .after {
                                         HStack {
                                             TextField("", value: $repeatCount, formatter: NumberFormatter())
                                                 .keyboardType(.numberPad)
                                                 .frame(width: 24)
-                                                .frame(height: 36)
-                                                .padding(.vertical,0)
                                                 .multilineTextAlignment(.center)
-                                            Text(getRepeatCadenceText())
-                                            Spacer()
-                                            Stepper("", value: $repeatCount, in: 1...100)
-                                            .frame(height: 36)
-                                            .padding(.vertical,0)
+                                            Stepper(value: $repeatCount, in: 1...100) {
+                                                Text(" times")
+                                            }
                                         }
-                                        
                                     }
                                 }
                             }
                         }
                     }
-                    .padding (.horizontal)
-                    
+                    .padding(.horizontal)
                     
                     // Category Section
                     VStack {
                         HStack {
                             Text("Category")
                                 .font(.headline)
-                                .foregroundColor(.gray) 
+                                .foregroundColor(.gray)
                                 .padding(.top)
                                 .padding(.horizontal)
                             Spacer()
@@ -229,10 +220,10 @@ struct AddEventView: View {
                                 }
                                 // New category pill
                                 Button(action: {
-                                    selectedCategory = nil // Ensure no category is selected
-                                    showAddCategorySheet = true // Show the add category sheet
+                                    selectedCategory = nil
+                                    showAddCategorySheet = true
                                     newCategoryName = ""
-                                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9)) // Ensure middle range color
+                                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))
                                 }) {
                                     HStack {
                                         Image(systemName: "plus")
@@ -242,67 +233,69 @@ struct AddEventView: View {
                                     .padding(.vertical, 8)
                                     .background(Color.blue.opacity(0.15))
                                     .cornerRadius(20)
-                                    .foregroundColor(.blue)
                                 }
                             }
                             .padding(.horizontal)
                         }
                         
-                        HStack {
-                            Toggle(isOn: $notificationsEnabled) {
-                                Text("Notify me")
-                                    .fontWeight(.semibold) // Make the text bold
-                                    .foregroundColor(.gray) // Set text color to light gray
-                            }
-                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+                    }
+                    
+                    // Notification Section
+                    HStack {
+                        Toggle(isOn: $notificationsEnabled) {
+                            Text("Notify me")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.gray)
                         }
-                        .padding()
-                        
-                        Spacer()  
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+                    }
+                    .padding()
+                    
+                    Spacer()
+                }
+            }
+            .navigationTitle("Add Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { 
+                    Button(action: {
+                        showAddEventSheet = false
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
-                .navigationTitle("Add Event")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) { 
-                        Button(action: {
-                            showAddEventSheet = false
-                        }) {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        saveNewEvent()
+                        showAddEventSheet = false
+                    }) {
+                        Group {
                             ZStack {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .heavy))
-                                    .foregroundColor(.primary)
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(getCategoryColor())
+                                    .frame(width: 60, height: 32)
+                                Text("Add")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
                             }
                         }
+                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            saveNewEvent()
-                            showAddEventSheet = false
-                        }) {
-                            Group {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(getCategoryColor())
-                                        .frame(width: 60, height: 32)
-                                    Text("Add")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .opacity(newEventTitle.isEmpty ? 0.3 : 1.0) // Adjust opacity based on title
-                        }
-                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
-                    }
+                    .disabled(newEventTitle.isEmpty)
                 }
             }
             .onAppear {
                 if selectedCategory == nil {
                     selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
                 }
+                isNameFieldFocused = true // Focus the TextField when the sheet appears
             }
             .sheet(isPresented: $showAddCategorySheet, onDismiss: {
                 if !newCategoryName.isEmpty {
@@ -314,7 +307,7 @@ struct AddEventView: View {
                     newCategoryColor: $newCategoryColor,
                     showingAddCategorySheet: $showAddCategorySheet,
                     appData: appData
-                ) // Present the AddCategoryView as a sheet
+                )
             }
         }
     }
@@ -360,7 +353,7 @@ struct AddEventView: View {
         if newEvent.notificationsEnabled {
             appData.scheduleNotification(for: newEvent)
         }
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
     }
 
     func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
@@ -388,11 +381,11 @@ struct AddEventView: View {
         
         switch repeatUntilOption {
         case .indefinitely:
-            maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
+            maxRepetitions = 100
         case .after:
             maxRepetitions = repeatCount
         case .onDate:
-            maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
+            maxRepetitions = 100
         }
         
         print("Generating repeating events for \(event.title)")
@@ -444,7 +437,6 @@ struct AddEventView: View {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            // print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")
         }
@@ -454,26 +446,9 @@ struct AddEventView: View {
     func getCategoryColor() -> Color {
         if let selectedCategory = selectedCategory,
            let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color // Assuming category.color is of type Color
+            return category.color
         }
-        return Color.blue // Default color if no category is selected
-    }
-    
-    func getRepeatCadenceText() -> String {
-        let cadence: String
-        switch repeatOption {
-        case .daily:
-            cadence = repeatCount == 1 ? "day" : "days"
-        case .weekly:
-            cadence = repeatCount == 1 ? "week" : "weeks"
-        case .monthly:
-            cadence = repeatCount == 1 ? "month" : "months"
-        case .yearly:
-            cadence = repeatCount == 1 ? "year" : "years"
-        case .never:
-            cadence = repeatCount == 1 ? "time" : "times"
-        }
-        return cadence
+        return Color.blue
     }
 }
 
