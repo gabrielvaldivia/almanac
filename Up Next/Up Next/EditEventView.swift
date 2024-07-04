@@ -197,7 +197,11 @@ struct EditEventView: View {
                     }
                     ToolbarItem(placement: .bottomBar) {
                         Button("Delete Event") {
-                            showDeleteActionSheet = true
+                            if selectedEvent?.repeatOption != .never {
+                                showDeleteActionSheet = true
+                            } else {
+                                deleteEvent()
+                            }
                         }
                         .foregroundColor(.red)
                     }
@@ -237,15 +241,21 @@ struct EditEventView: View {
     func deleteEvent() {
         guard let event = selectedEvent else { return }
         
-        switch deleteOption {
-        case .thisEvent:
+        if event.repeatOption == .never {
             if let index = events.firstIndex(where: { $0.id == event.id }) {
                 events.remove(at: index)
             }
-        case .thisAndUpcoming:
-            events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
-        case .allEvents:
-            events.removeAll { $0.id == event.id || $0.repeatOption == event.repeatOption }
+        } else {
+            switch deleteOption {
+            case .thisEvent:
+                if let index = events.firstIndex(where: { $0.id == event.id }) {
+                    events.remove(at: index)
+                }
+            case .thisAndUpcoming:
+                events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
+            case .allEvents:
+                events.removeAll { $0.id == event.id || $0.repeatOption == event.repeatOption }
+            }
         }
         
         saveEvents()
@@ -372,3 +382,4 @@ enum DeleteOption {
     case thisAndUpcoming
     case allEvents
 }
+
