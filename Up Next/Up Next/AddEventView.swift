@@ -114,33 +114,41 @@ struct AddEventView: View {
                                         Text("Forever")
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: 44) // Fixed height
+                                    .frame(height: 36) 
+                                    .padding(.top, 10)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 
-                                Button(action: { repeatUntilOption = .after }) {
+                                HStack {
+                                    Button(action: { repeatUntilOption = .after }) {
                                     HStack {
                                         Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
                                             .font(.system(size: 24))
                                             .fontWeight(.light)
                                             .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
                                         Text("End after")
-                                        if repeatUntilOption == .after {
-                                            HStack {
-                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                    .keyboardType(.numberPad)
-                                                    .frame(width: 24)
-                                                    .multilineTextAlignment(.center)
-                                                Stepper(value: $repeatCount, in: 1...100) {
-                                                    Text(" times")
-                                                }
-                                            }
-                                        }
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: 44) // Fixed height
+                                    .frame(alignment: .leading)
+                                    .frame(height: 36)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+
+                                    if repeatUntilOption == .after {
+                                        HStack {
+                                            TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                            .keyboardType(.numberPad)
+                                            .frame(width: 24)
+                                            .multilineTextAlignment(.center)
+                                        Text("times")
+                                        Spacer()
+                                        Stepper("", value: $repeatCount, in: 1...100)
+                                        }
+                                        
+                                    }
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                
+                                
+                                
                                 
                                 HStack {
                                     Button(action: { repeatUntilOption = .onDate }) {
@@ -152,7 +160,7 @@ struct AddEventView: View {
                                             Text("Repeat until")
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .frame(height: 44) // Fixed height
+                                        .frame(height: 36) 
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     Spacer()
@@ -199,8 +207,11 @@ struct AddEventView: View {
                         }
                         
                         HStack {
-                            Toggle("Notify me", isOn: $notificationsEnabled)
-                                .toggleStyle(SwitchToggleStyle(tint: getCategoryColor())) // Change color based on category
+                            Toggle(isOn: $notificationsEnabled) {
+                                Text("Notify me")
+                                    .fontWeight(.semibold) // Make the text bold
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                         }
                         .padding()
                         
@@ -428,3 +439,6 @@ final class KeyboardResponder: ObservableObject {
         cancellable?.cancel()
     }
 }
+
+
+
