@@ -30,6 +30,9 @@ struct AddEventView: View {
     @State private var showRepeatOptions: Bool = false // New state variable to show/hide repeat options
     @StateObject private var keyboardResponder = KeyboardResponder()
     @State private var isNameFieldFocused: Bool = false // New state variable
+    @State private var showAddCategorySheet: Bool = false // New state variable
+    @State private var newCategoryName: String = "" // New state variable
+    @State private var newCategoryColor: Color = .blue // New state variable
 
     var body: some View {
         NavigationView {
@@ -224,6 +227,23 @@ struct AddEventView: View {
                                             selectedCategory = category.name
                                         }
                                 }
+                                // New category pill
+                                Button(action: {
+                                    selectedCategory = nil // Ensure no category is selected
+                                    showAddCategorySheet = true // Show the add category sheet
+                                    newCategoryName = ""
+                                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9)) // Ensure middle range color
+                                }) {
+                                    HStack {
+                                        Image(systemName: "plus")
+                                        Text("New Category")
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue.opacity(0.15))
+                                    .cornerRadius(20)
+                                    .foregroundColor(.blue)
+                                }
                             }
                             .padding(.horizontal)
                         }
@@ -283,6 +303,18 @@ struct AddEventView: View {
                 if selectedCategory == nil {
                     selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
                 }
+            }
+            .sheet(isPresented: $showAddCategorySheet, onDismiss: {
+                if !newCategoryName.isEmpty {
+                    selectedCategory = newCategoryName
+                }
+            }) {
+                AddCategoryView(
+                    newCategoryName: $newCategoryName,
+                    newCategoryColor: $newCategoryColor,
+                    showingAddCategorySheet: $showAddCategorySheet,
+                    appData: appData
+                ) // Present the AddCategoryView as a sheet
             }
         }
     }
