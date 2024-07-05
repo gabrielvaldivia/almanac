@@ -244,7 +244,7 @@ struct ContentView: View {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
             saveEvents()  // Save after deleting
-            appData.removeNotification(for: event) // Call centralized function
+            appData.removeNotification(for: event) // Call centralized function to remove notification
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
         }
