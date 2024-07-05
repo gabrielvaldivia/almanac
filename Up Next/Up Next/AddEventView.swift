@@ -39,18 +39,9 @@ struct AddEventView: View {
                     DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
                     if showEndDate {
                         DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                        Button("Remove End Date") {
-                            showEndDate = false
-                            newEventEndDate = Date()
-                        }
-                        .foregroundColor(.red)
-                    } else {
-                        Button("Add End Date") {
-                            showEndDate = true
-                            newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
-                        }
-                        .foregroundColor(getCategoryColor())
                     }
+                    Toggle("Add End Date", isOn: $showEndDate)
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                 }
                 Section {
                     Picker("Repeat", selection: $repeatOption) {
