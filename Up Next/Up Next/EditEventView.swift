@@ -10,6 +10,12 @@ import SwiftUI
 import WidgetKit
 import UserNotifications
 
+enum DeleteOption {
+    case thisEvent
+    case thisAndUpcoming
+    case allEvents
+}
+
 struct EditEventView: View {
     @Binding var events: [Event]
     @Binding var selectedEvent: Event? {
@@ -19,6 +25,7 @@ struct EditEventView: View {
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
                 repeatIndefinitely = event.repeatUntil == nil // Adjust logic
+                updateRepeatUntilOption(for: event)
             }
         }
     }
@@ -41,197 +48,190 @@ struct EditEventView: View {
     @EnvironmentObject var appData: AppData
 
     var body: some View {
-            NavigationView {
-                Form {
-                    Section() {
-                        TextField("Title", text: $newEventTitle)
-                    }
-                    Section() {
-                        DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
+        NavigationView {
+            Form {
+                Section() {
+                    TextField("Title", text: $newEventTitle)
+                }
+                Section() {
+                    DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
+                        .datePickerStyle(DefaultDatePickerStyle())
+                    if showEndDate {
+                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
                             .datePickerStyle(DefaultDatePickerStyle())
-                        if showEndDate {
-                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle())
-                            Button("Remove End Date") {
-                                showEndDate = false
-                                newEventEndDate = Date()
-                            }
-                            .foregroundColor(.red)
-                        } else {
-                            Button("Add End Date") {
-                                showEndDate = true
-                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
-                            }
-                            .foregroundColor(getCategoryColor()) // Change color based on category
-                        }
                     }
-                    Section() {
-                        Picker("Repeat", selection: $repeatOption) {
-                            ForEach(RepeatOption.allCases, id: \.self) { option in
-                                Text(option.rawValue).tag(option)
+                    Toggle("Multi-Day", isOn: $showEndDate)
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+                }
+                Section() {
+                    Menu {
+                        ForEach(RepeatOption.allCases, id: \.self) { option in
+                            Button(action: {
+                                repeatOption = option
+                            }) {
+                                Text(option.rawValue)
+                                    .foregroundColor(option == repeatOption ? .gray : .primary)
                             }
                         }
-
-                        if repeatOption != .never {
-                            Section() {
-                                List {
-                                    Button(action: { repeatUntilOption = .indefinitely }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
-                                            Text("Forever")
-                                        }
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .listRowSeparator(.hidden)
-
-                                    Button(action: { repeatUntilOption = .after }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
-                                            Text("End after")
-                                            if repeatUntilOption == .after {
-                                                HStack {
-                                                    TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                        .keyboardType(.numberPad)
-                                                        .frame(width: 24)
-                                                        .multilineTextAlignment(.center)
-                                                    Stepper(value: $repeatCount, in: 1...100) {
-                                                        Text(" times")
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .listRowSeparator(.hidden)
-
-                                    Button(action: { repeatUntilOption = .onDate }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
-                                            Text("Repeat until")
-                                            Spacer()
-                                            if repeatUntilOption == .onDate {
-                                                DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                                    .datePickerStyle(DefaultDatePickerStyle())
-                                                    .labelsHidden()
-                                                    .onChange(of: repeatUntil) { newDate in
-                                                        print("Selected date: \(dateFormatter.string(from: newDate))")
-                                                    }
-                                            }
-                                        }
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .listRowSeparator(.hidden)
-                                }
-                            }
-                        }
-                    }
-                    Section() {
+                    } label: {
                         HStack {
-                            Text("Category")
+                            Text("Repeat")
+                                .foregroundColor(.primary)
                             Spacer()
-                            Menu {
-                                Picker("Select Category", selection: $selectedCategory) {
-                                    ForEach(appData.categories, id: \.name) { category in
-                                        Text(category.name).tag(category.name as String?)
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedCategory ?? "Select")
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
-                                }
-                            }
+                            Text(repeatOption.rawValue)
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .foregroundColor(.gray)
+                                .font(.footnote)
                         }
                     }
-                    Section() {
-                        Toggle("Notify me", isOn: $notificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                    }
-                    
-                }
-                .navigationTitle("Edit Event")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) { 
-                        Button(action: {
-                            showEditSheet = false
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .heavy))
+
+                    if repeatOption != .never {
+                        Menu {
+                            Button(action: {
+                                repeatUntilOption = .indefinitely
+                            }) {
+                                Text("Never")
+                                    .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
+                            }
+                            Button(action: {
+                                repeatUntilOption = .after
+                            }) {
+                                Text("After")
+                                    .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
+                            }
+                            Button(action: {
+                                repeatUntilOption = .onDate
+                            }) {
+                                Text("On")
+                                    .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
+                            }
+                        } label: {
+                            HStack {
+                                Text("End Repeat")
                                     .foregroundColor(.primary)
+                                Spacer()
+                                Text(repeatUntilOption.rawValue)
+                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.gray)
+                                    .font(.footnote)
                             }
                         }
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            saveEvent()
-                        }) {
-                            Group {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(getCategoryColor())
-                                        .frame(width: 60, height: 32)
-                                    Text("Save")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
+
+                        if repeatUntilOption == .after {
+                            HStack {
+                                TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                    .keyboardType(.numberPad)
+                                    .frame(width: 24)
+                                    .multilineTextAlignment(.center)
+                                Stepper(value: $repeatCount, in: 1...100) {
+                                    Text(" times")
                                 }
                             }
-                            .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
+                        } else if repeatUntilOption == .onDate {
+                            DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
                         }
-                        .disabled(newEventTitle.isEmpty)
-                    }
-                    ToolbarItem(placement: .bottomBar) {
-                        Button("Delete Event") {
-                            showDeleteActionSheet = true
-                        }
-                        .foregroundColor(.red)
                     }
                 }
-                .actionSheet(isPresented: $showDeleteActionSheet) {
-                    ActionSheet(
-                        title: Text("Delete Event"),
-                        message: Text("Are you sure you want to delete this event?"),
-                        buttons: [
-                            .destructive(Text("Delete this event")) {
-                                deleteOption = .thisEvent
-                                deleteEvent()
-                            },
-                            .destructive(Text("Delete this and all upcoming events")) {
-                                deleteOption = .thisAndUpcoming
-                                deleteEvent()
-                            },
-                            .destructive(Text("Delete all events in this series")) {
-                                deleteOption = .allEvents
-                                deleteEvent()
-                            },
-                            .cancel()
-                        ]
-                    )
+                Section() {
+                    HStack {
+                        Text("Category")
+                        Spacer()
+                        Menu {
+                            Picker("Select Category", selection: $selectedCategory) {
+                                ForEach(appData.categories, id: \.name) { category in
+                                    Text(category.name).tag(category.name as String?)
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedCategory ?? "Select")
+                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                }
+                Section() {
+                    Toggle("Notify me", isOn: $notificationsEnabled)
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                 }
             }
-            .onAppear {
-                if let event = selectedEvent {
-                    notificationsEnabled = event.notificationsEnabled
-                    repeatOption = event.repeatOption
-                    repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                    repeatIndefinitely = event.repeatUntil == nil // Adjust logic
+            .navigationTitle("Edit Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { 
+                    Button(action: {
+                        showEditSheet = false
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        saveEvent()
+                    }) {
+                        Group {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(getCategoryColor())
+                                    .frame(width: 60, height: 32)
+                                Text("Save")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
+                    }
+                    .disabled(newEventTitle.isEmpty)
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Delete Event") {
+                        showDeleteActionSheet = true
+                    }
+                    .foregroundColor(.red)
                 }
             }
+            .actionSheet(isPresented: $showDeleteActionSheet) {
+                ActionSheet(
+                    title: Text("Delete Event"),
+                    message: Text("Are you sure you want to delete this event?"),
+                    buttons: [
+                        .destructive(Text("Delete this event")) {
+                            deleteOption = .thisEvent
+                            deleteEvent()
+                        },
+                        .destructive(Text("Delete this and all upcoming events")) {
+                            deleteOption = .thisAndUpcoming
+                            deleteEvent()
+                        },
+                        .destructive(Text("Delete all events in this series")) {
+                            deleteOption = .allEvents
+                            deleteEvent()
+                        },
+                        .cancel()
+                    ]
+                )
+            }
+        }
+        .onAppear {
+            if let event = selectedEvent {
+                notificationsEnabled = event.notificationsEnabled
+                repeatOption = event.repeatOption
+                repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+                repeatIndefinitely = event.repeatUntil == nil
+                updateRepeatUntilOption(for: event)
+            }
+        }
     }
 
     func deleteEvent() {
@@ -345,30 +345,18 @@ struct EditEventView: View {
         formatter.dateFormat = "MMM, d, yyyy"
         return formatter
     }
-}
 
-// Preview Provider
-struct EditEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        EditEventView(
-            events: .constant([]),
-            selectedEvent: .constant(nil),
-            newEventTitle: .constant(""),
-            newEventDate: .constant(Date()),
-            newEventEndDate: .constant(Date()),
-            showEndDate: .constant(false),
-            showEditSheet: .constant(false),
-            selectedCategory: .constant(nil),
-            selectedColor: .constant(CodableColor(color: .black)),
-            notificationsEnabled: .constant(true),
-            saveEvent: {}
-        )
-        .environmentObject(AppData())
+    private func updateRepeatUntilOption(for event: Event) {
+        if let repeatUntil = event.repeatUntil {
+            if Calendar.current.isDate(repeatUntil, inSameDayAs: event.date) {
+                repeatUntilOption = .indefinitely
+            } else if repeatUntil > event.date {
+                repeatUntilOption = .onDate
+            } else {
+                repeatUntilOption = .after
+            }
+        } else {
+            repeatUntilOption = .indefinitely
+        }
     }
-}
-
-enum DeleteOption {
-    case thisEvent
-    case thisAndUpcoming
-    case allEvents
 }
