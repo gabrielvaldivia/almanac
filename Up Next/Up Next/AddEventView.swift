@@ -34,6 +34,7 @@ struct AddEventView: View {
                 Section {
                     TextField("Title", text: $newEventTitle)
                         .focused($isTitleFocused)
+<<<<<<< Updated upstream
                 }
                 Section {
                     DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
@@ -110,6 +111,76 @@ struct AddEventView: View {
                     }
                 }
                 Section {
+=======
+                }
+                Section {
+                    DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
+                    
+                    if showEndDate {
+                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                            .transition(.move(edge: .top).combined(with: .opacity)) 
+                    }
+                    
+                    Toggle("Multi-Day Event", isOn: $showEndDate)
+                        .onChange(of: showEndDate) { value in
+                            withAnimation {
+                                if value {
+                                    newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
+                                } else {
+                                    newEventEndDate = Date()
+                                }
+                            }
+                        }
+                }
+                Section {
+                    Picker("Repeat", selection: $repeatOption) {
+                        ForEach(RepeatOption.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                    if repeatOption != .never {
+                        HStack {
+                            Text("End Repeat")
+                            Spacer()
+                            Menu {
+                                Picker(selection: $repeatUntilOption, label: EmptyView()) {
+                                    Text("Never").tag(RepeatUntilOption.indefinitely) // Updated text
+                                    Text("After Some Time").tag(RepeatUntilOption.after)
+                                    Text("On Date").tag(RepeatUntilOption.onDate)
+                                }
+                            } label: {
+                                HStack(spacing: 2) {
+                                    Text(repeatUntilOption.rawValue) // This will now display "Never"
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                        .font(.footnote)
+                                }
+                            }
+                        }
+                        
+                        if repeatUntilOption == .after {
+                            HStack {
+                                TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                    .keyboardType(.numberPad)
+                                    .frame(width: 24)
+                                    .multilineTextAlignment(.center)
+                                Stepper(value: $repeatCount, in: 1...100) {
+                                    Text(" times")
+                                }
+                            }
+                        } else if repeatUntilOption == .onDate {
+                            HStack {
+                                Text("End Date")
+                                Spacer()
+                                DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                        }
+                    }
+                }
+                Section {
+>>>>>>> Stashed changes
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(appData.categories, id: \.name) { category in
                             Text(category.name).tag(category.name as String?)
@@ -325,9 +396,9 @@ private func hideKeyboard() {
 }
 
 enum RepeatUntilOption: String, CaseIterable {
-    case indefinitely = "Indefinitely"
+    case indefinitely = "Never" // Changed from "Indefinitely" to "Never"
     case after = "After"
-    case onDate = "On"
+    case onDate = "On Date"
 }
 
 // Custom date formatter
@@ -336,6 +407,8 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
+
+
 
 
 
