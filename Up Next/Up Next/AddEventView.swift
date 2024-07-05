@@ -40,13 +40,6 @@ struct AddEventView: View {
                 VStack {
                     // Name Section
                     VStack {
-                        HStack {
-                            Text("Name")
-                                .font(.headline)
-                                .padding(.top)
-                                .foregroundColor(.gray)
-                            Spacer()
-                        }
                         
                         HStack {
                             TextField("Title", text: $newEventTitle, onEditingChanged: { isEditing in
@@ -65,6 +58,7 @@ struct AddEventView: View {
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.vertical, 10) 
                     
                     // Date Section
                     VStack {
@@ -193,6 +187,7 @@ struct AddEventView: View {
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.bottom, 10) // Increased padding
                     
                     // Category Section
                     VStack {
@@ -231,14 +226,21 @@ struct AddEventView: View {
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.15))
-                                    .cornerRadius(20)
+                                    .background(Color.clear)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [6])) // Corrected order of arguments
+                                            .foregroundColor(.gray)
+                                    )
+                                    .foregroundColor(.gray)
+                                    .frame(height: 38)
                                 }
                             }
                             .padding(.horizontal)
                         }
                         
                     }
+                    .padding(.bottom, 10) // Increased padding
                     
                     // Notification Section
                     HStack {
@@ -342,7 +344,7 @@ struct AddEventView: View {
 
         // Remove existing events in the series if editing an existing event
         if let selectedEvent = selectedEvent {
-            events.removeAll { $0.id == selectedEvent.id || $0.repeatOption == selectedEvent.repeatOption }
+            events.removeAll { $0.id == selectedEvent.id }
         }
 
         // Create new events based on the repeat options
@@ -485,6 +487,8 @@ final class KeyboardResponder: ObservableObject {
         cancellable?.cancel()
     }
 }
+
+
 
 
 
