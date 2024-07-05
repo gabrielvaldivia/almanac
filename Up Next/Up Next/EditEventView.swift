@@ -196,7 +196,11 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .bottomBar) {
                     Button("Delete Event") {
-                        showDeleteActionSheet = true
+                        if selectedEvent?.repeatOption != .never {
+                            showDeleteActionSheet = true
+                        } else {
+                            deleteEvent()
+                        }
                     }
                     .foregroundColor(.red)
                 }
