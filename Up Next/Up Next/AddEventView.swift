@@ -40,7 +40,7 @@ struct AddEventView: View {
                     if showEndDate {
                         DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
                     }
-                    Toggle("Add End Date", isOn: $showEndDate)
+                    Toggle("Multi-Day", isOn: $showEndDate)
                         .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                 }
                 Section {
