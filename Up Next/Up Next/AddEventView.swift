@@ -44,59 +44,74 @@ struct AddEventView: View {
                         .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                 }
                 Section {
-                    Picker("Repeat", selection: $repeatOption) {
+                    Menu {
                         ForEach(RepeatOption.allCases, id: \.self) { option in
-                            Text(option.rawValue).tag(option)
+                            Button(action: {
+                                repeatOption = option
+                            }) {
+                                Text(option.rawValue)
+                                    .foregroundColor(option == repeatOption ? .gray : .primary) // Change color of selected option
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Repeat")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(repeatOption.rawValue)
+                                .foregroundColor(.gray) 
+                            Image(systemName: "chevron.up.chevron.down") 
+                                .foregroundColor(.gray)
+                                .font(.footnote)
+                                
                         }
                     }
+
                     if repeatOption != .never {
-                        List {
-                            HStack {
-                                Button(action: { repeatUntilOption = .indefinitely }) {
-                                    Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
-                                    Text("Forever")
-                                }
-                                .buttonStyle(PlainButtonStyle())
+                        Menu {
+                            Button(action: {
+                                repeatUntilOption = .indefinitely
+                            }) {
+                                Text("Never")
+                                    .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
                             }
-                            .listRowSeparator(.hidden)
-                            HStack {
-                                Button(action: { repeatUntilOption = .after }) {
-                                    Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
-                                    Text("End after")
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                if repeatUntilOption == .after {
-                                    HStack {
-                                        TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                            .keyboardType(.numberPad)
-                                            .frame(width: 24)
-                                            .multilineTextAlignment(.center)
-                                        Stepper(value: $repeatCount, in: 1...100) {
-                                            Text(" times")
-                                        }
-                                    }
-                                }
+                            Button(action: {
+                                repeatUntilOption = .after
+                            }) {
+                                Text("After")
+                                    .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
                             }
-                            .listRowSeparator(.hidden)
+                            Button(action: {
+                                repeatUntilOption = .onDate
+                            }) {
+                                Text("On")
+                                    .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
+                            }
+                        } label: {
                             HStack {
-                                Button(action: { repeatUntilOption = .onDate }) {
-                                    Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
-                                    Text("Repeat until")
-                                }
-                                .buttonStyle(PlainButtonStyle())
+                                Text("End Repeat")
+                                    .foregroundColor(.primary)
                                 Spacer()
-                                if repeatUntilOption == .onDate {
-                                    DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                        .labelsHidden()
+                                Text(repeatUntilOption.rawValue)
+                                    .foregroundColor(.gray) 
+                                Image(systemName: "chevron.up.chevron.down") 
+                                    .foregroundColor(.gray)
+                                    .font(.footnote)
+                            }
+                        }
+
+                        if repeatUntilOption == .after {
+                            HStack {
+                                TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                    .keyboardType(.numberPad)
+                                    .frame(width: 24)
+                                    .multilineTextAlignment(.center)
+                                Stepper(value: $repeatCount, in: 1...100) {
+                                    Text(" times")
                                 }
                             }
-                            .listRowSeparator(.hidden)
+                        } else if repeatUntilOption == .onDate {
+                            DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
                         }
                     }
                 }
@@ -318,7 +333,7 @@ private func hideKeyboard() {
 enum RepeatUntilOption: String, CaseIterable {
     case indefinitely = "Never" // Changed from "Indefinitely" to "Never"
     case after = "After"
-    case onDate = "On Date"
+    case onDate = "On"
 }
 
 // Custom date formatter
@@ -327,6 +342,7 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
+
 
 
 
