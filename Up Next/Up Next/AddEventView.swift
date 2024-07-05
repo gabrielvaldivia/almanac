@@ -29,173 +29,152 @@ struct AddEventView: View {
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
 
     var body: some View {
-            NavigationView {
-                Form {
-                    Section() {
-                        TextField("Title", text: $newEventTitle)
-                            .focused($isTitleFocused) // Apply focused state to the TextField
-                    }
-                    Section() {
-                        DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
-                            .datePickerStyle(DefaultDatePickerStyle())
-                        if showEndDate {
-                            DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle()) 
-                            Button("Remove End Date") {
-                                showEndDate = false
-                                newEventEndDate = Date() 
-                            }
-                            .foregroundColor(.red)
-                        } else {
-                            Button("Add End Date") {
-                                showEndDate = true
-                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date() // Set default end date to one day after start date
-                            }
-                            .foregroundColor(getCategoryColor()) // Change color based on category
-                        }
-                    }
-                    Section() {
-                        Picker("Repeat", selection: $repeatOption) {
-                            ForEach(RepeatOption.allCases, id: \.self) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-
-                        if repeatOption != .never {
-                            Section() {
-                                List {
-                                    HStack {
-                                        Button(action: { repeatUntilOption = .indefinitely }) {
-                                            Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray) // Conditional color
-                                            Text("Forever")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                    .listRowSeparator(.hidden) // Hide the separator below "Forever"
-
-                                    HStack {
-                                        Button(action: { repeatUntilOption = .after }) {
-                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray) // Conditional color
-                                            Text("End after")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        if repeatUntilOption == .after {
-                                            HStack {
-                                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                    .keyboardType(.numberPad)
-                                                    .frame(width: 24)
-                                                    .multilineTextAlignment(.center)
-                                                Stepper(value: $repeatCount, in: 1...100) {
-                                                    Text(" times")
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .listRowSeparator(.hidden) // Hide the separator below "End after"
-
-                                    HStack {
-                                        Button(action: { repeatUntilOption = .onDate }) {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray) // Conditional color
-                                            Text("Repeat until")
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        Spacer()
-                                        if repeatUntilOption == .onDate {
-                                            DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                                .datePickerStyle(DefaultDatePickerStyle())
-                                                .labelsHidden()
-                                                .onChange(of: repeatUntil) { newDate in
-                                                    print("Selected date: \(dateFormatter.string(from: newDate))")
-                                                }
-                                        }
-                                    }
-                                    .listRowSeparator(.hidden)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Section() {
-                        HStack {
-                            Picker("Category", selection: $selectedCategory) {
-                                ForEach(appData.categories, id: \.name) { category in
-                                    Text(category.name).tag(category.name as String?)
-                                }
-                            }
-                            .onAppear {
-                                if selectedCategory == nil {
-                                    selectedCategory = appData.defaultCategory
-                                }
-                            }
-                        }
-                    }
-                    Section() {
-                        Toggle("Notify me", isOn: $notificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor())) // Change color based on category
-                    }
-                    
+        NavigationView {
+            Form {
+                Section {
+                    TextField("Title", text: $newEventTitle)
+                        .focused($isTitleFocused)
                 }
-                .navigationTitle("Add Event")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) { 
-                        Button(action: {
-                            showAddEventSheet = false
-                        }) {
+                Section {
+                    DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
+                    if showEndDate {
+                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
+                        Button("Remove End Date") {
+                            showEndDate = false
+                            newEventEndDate = Date()
+                        }
+                        .foregroundColor(.red)
+                    } else {
+                        Button("Add End Date") {
+                            showEndDate = true
+                            newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
+                        }
+                        .foregroundColor(getCategoryColor())
+                    }
+                }
+                Section {
+                    Picker("Repeat", selection: $repeatOption) {
+                        ForEach(RepeatOption.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                    if repeatOption != .never {
+                        List {
+                            HStack {
+                                Button(action: { repeatUntilOption = .indefinitely }) {
+                                    Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
+                                    Text("Forever")
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .listRowSeparator(.hidden)
+                            HStack {
+                                Button(action: { repeatUntilOption = .after }) {
+                                    Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
+                                    Text("End after")
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                if repeatUntilOption == .after {
+                                    HStack {
+                                        TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                            .keyboardType(.numberPad)
+                                            .frame(width: 24)
+                                            .multilineTextAlignment(.center)
+                                        Stepper(value: $repeatCount, in: 1...100) {
+                                            Text(" times")
+                                        }
+                                    }
+                                }
+                            }
+                            .listRowSeparator(.hidden)
+                            HStack {
+                                Button(action: { repeatUntilOption = .onDate }) {
+                                    Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
+                                    Text("Repeat until")
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                Spacer()
+                                if repeatUntilOption == .onDate {
+                                    DatePicker("", selection: $repeatUntil, displayedComponents: .date)
+                                        .labelsHidden()
+                                }
+                            }
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                }
+                Section {
+                    Picker("Category", selection: $selectedCategory) {
+                        ForEach(appData.categories, id: \.name) { category in
+                            Text(category.name).tag(category.name as String?)
+                        }
+                    }
+                    .onAppear {
+                        if selectedCategory == nil {
+                            selectedCategory = appData.defaultCategory
+                        }
+                    }
+                }
+                Section {
+                    Toggle("Notify me", isOn: $notificationsEnabled)
+                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+                }
+            }
+            .navigationTitle("Add Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showAddEventSheet = false
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        saveNewEvent()
+                        showAddEventSheet = false
+                    }) {
+                        Group {
                             ZStack {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .heavy))
-                                    .foregroundColor(.primary)
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(getCategoryColor())
+                                    .frame(width: 60, height: 32)
+                                Text("Add")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
                             }
                         }
+                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            saveNewEvent()
-                            showAddEventSheet = false
-                        }) {
-                            Group {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(getCategoryColor())
-                                        .frame(width: 60, height: 32)
-                                    Text("Add")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .opacity(newEventTitle.isEmpty ? 0.3 : 1.0) // Adjust opacity based on title
-                        }
-                        .disabled(newEventTitle.isEmpty) // Disable the button if newEventTitle is empty
-                    }
+                    .disabled(newEventTitle.isEmpty)
                 }
             }
-            .onTapGesture {
-                hideKeyboard()
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isTitleFocused = true
             }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isTitleFocused = true // Set focus to true when the view appears with a delay
-                }
-                if selectedCategory == nil {
-                    selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
-                }
+            if selectedCategory == nil {
+                selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
             }
-            .onDisappear {
-                isTitleFocused = false // Reset focus state when the view disappears
-            }
+        }
+        .onDisappear {
+            isTitleFocused = false
+        }
     }
 
     func deleteEvent(at event: Event) {
