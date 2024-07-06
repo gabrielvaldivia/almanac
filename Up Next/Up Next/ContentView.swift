@@ -73,8 +73,9 @@ struct ContentView: View {
                                     ForEach(sortedMonths, id: \.self) { month in
                                         VStack(alignment: .leading) {
                                             Text(itemDateFormatter.string(from: month)) // Ensure month is formatted correctly
-                                                .font(.headline)
+                                                .roundedFont(.headline)
                                                 .padding(.horizontal)
+                                                .padding(.top, 10)
                                             
                                             let eventsInMonth = groupedEventsByMonth[month]!
                                             let groupedEventsByDate = Dictionary(grouping: eventsInMonth, by: { event in
