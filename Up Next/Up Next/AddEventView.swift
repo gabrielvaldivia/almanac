@@ -180,9 +180,18 @@ struct AddEventView: View {
             }
         }
         .sheet(isPresented: $showCategoryManagementView) {
-            CategoriesView()
-                .environmentObject(appData)
-                .presentationDetents([.medium, .large], selection: .constant(.medium)) 
+            NavigationView {
+                CategoriesView()
+                    .environmentObject(appData)
+                    // .toolbar {
+                    //     ToolbarItem(placement: .navigationBarLeading) {
+                    //         Button("Close") {
+                    //             showCategoryManagementView = false
+                    //         }
+                    //     }
+                    // }
+            }
+            .presentationDetents([.medium, .large], selection: .constant(.medium)) // Specify the sizes for the sheet and set initial detent to medium
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -351,4 +360,3 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
-

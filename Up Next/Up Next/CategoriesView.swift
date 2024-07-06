@@ -95,10 +95,11 @@ struct CategoriesView: View {
             NavigationView {
                 Form {
                     TextField("Category Name", text: $newCategoryName)
-                        .focused($isCategoryNameFieldFocused)  // Add this line
+                        .focused($isCategoryNameFieldFocused)  // Ensure the TextField is focused
                     ColorPicker("Choose Color", selection: $newCategoryColor)
                 }
                 .formStyle(GroupedFormStyle())  // Add this line
+                .navigationBarTitle("Add Category", displayMode: .inline)  // Add this line
                 .navigationBarItems(
                     leading: Button("Cancel") {
                         showingAddCategorySheet = false
@@ -111,7 +112,7 @@ struct CategoriesView: View {
                 )
             }
             .onAppear {
-                isCategoryNameFieldFocused = true  
+                isCategoryNameFieldFocused = true  // Focus the TextField when the sheet appears
             }
             .presentationDetents([.medium])  // Add this line to set the sheet size to medium
         }
@@ -176,3 +177,4 @@ struct CategoriesView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 }
+
