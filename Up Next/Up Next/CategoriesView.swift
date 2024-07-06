@@ -27,6 +27,7 @@ struct CategoriesView: View {
     @State private var newCategoryColor = Color.blue  // Default color for new category
     @FocusState private var isCategoryNameFieldFocused: Bool  // Add this line
     @State private var showingDeleteAllAlert = false
+    @State private var selectedCategory: String?  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -45,7 +46,11 @@ struct CategoriesView: View {
                                 if self.appData.categories.indices.contains(index) {
                                     let oldName = self.appData.categories[index].name
                                     self.appData.categories[index].name = $0
-                                    updateEventsForCategoryChange(oldName: oldName, newName: $0)  // Update events
+                                    updateEventsForCategoryChange(oldName: oldName, newName: $0)
+                                    if selectedCategory == oldName {  // Update selectedCategory if it matches oldName
+                                        selectedCategory = $0
+                                    }
+                                    appData.saveCategories()  // Save categories to user defaults
                                 }
                             }
                         ))
@@ -107,12 +112,15 @@ struct CategoriesView: View {
                     trailing: Button("Save") {
                         let newCategory = (name: newCategoryName, color: newCategoryColor)
                         appData.categories.append(newCategory)
+                        appData.saveCategories()  // Save categories to user defaults
                         showingAddCategorySheet = false
                     }
                 )
             }
             .onAppear {
-                isCategoryNameFieldFocused = true  // Focus the TextField when the sheet appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isCategoryNameFieldFocused = true  // Delay focusing the TextField
+                }
             }
             .presentationDetents([.medium])  // Add this line to set the sheet size to medium
         }
@@ -125,11 +133,16 @@ struct CategoriesView: View {
     }
 
     private func removeCategory(at offsets: IndexSet) {
-        // Ensure UI updates are performed on the main thread
         DispatchQueue.main.async {
-            // Safely unwrap and ensure the index is within the range before removing
             if let index = offsets.first, index < self.appData.categories.count {
+                let removedCategory = self.appData.categories[index].name
                 self.appData.categories.remove(at: index)
+                appData.saveCategories()  // Save categories to user defaults
+                
+                // Update defaultCategory if the removed category was the default one
+                if appData.defaultCategory == removedCategory {
+                    appData.defaultCategory = appData.categories.first?.name ?? ""
+                }
             }
         }
     }
@@ -177,4 +190,3 @@ struct CategoriesView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 }
-

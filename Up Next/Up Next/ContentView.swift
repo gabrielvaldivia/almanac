@@ -131,7 +131,7 @@ struct ContentView: View {
                                 }
                             }
                             
-                            if monthsToLoad < 12 * 5 { // Only show "View More" button if there are more events to load
+                            if hasMoreEventsToLoad() { // Check if there are more events to load
                                 Button(action: {
                                     self.monthsToLoad += 12 // Increment monthsToLoad by 12
                                     loadEvents() // Reload events
@@ -359,6 +359,12 @@ struct ContentView: View {
             appData.removeNotification(for: event) // Call centralized function
         }
     }
+    
+    func hasMoreEventsToLoad() -> Bool {
+        let lastEventDate = events.last?.date ?? Date()
+        let lastLoadedDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: Date())!
+        return lastEventDate > lastLoadedDate
+    }
 }
 
 // Preview Provider
@@ -369,5 +375,3 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
-
-

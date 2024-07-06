@@ -149,7 +149,7 @@ class AppData: NSObject, ObservableObject {
         UNUserNotificationCenter.current().delegate = self
     }
 
-    private func saveCategories() {
+    func saveCategories() {
         let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
         encodeToUserDefaults(categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
     }
@@ -212,7 +212,7 @@ class AppData: NSObject, ObservableObject {
                     }
                 }
                 events = decodedEvents
-                // print("Loaded events: \(events)")
+                print("Loaded \(events.count) events from user defaults.")
             } catch {
                 print("Failed to decode events: \(error)")
             }
