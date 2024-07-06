@@ -20,6 +20,23 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Categories")) {
+                
+                Picker("Default Category", selection: Binding(
+                    get: {
+                        if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
+                            return firstCategory
+                        }
+                        return appData.defaultCategory
+                    },
+                    set: { appData.defaultCategory = $0 }
+                )) {
+                    ForEach(appData.categories, id: \.name) { category in
+                        Text(category.name)
+                            .tag(category.name)
+                            .foregroundColor(.gray) // Set the text color to gray
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
                 NavigationLink(destination: CategoriesView().environmentObject(appData)) {
                     Text("Manage Categories")
                 }

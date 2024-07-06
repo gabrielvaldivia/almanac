@@ -27,6 +27,7 @@ struct AddEventView: View {
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
+    @State private var showCategoryManagementView = false // Add this state variable
 
     var body: some View {
         NavigationView {
@@ -126,6 +127,14 @@ struct AddEventView: View {
                             selectedCategory = appData.defaultCategory
                         }
                     }
+                    
+                    // Add the Manage Categories button
+                    Button(action: {
+                        showCategoryManagementView = true
+                    }) {
+                        Text("Manage Categories")
+                            .foregroundColor(.blue)
+                    }
                 }
                 Section {
                     Toggle("Notify me", isOn: $notificationsEnabled)
@@ -169,6 +178,11 @@ struct AddEventView: View {
                     .disabled(newEventTitle.isEmpty)
                 }
             }
+        }
+        .sheet(isPresented: $showCategoryManagementView) {
+            CategoriesView()
+                .environmentObject(appData)
+                .presentationDetents([.medium, .large], selection: .constant(.medium)) 
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -337,12 +351,4 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
-
-
-
-
-
-
-
-
 

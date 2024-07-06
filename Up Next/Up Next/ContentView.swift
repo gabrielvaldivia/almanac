@@ -156,7 +156,14 @@ struct ContentView: View {
                 }
                 .navigationTitle("Up Next")
                 .navigationBarItems(
-                    leading: NavigationLink(destination: SettingsView()) {
+                    leading: Button(action: {
+                        self.showPastEventsSheet = true
+                    }) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .imageScale(.large)
+                            .fontWeight(.bold)
+                    },
+                    trailing: NavigationLink(destination: SettingsView()) {
                         Image(systemName: "gearshape.fill")
                             .imageScale(.large)
                     }
@@ -362,3 +369,5 @@ struct ContentView_Previews: PreviewProvider {
             .preferredColorScheme(.dark) // Preview in dark mode
     }
 }
+
+

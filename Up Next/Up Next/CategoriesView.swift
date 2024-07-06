@@ -30,25 +30,8 @@ struct CategoriesView: View {
 
     var body: some View {
         Form {  // Change List to Form
-        // Default Category Picker
-            Section() {
-                Picker("Default Category", selection: Binding(
-                    get: {
-                        if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
-                            return firstCategory
-                        }
-                        return appData.defaultCategory
-                    },
-                    set: { appData.defaultCategory = $0 }
-                )) {
-                    ForEach(appData.categories, id: \.name) { category in
-                        Text(category.name).tag(category.name)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-            }
             // Categories section 
-            Section(header: Text("Categories")) {
+            Section() {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         TextField("Category Name", text: Binding(
