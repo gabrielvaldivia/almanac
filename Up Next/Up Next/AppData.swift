@@ -120,7 +120,6 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
-                // print("Notification time saved: \(notificationTime)")
                 scheduleDailyNotification()
                 saveState()
             }

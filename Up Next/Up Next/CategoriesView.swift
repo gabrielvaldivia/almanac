@@ -29,9 +29,26 @@ struct CategoriesView: View {
     @State private var showingDeleteAllAlert = false
 
     var body: some View {
-        NavigationView {
-            Form {  // Change List to Form
-                // Categories section 
+        Form {  // Change List to Form
+        // Default Category Picker
+            Section() {
+                Picker("Default Category", selection: Binding(
+                    get: {
+                        if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
+                            return firstCategory
+                        }
+                        return appData.defaultCategory
+                    },
+                    set: { appData.defaultCategory = $0 }
+                )) {
+                    ForEach(appData.categories, id: \.name) { category in
+                        Text(category.name).tag(category.name)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+            }
+            // Categories section 
+            Section(header: Text("Categories")) {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         TextField("Category Name", text: Binding(
@@ -70,104 +87,55 @@ struct CategoriesView: View {
                 }
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)
-                
-                // Add Category button
-                HStack {
-                    Button(action: {
-                        showingAddCategorySheet = true
-                        newCategoryName = ""
-                        newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))  // Ensure middle range color
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Category")
-                        }
-                    }
-                }
-                
-                // Default Category Picker
-                Section() {
-                    Picker("Default Category", selection: Binding(
-                        get: {
-                            if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
-                                return firstCategory
-                            }
-                            return appData.defaultCategory
-                        },
-                        set: { appData.defaultCategory = $0 }
-                    )) {
-                        ForEach(appData.categories, id: \.name) { category in
-                            Text(category.name).tag(category.name)
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                }
-
-                // Notification time section
-                Section() {
-                    DatePicker("Notification Time", selection: Binding(
-                        get: { appData.notificationTime },
-                        set: { newTime in
-                            appData.notificationTime = newTime
-                            updateDailyNotificationTime(newTime)  // Call the update method
-                        }
-                    ), displayedComponents: .hourAndMinute)
-                }
-
-                // Delete All Events Button
-                    Button(action: {
-                        showingDeleteAllAlert = true
-                    }) {
-                        HStack {
-                            // Image(systemName: "trash")
-                            Text("Delete All Events")
-                        }
-                        .foregroundColor(.red)
-                    }
-                    .alert(isPresented: $showingDeleteAllAlert) {
-                        Alert(
-                            title: Text("Delete All Events"),
-                            message: Text("Are you sure you want to delete all events? This action cannot be undone."),
-                            primaryButton: .destructive(Text("Delete")) {
-                                deleteAllEvents()
-                            },
-                            secondaryButton: .cancel()
-                        )
-                    }
             }
-            .formStyle(GroupedFormStyle()) 
-            .navigationBarTitle("Settings", displayMode: .inline)
-            .navigationBarItems(leading: EditButton())
             
-            // Add Category Sheet
-            .sheet(isPresented: $showingAddCategorySheet) {
-                NavigationView {
-                    Form {
-                        TextField("Category Name", text: $newCategoryName)
-                            .focused($isCategoryNameFieldFocused)  // Add this line
-                        ColorPicker("Choose Color", selection: $newCategoryColor)
+            // Add Category button
+            HStack {
+                Button(action: {
+                    showingAddCategorySheet = true
+                    newCategoryName = ""
+                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))  // Ensure middle range color
+                }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add Category")
                     }
-                    .formStyle(GroupedFormStyle())  // Add this line
-                    .navigationBarItems(
-                        leading: Button("Cancel") {
-                            showingAddCategorySheet = false
-                        },
-                        trailing: Button("Save") {
-                            let newCategory = (name: newCategoryName, color: newCategoryColor)
-                            appData.categories.append(newCategory)
-                            showingAddCategorySheet = false
-                        }
-                    )
                 }
-                .onAppear {
-                    isCategoryNameFieldFocused = true  
+            }
+        }
+        .formStyle(GroupedFormStyle()) 
+        .navigationBarTitle("Manage Categories", displayMode: .inline)
+        .navigationBarItems(trailing: EditButton())  // Move Edit button to the top right
+        
+        // Add Category Sheet
+        .sheet(isPresented: $showingAddCategorySheet) {
+            NavigationView {
+                Form {
+                    TextField("Category Name", text: $newCategoryName)
+                        .focused($isCategoryNameFieldFocused)  // Add this line
+                    ColorPicker("Choose Color", selection: $newCategoryColor)
                 }
+                .formStyle(GroupedFormStyle())  // Add this line
+                .navigationBarItems(
+                    leading: Button("Cancel") {
+                        showingAddCategorySheet = false
+                    },
+                    trailing: Button("Save") {
+                        let newCategory = (name: newCategoryName, color: newCategoryColor)
+                        appData.categories.append(newCategory)
+                        showingAddCategorySheet = false
+                    }
+                )
             }
             .onAppear {
-                appData.loadCategories()
-                if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
-                    appData.defaultCategory = firstCategory
-                }
+                isCategoryNameFieldFocused = true  
+            }
+            .presentationDetents([.medium])  // Add this line to set the sheet size to medium
+        }
+        .onAppear {
+            appData.loadCategories()
+            if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
+                appData.defaultCategory = firstCategory
             }
         }
     }

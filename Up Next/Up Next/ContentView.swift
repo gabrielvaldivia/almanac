@@ -75,7 +75,7 @@ struct ContentView: View {
                                             Text(itemDateFormatter.string(from: month)) // Ensure month is formatted correctly
                                                 .roundedFont(.headline)
                                                 .padding(.horizontal)
-                                                .padding(.top, 10)
+                                                .padding(.top, 10) // Add padding above each month
                                             
                                             let eventsInMonth = groupedEventsByMonth[month]!
                                             let groupedEventsByDate = Dictionary(grouping: eventsInMonth, by: { event in
@@ -155,27 +155,10 @@ struct ContentView: View {
                     } 
                 }
                 .navigationTitle("Up Next")
-                .roundedFont(.title)
                 .navigationBarItems(
-                    leading: HStack {
-                        CircleButton(
-                            iconName: "clock.arrow.circlepath",
-                            action: {
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                                self.showPastEventsSheet = true
-                            }
-                        )
-                    },
-                    trailing: HStack {
-                        CircleButton(
-                            iconName: "gearshape.fill",
-                            action: {
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                                self.showCategoryManagementView = true
-                            }
-                        )
+                    leading: NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gearshape.fill")
+                            .imageScale(.large)
                     }
                 )
                 .onAppear {
