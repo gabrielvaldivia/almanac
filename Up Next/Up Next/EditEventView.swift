@@ -249,7 +249,7 @@ struct EditEventView: View {
         case .thisAndUpcoming:
             events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
         case .allEvents:
-            events.removeAll { $0.id == event.id || $0.repeatOption == event.repeatOption }
+            events.removeAll { $0.title == event.title && $0.category == event.category }
         }
         
         saveEvents()
