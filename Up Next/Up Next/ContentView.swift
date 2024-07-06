@@ -25,13 +25,20 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
     @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var notificationsEnabled: Bool = true // New state to track notification status
+    @State private var monthsToLoad: Int = 12 // State to track the number of months to load
 
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
 
     let itemDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMMM d" // Updated format to include day of the week
+        formatter.dateFormat = "MMMM yyyy" // Updated format to include full month and year
+        return formatter
+    }()
+
+    let yearFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy"
         return formatter
     }()
 
@@ -40,19 +47,13 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) { // Remove vertical padding by setting spacing to 0
                     // List of events
-                    let groupedEvents = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
-                        if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
-                            return "Today"
-                        } else {
-                            return event.date.relativeDate()
-                        }
+                    let groupedEventsByMonth = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
+                        let components = Calendar.current.dateComponents([.year, .month], from: event.date)
+                        return Calendar.current.date(from: components)!
                     })
-                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                        let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
-                        let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
-                        return date1 < date2
-                    }
-                    if sortedKeys.isEmpty {
+                    let sortedMonths = groupedEventsByMonth.keys.sorted()
+
+                    if sortedMonths.isEmpty {
                         VStack {
                             Spacer()
                             Text("No upcoming events")
@@ -69,45 +70,83 @@ struct ContentView: View {
                                 Section(header: CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                                             .padding(.vertical, 10)
                                 ) {
-                                    ForEach(sortedKeys, id: \.self) { key in
-                                        HStack(alignment: .top) {
-                                            Text(key.uppercased())
-                                                .font(.system(.caption, design: .monospaced, weight: .medium))
-                                                // .font(.system(.footnote, design: .rounded, weight: .medium))
-                                                .foregroundColor(.gray)
-                                                .frame(width: 100, alignment: .leading) 
-                                                .padding(.vertical, 14)
-                                            VStack(alignment: .leading) {
-                                                ForEach(groupedEvents[key]!, id: \.id) { event in
-                                                    EventRow(event: event, formatter: itemDateFormatter,
-                                                             selectedEvent: $selectedEvent,
-                                                             newEventTitle: $newEventTitle,
-                                                             newEventDate: $newEventDate,
-                                                             newEventEndDate: $newEventEndDate,
-                                                             showEndDate: $showEndDate,
-                                                             selectedCategory: $selectedCategory,
-                                                             showEditSheet: $showEditSheet,
-                                                             categories: appData.categories)
-                                                        .onTapGesture {
-                                                            self.selectedEvent = event
-                                                            self.newEventTitle = event.title
-                                                            self.newEventDate = event.date
-                                                            self.newEventEndDate = event.endDate ?? Date()
-                                                            self.showEndDate = event.endDate != nil
-                                                            self.selectedCategory = event.category
-                                                            self.showEditSheet = true
+                                    ForEach(sortedMonths, id: \.self) { month in
+                                        VStack(alignment: .leading) {
+                                            Text(itemDateFormatter.string(from: month)) // Ensure month is formatted correctly
+                                                .font(.headline)
+                                                .padding(.horizontal)
+                                            
+                                            let eventsInMonth = groupedEventsByMonth[month]!
+                                            let groupedEventsByDate = Dictionary(grouping: eventsInMonth, by: { event in
+                                                if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
+                                                    return "Today"
+                                                } else {
+                                                    return event.date.relativeDate()
+                                                }
+                                            })
+                                            let sortedKeys = groupedEventsByDate.keys.sorted { key1, key2 in
+                                                let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+                                                let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+                                                return date1 < date2
+                                            }
+                                            
+                                            ForEach(sortedKeys, id: \.self) { key in
+                                                HStack(alignment: .top) {
+                                                    Text(key.uppercased())
+                                                        .font(.system(.caption, design: .monospaced, weight: .medium))
+                                                        .foregroundColor(.gray)
+                                                        .frame(width: 100, alignment: .leading)
+                                                        .padding(.vertical, 14)
+                                                    VStack(alignment: .leading) {
+                                                        ForEach(groupedEventsByDate[key]!, id: \.id) { event in
+                                                            EventRow(event: event, formatter: itemDateFormatter,
+                                                                     selectedEvent: $selectedEvent,
+                                                                     newEventTitle: $newEventTitle,
+                                                                     newEventDate: $newEventDate,
+                                                                     newEventEndDate: $newEventEndDate,
+                                                                     showEndDate: $showEndDate,
+                                                                     selectedCategory: $selectedCategory,
+                                                                     showEditSheet: $showEditSheet,
+                                                                     categories: appData.categories)
+                                                                .onTapGesture {
+                                                                    self.selectedEvent = event
+                                                                    self.newEventTitle = event.title
+                                                                    self.newEventDate = event.date
+                                                                    self.newEventEndDate = event.endDate ?? Date()
+                                                                    self.showEndDate = event.endDate != nil
+                                                                    self.selectedCategory = event.category
+                                                                    self.showEditSheet = true
+                                                                }
+                                                                .listRowSeparator(.hidden)
                                                         }
-                                                        .listRowSeparator(.hidden)
+                                                    }
                                                 }
                                             }
-                                        } 
-                                        
-                                    } 
-                                    .listRowSeparator(.hidden)
-                                    .padding(.horizontal)
-                                    .padding(.bottom, 10)
+                                            .listRowSeparator(.hidden)
+                                            .padding(.horizontal)
+                                            .padding(.bottom, 10)
+                                        }
+                                    }
                                 }
                             }
+                            
+                            if monthsToLoad < 12 * 5 { // Only show "View More" button if there are more events to load
+                                Button(action: {
+                                    self.monthsToLoad += 12 // Increment monthsToLoad by 12
+                                    loadEvents() // Reload events
+                                }) {
+                                    Text("View More")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 5)
+                                        .background(Color.gray.opacity(0.2)) // Use a light gray background
+                                        .foregroundColor(.gray) // Use gray text color
+                                        .cornerRadius(20)
+                                }
+                                .padding(.vertical, 10)
+                            }
+                            
+                            Spacer(minLength: 80) // Add a spacer to ensure the content is not clipped
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
@@ -127,14 +166,16 @@ struct ContentView: View {
                             }
                         )
                     },
-                    trailing: CircleButton(
-                        iconName: "gearshape.fill",
-                        action: {
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            self.showCategoryManagementView = true
-                        }
-                    )
+                    trailing: HStack {
+                        CircleButton(
+                            iconName: "gearshape.fill",
+                            action: {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                self.showCategoryManagementView = true
+                            }
+                        )
+                    }
                 )
                 .onAppear {
                     print("ContentView appeared")
@@ -223,15 +264,16 @@ struct ContentView: View {
     func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
+        let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
         var allEvents = [Event]()
 
         for event in events {
             if let filter = selectedCategoryFilter {
-                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)) {
+                if event.category == filter && (event.date >= startOfToday && event.date <= endDate || (event.endDate != nil && event.endDate! >= startOfToday && event.endDate! <= endDate)) {
                     allEvents.append(event)
                 }
             } else {
-                if event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday) {
+                if event.date >= startOfToday && event.date <= endDate || (event.endDate != nil && event.endDate! >= startOfToday && event.endDate! <= endDate) {
                     allEvents.append(event)
                 }
             }

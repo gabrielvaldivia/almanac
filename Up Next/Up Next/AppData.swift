@@ -177,12 +177,26 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
-    func filteredEvents(events: [Event], selectedCategoryFilter: String?) -> [Event] {
+    
+    // Filtered events
+    func filteredEvents(selectedCategoryFilter: String?) -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
-        return events.filter { event in
-            (selectedCategoryFilter == nil || event.category == selectedCategoryFilter) && event.date >= startOfToday
+        var allEvents = [Event]()
+
+        for event in events {
+            if let filter = selectedCategoryFilter {
+                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)) {
+                    allEvents.append(event)
+                }
+            } else {
+                if event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday) {
+                    allEvents.append(event)
+                }
+            }
         }
+
+        return allEvents.sorted { $0.date < $1.date }
     }
 
     func loadEvents() {

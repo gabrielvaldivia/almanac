@@ -211,11 +211,6 @@ struct AddEventView: View {
             repeatUntil: repeatUntilDate
         )
 
-        // Remove existing events in the series if editing an existing event
-        if let selectedEvent = selectedEvent {
-            events.removeAll { $0.id == selectedEvent.id || $0.repeatOption == selectedEvent.repeatOption }
-        }
-
         // Create new events based on the repeat options
         let newEvents = generateRepeatingEvents(for: newEvent)
         events.append(contentsOf: newEvents)
@@ -342,6 +337,8 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
+
+
 
 
 

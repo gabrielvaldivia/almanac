@@ -31,12 +31,6 @@ struct EventRow: View {
                         .fontWeight(.medium)
                         .foregroundColor(colorScheme == .dark ? .white : colorForCategory(event.category))
                     Spacer()
-                    if event.notificationsEnabled {
-                        Image(systemName: "bell.fill")
-                            .foregroundColor(colorForCategory(event.category).opacity(0.9))
-                            .font(.caption)
-                            .padding(.trailing)
-                    }
                 }
                 if let endDate = event.endDate {
                     let today = Date()
