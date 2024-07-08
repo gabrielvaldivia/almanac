@@ -15,6 +15,7 @@ struct Up_NextApp: App {
     init() {
         requestNotificationPermissions()
         UNUserNotificationCenter.current().delegate = appData
+        appData.scheduleDailyNotification() // Ensure daily notification is scheduled
     }
 
     var body: some Scene {

@@ -239,9 +239,6 @@ struct AddEventView: View {
         events.append(contentsOf: newEvents)
 
         saveEvents()
-        if newEvent.notificationsEnabled {
-            appData.scheduleNotification(for: newEvent)
-        }
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 
