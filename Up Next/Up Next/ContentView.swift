@@ -277,7 +277,6 @@ struct ContentView: View {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
             saveEvents()  // Save after deleting
-            appData.removeNotification(for: event) // Call centralized function to remove notification
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
         }
@@ -342,22 +341,6 @@ struct ContentView: View {
         showEndDate = false
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
-    }
-    
-    func handleNotification(for event: Event) {
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)!
-
-        if event.notificationsEnabled {
-            if event.date <= endOfToday && (event.endDate ?? event.date) >= startOfToday {
-                appData.scheduleNotification(for: event) // Call centralized function
-            } else {
-                appData.removeNotification(for: event) // Call centralized function
-            }
-        } else {
-            appData.removeNotification(for: event) // Call centralized function
-        }
     }
     
     func hasMoreEventsToLoad() -> Bool {
