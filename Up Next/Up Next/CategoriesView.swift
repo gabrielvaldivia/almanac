@@ -181,6 +181,7 @@ struct CategoriesView: View {
             }
         }
         appData.objectWillChange.send()  // Notify the view of changes
+        appData.saveEvents()  // Save updated events to user defaults
     }
     
     private func deleteAllEvents() {
