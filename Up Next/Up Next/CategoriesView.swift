@@ -145,7 +145,6 @@ struct CategoriesView: View {
                 appData.defaultCategory = firstCategory
             }
         }
-        // ... existing code ...
         .onChange(of: editMode?.wrappedValue) {
             if let newValue = editMode?.wrappedValue, newValue == .active {
                 // Initialize tempCategoryNames with current category names
@@ -165,7 +164,6 @@ struct CategoriesView: View {
                 appData.saveCategories()  // Save categories to user defaults
             }
 }
-// ... existing code ...
     }
 
     private func removeCategory(at offsets: IndexSet) {

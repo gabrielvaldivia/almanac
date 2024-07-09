@@ -12,6 +12,7 @@ import WidgetKit
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingDeleteAllAlert = false
+    @Environment(\.openURL) var openURL
 
     var body: some View {
         Form {
@@ -45,6 +46,16 @@ struct SettingsView: View {
                 .pickerStyle(MenuPickerStyle())
                 NavigationLink(destination: CategoriesView().environmentObject(appData)) {
                     Text("Manage Categories")
+                }
+            }
+            
+            Section(header: Text("Feedback")) {
+                Button(action: {
+                    if let url = URL(string: "https://twitter.com/gabrielvaldivia") {
+                        openURL(url)
+                    }
+                }) {
+                    Text("Send Feedback")
                 }
             }
             
