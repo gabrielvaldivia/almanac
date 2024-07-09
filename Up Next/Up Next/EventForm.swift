@@ -150,6 +150,9 @@ struct EventForm: View {
             }
             if selectedCategory == nil {
                 selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+                selectedColor = CodableColor(color: .blue) // Set default color to blue
+            } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
+                selectedColor = CodableColor(color: category.color)
             }
         }
         .onDisappear {
@@ -158,10 +161,6 @@ struct EventForm: View {
     }
 
     private func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color
-        }
-        return Color.blue
+        return selectedColor.color
     }
 }

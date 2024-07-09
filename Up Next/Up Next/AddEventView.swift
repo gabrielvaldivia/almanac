@@ -71,7 +71,7 @@ struct AddEventView: View {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(getCategoryColor())
+                                    .fill(selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Add")
                                     .font(.system(size: 14, weight: .bold))
@@ -95,6 +95,7 @@ struct AddEventView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isTitleFocused = true
             }
+            selectedColor = CodableColor(color: .blue) // Set default color to blue
             if selectedCategory == nil {
                 selectedCategory = "None" // Set default category to "None"
             }
@@ -229,11 +230,7 @@ struct AddEventView: View {
     
     // Helper function to get the color of the selected category
     func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color // Assuming category.color is of type Color
-        }
-        return Color.blue // Default color if no category is selected
+        return selectedColor.color
     }
     
 }

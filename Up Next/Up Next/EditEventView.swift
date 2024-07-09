@@ -89,7 +89,7 @@ struct EditEventView: View {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(getCategoryColor())
+                                    .fill(selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Save")
                                     .font(.system(size: 14, weight: .bold))
@@ -163,11 +163,7 @@ struct EditEventView: View {
     }
 
     func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color // Assuming category.color is of type Color
-        }
-        return Color.blue // Default color if no category is selected
+        return selectedColor.color
     }
 
     func saveEvents() {

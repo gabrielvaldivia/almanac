@@ -22,7 +22,7 @@ struct ContentView: View {
     @State private var showPastEventsSheet: Bool = false // State for showing past events
     @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
     @State private var showCategoryManagementView: Bool = false // State to show category management view
-    @State private var selectedColor: CodableColor = CodableColor(color: .black) // Default color set to Black
+    @State private var selectedColor: CodableColor = CodableColor(color: .blue) // Default color set to Blue
     @State private var selectedCategory: String? = nil // Default category set to nil
     @State private var notificationsEnabled: Bool = true // New state to track notification status
     @State private var monthsToLoad: Int = 12 // State to track the number of months to load
