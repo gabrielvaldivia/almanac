@@ -96,7 +96,7 @@ struct AddEventView: View {
                 isTitleFocused = true
             }
             if selectedCategory == nil {
-                selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
+                selectedCategory = "None" // Set default category to "None"
             }
         }
         .onDisappear {

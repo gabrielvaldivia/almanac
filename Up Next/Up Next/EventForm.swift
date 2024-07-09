@@ -103,13 +103,14 @@ struct EventForm: View {
             }
             Section {
                 Picker("Category", selection: $selectedCategory) {
+                    Text("None").tag(nil as String?) // Show "Select" when no category is selected
                     ForEach(appData.categories, id: \.name) { category in
                         Text(category.name).tag(category.name as String?)
                     }
                 }
                 .onAppear {
                     if selectedCategory == nil {
-                        selectedCategory = appData.defaultCategory
+                        selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
                     }
                 }
 
@@ -130,7 +131,7 @@ struct EventForm: View {
                 isTitleFocused = true
             }
             if selectedCategory == nil {
-                selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
+                selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
             }
         }
         .onDisappear {

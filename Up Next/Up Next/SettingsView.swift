@@ -20,16 +20,22 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Categories")) {
-                
                 Picker("Default Category", selection: Binding(
                     get: {
-                        if let firstCategory = appData.categories.first?.name, appData.defaultCategory.isEmpty {
-                            return firstCategory
+                        if appData.defaultCategory.isEmpty {
+                            return "None"
                         }
                         return appData.defaultCategory
                     },
-                    set: { appData.defaultCategory = $0 }
+                    set: { newValue in
+                        if newValue == "None" {
+                            appData.defaultCategory = ""
+                        } else {
+                            appData.defaultCategory = newValue
+                        }
+                    }
                 )) {
+                    Text("None").tag("None")
                     ForEach(appData.categories, id: \.name) { category in
                         Text(category.name)
                             .tag(category.name)

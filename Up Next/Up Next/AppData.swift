@@ -139,10 +139,9 @@ class AppData: NSObject, ObservableObject {
         super.init()
         migrateUserDefaults() // Call the migration function
         loadCategories()
-        defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? categories.first?.name ?? ""
+        defaultCategory = "" // Ensure no default category is set
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
-            // print("Notification time loaded: \(notificationTime)")
         }
         loadEvents()
         isDataLoaded = true
