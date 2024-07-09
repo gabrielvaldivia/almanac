@@ -98,14 +98,14 @@
 		405F66782C33A5C4003C9DC4 /* AddEventButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButton.swift; sourceTree = "<group>"; };
 		405F667A2C33A651003C9DC4 /* CircleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircleButton.swift; sourceTree = "<group>"; };
 		406191892C38FA6700BC3D4A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		40790D6E2C23286B005DDC65 /* Up Next.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Up Next.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		40790D6E2C23286B005DDC65 /* Almanac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Almanac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D712C23286B005DDC65 /* Up_NextApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextApp.swift; sourceTree = "<group>"; };
 		40790D732C23286B005DDC65 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		40790D752C23286C005DDC65 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		40790D782C23286C005DDC65 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		40790D7E2C23286C005DDC65 /* Up NextTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Up NextTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		40790D7E2C23286C005DDC65 /* AlmanacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlmanacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D822C23286C005DDC65 /* Up_NextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextTests.swift; sourceTree = "<group>"; };
-		40790D882C23286C005DDC65 /* Up NextUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Up NextUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		40790D882C23286C005DDC65 /* AlmanacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlmanacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITests.swift; sourceTree = "<group>"; };
 		40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		409726472C2DE2CB0050988E /* CategoryPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPillsView.swift; sourceTree = "<group>"; };
@@ -190,9 +190,9 @@
 		40790D6F2C23286B005DDC65 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				40790D6E2C23286B005DDC65 /* Up Next.app */,
-				40790D7E2C23286C005DDC65 /* Up NextTests.xctest */,
-				40790D882C23286C005DDC65 /* Up NextUITests.xctest */,
+				40790D6E2C23286B005DDC65 /* Almanac.app */,
+				40790D7E2C23286C005DDC65 /* AlmanacTests.xctest */,
+				40790D882C23286C005DDC65 /* AlmanacUITests.xctest */,
 				405920DC2C23B862008A9CF2 /* UpNextWidgetExtension.appex */,
 			);
 			name = Products;
@@ -267,9 +267,9 @@
 			productReference = 405920DC2C23B862008A9CF2 /* UpNextWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		40790D6D2C23286B005DDC65 /* Up Next */ = {
+		40790D6D2C23286B005DDC65 /* Almanac */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 40790D922C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up Next" */;
+			buildConfigurationList = 40790D922C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Almanac" */;
 			buildPhases = (
 				40790D6A2C23286B005DDC65 /* Sources */,
 				40790D6B2C23286B005DDC65 /* Frameworks */,
@@ -281,14 +281,14 @@
 			dependencies = (
 				405920EC2C23B863008A9CF2 /* PBXTargetDependency */,
 			);
-			name = "Up Next";
+			name = Almanac;
 			productName = "Up Next";
-			productReference = 40790D6E2C23286B005DDC65 /* Up Next.app */;
+			productReference = 40790D6E2C23286B005DDC65 /* Almanac.app */;
 			productType = "com.apple.product-type.application";
 		};
-		40790D7D2C23286C005DDC65 /* Up NextTests */ = {
+		40790D7D2C23286C005DDC65 /* AlmanacTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 40790D952C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up NextTests" */;
+			buildConfigurationList = 40790D952C23286C005DDC65 /* Build configuration list for PBXNativeTarget "AlmanacTests" */;
 			buildPhases = (
 				40790D7A2C23286C005DDC65 /* Sources */,
 				40790D7B2C23286C005DDC65 /* Frameworks */,
@@ -299,14 +299,14 @@
 			dependencies = (
 				40790D802C23286C005DDC65 /* PBXTargetDependency */,
 			);
-			name = "Up NextTests";
+			name = AlmanacTests;
 			productName = "Up NextTests";
-			productReference = 40790D7E2C23286C005DDC65 /* Up NextTests.xctest */;
+			productReference = 40790D7E2C23286C005DDC65 /* AlmanacTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		40790D872C23286C005DDC65 /* Up NextUITests */ = {
+		40790D872C23286C005DDC65 /* AlmanacUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 40790D982C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up NextUITests" */;
+			buildConfigurationList = 40790D982C23286C005DDC65 /* Build configuration list for PBXNativeTarget "AlmanacUITests" */;
 			buildPhases = (
 				40790D842C23286C005DDC65 /* Sources */,
 				40790D852C23286C005DDC65 /* Frameworks */,
@@ -317,9 +317,9 @@
 			dependencies = (
 				40790D8A2C23286C005DDC65 /* PBXTargetDependency */,
 			);
-			name = "Up NextUITests";
+			name = AlmanacUITests;
 			productName = "Up NextUITests";
-			productReference = 40790D882C23286C005DDC65 /* Up NextUITests.xctest */;
+			productReference = 40790D882C23286C005DDC65 /* AlmanacUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -348,7 +348,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 40790D692C23286B005DDC65 /* Build configuration list for PBXProject "Up Next" */;
+			buildConfigurationList = 40790D692C23286B005DDC65 /* Build configuration list for PBXProject "Almanac" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -361,9 +361,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				40790D6D2C23286B005DDC65 /* Up Next */,
-				40790D7D2C23286C005DDC65 /* Up NextTests */,
-				40790D872C23286C005DDC65 /* Up NextUITests */,
+				40790D6D2C23286B005DDC65 /* Almanac */,
+				40790D7D2C23286C005DDC65 /* AlmanacTests */,
+				40790D872C23286C005DDC65 /* AlmanacUITests */,
 				405920DB2C23B862008A9CF2 /* UpNextWidgetExtension */,
 			);
 		};
@@ -469,12 +469,12 @@
 		};
 		40790D802C23286C005DDC65 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 40790D6D2C23286B005DDC65 /* Up Next */;
+			target = 40790D6D2C23286B005DDC65 /* Almanac */;
 			targetProxy = 40790D7F2C23286C005DDC65 /* PBXContainerItemProxy */;
 		};
 		40790D8A2C23286C005DDC65 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 40790D6D2C23286B005DDC65 /* Up Next */;
+			target = 40790D6D2C23286B005DDC65 /* Almanac */;
 			targetProxy = 40790D892C23286C005DDC65 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -500,7 +500,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.Almanac.UpNextWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -529,7 +529,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.Almanac.UpNextWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -683,7 +683,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.Almanac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -715,7 +715,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.Almanac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -734,12 +734,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-NextTests";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.AlmanacTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Almanac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Almanac";
 			};
 			name = Debug;
 		};
@@ -754,12 +754,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-NextTests";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.AlmanacTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Up Next.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Up Next";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Almanac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Almanac";
 			};
 			name = Release;
 		};
@@ -772,7 +772,7 @@
 				DEVELOPMENT_TEAM = RWC965TCNN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-NextUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.AlmanacUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -790,7 +790,7 @@
 				DEVELOPMENT_TEAM = RWC965TCNN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-NextUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = ValdiviaWorks.AlmanacUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -811,7 +811,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		40790D692C23286B005DDC65 /* Build configuration list for PBXProject "Up Next" */ = {
+		40790D692C23286B005DDC65 /* Build configuration list for PBXProject "Almanac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				40790D902C23286C005DDC65 /* Debug */,
@@ -820,7 +820,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		40790D922C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up Next" */ = {
+		40790D922C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Almanac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				40790D932C23286C005DDC65 /* Debug */,
@@ -829,7 +829,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		40790D952C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up NextTests" */ = {
+		40790D952C23286C005DDC65 /* Build configuration list for PBXNativeTarget "AlmanacTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				40790D962C23286C005DDC65 /* Debug */,
@@ -838,7 +838,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		40790D982C23286C005DDC65 /* Build configuration list for PBXNativeTarget "Up NextUITests" */ = {
+		40790D982C23286C005DDC65 /* Build configuration list for PBXNativeTarget "AlmanacUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				40790D992C23286C005DDC65 /* Debug */,
