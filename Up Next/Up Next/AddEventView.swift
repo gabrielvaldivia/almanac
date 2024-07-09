@@ -28,6 +28,7 @@ struct AddEventView: View {
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
     @State private var showCategoryManagementView = false // Add this state variable
+    @State private var showDeleteActionSheet = false // Add this state variable
 
     var body: some View {
         NavigationView {
@@ -43,7 +44,10 @@ struct AddEventView: View {
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
                 repeatCount: $repeatCount,
-                showCategoryManagementView: $showCategoryManagementView
+                showCategoryManagementView: $showCategoryManagementView,
+                showDeleteActionSheet: $showDeleteActionSheet, // Pass the binding
+                selectedEvent: $selectedEvent, // Pass the binding
+                deleteEvent: deleteEvent // Pass the function
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
@@ -105,9 +109,11 @@ struct AddEventView: View {
         }
     }
 
-    func deleteEvent(at event: Event) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
+    func deleteEvent() {
+        if let event = selectedEvent {
+            if let index = events.firstIndex(where: { $0.id == event.id }) {
+                events.remove(at: index)
+            }
         }
     }
 

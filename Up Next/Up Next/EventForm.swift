@@ -13,6 +13,9 @@ struct EventForm: View {
     @Binding var repeatUntilOption: RepeatUntilOption
     @Binding var repeatCount: Int
     @Binding var showCategoryManagementView: Bool
+    @Binding var showDeleteActionSheet: Bool
+    @Binding var selectedEvent: Event?
+    var deleteEvent: () -> Void
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool
     @State private var showingAddCategorySheet = false
@@ -142,6 +145,18 @@ struct EventForm: View {
             Section {
                 Toggle("Notify me", isOn: $notificationsEnabled)
                     .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+            }
+            Section {
+                if selectedEvent != nil {
+                    Button("Delete Event") {
+                        if selectedEvent?.repeatOption != .never {
+                            showDeleteActionSheet = true
+                        } else {
+                            deleteEvent()
+                        }
+                    }
+                    .foregroundColor(.red)
+                }
             }
         }
         .onAppear {

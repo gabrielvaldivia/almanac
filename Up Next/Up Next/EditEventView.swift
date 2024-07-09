@@ -62,7 +62,10 @@ struct EditEventView: View {
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
                 repeatCount: $repeatCount,
-                showCategoryManagementView: $showCategoryManagementView
+                showCategoryManagementView: $showCategoryManagementView,
+                showDeleteActionSheet: $showDeleteActionSheet, // Pass the binding
+                selectedEvent: $selectedEvent, // Pass the binding
+                deleteEvent: deleteEvent // Pass the function
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")
@@ -99,16 +102,6 @@ struct EditEventView: View {
                         .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
                     }
                     .disabled(newEventTitle.isEmpty)
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Delete Event") {
-                        if selectedEvent?.repeatOption != .never {
-                            showDeleteActionSheet = true
-                        } else {
-                            deleteEvent()
-                        }
-                    }
-                    .foregroundColor(.red)
                 }
             }
             .actionSheet(isPresented: $showDeleteActionSheet) {
