@@ -14,10 +14,10 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>upnext</string>
+				<string>almanac</string>
 			</array>
 			<key>CFBundleURLName</key>
-			<string>Up Next</string>
+			<string>Almanac</string>
 		</dict>
 	</array>
 </dict>
