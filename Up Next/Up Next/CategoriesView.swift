@@ -28,6 +28,10 @@ struct CategoriesView: View {
     @FocusState private var isCategoryNameFieldFocused: Bool  // Add this line
     @State private var showingDeleteAllAlert = false
     @State private var selectedCategory: String?  // Add this line
+    @State private var tempCategoryNames: [String] = []  // Temporary storage for category names
+    @Environment(\.editMode) private var editMode  // Access the edit mode
+    @State private var showingEditCategorySheet = false  // Add this line
+    @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -35,25 +39,23 @@ struct CategoriesView: View {
             Section() {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
-                        TextField("Category Name", text: Binding(
-                            get: { 
-                                if self.appData.categories.indices.contains(index) {
-                                    return self.appData.categories[index].name
-                                }
-                                return ""
-                            },
-                            set: { 
-                                if self.appData.categories.indices.contains(index) {
-                                    let oldName = self.appData.categories[index].name
-                                    self.appData.categories[index].name = $0
-                                    updateEventsForCategoryChange(oldName: oldName, newName: $0)
-                                    if selectedCategory == oldName {  // Update selectedCategory if it matches oldName
-                                        selectedCategory = $0
+                        if editMode?.wrappedValue == .active {
+                            TextField("Category Name", text: Binding(
+                                get: { 
+                                    if self.tempCategoryNames.indices.contains(index) {
+                                        return self.tempCategoryNames[index]
                                     }
-                                    appData.saveCategories()  // Save categories to user defaults
+                                    return ""
+                                },
+                                set: { 
+                                    if self.tempCategoryNames.indices.contains(index) {
+                                        self.tempCategoryNames[index] = $0
+                                    }
                                 }
-                            }
-                        ))
+                            ))
+                        } else {
+                            Text(self.appData.categories[index].name)
+                        }
                         Spacer()
                         ColorPicker("", selection: Binding(
                             get: { 
@@ -71,6 +73,13 @@ struct CategoriesView: View {
                         .labelsHidden()
                         .frame(width: 30, height: 30)
                         .padding(.trailing, 10)
+                    }
+                    .contentShape(Rectangle())  // Make the entire HStack tappable
+                    .onTapGesture {
+                        if editMode?.wrappedValue != .active {
+                            categoryToEdit = (index: index, name: appData.categories[index].name, color: appData.categories[index].color)
+                            showingEditCategorySheet = true
+                        }
                     }
                 }
                 .onDelete(perform: removeCategory)
@@ -93,7 +102,7 @@ struct CategoriesView: View {
         }
         .formStyle(GroupedFormStyle()) 
         .navigationBarTitle("Manage Categories", displayMode: .inline)
-        .navigationBarItems(trailing: EditButton())  // Move Edit button to the top right
+        .navigationBarItems(trailing: EditButton())  // Use the existing Edit button
         
         // Add Category Sheet
         .sheet(isPresented: $showingAddCategorySheet) {
@@ -101,7 +110,7 @@ struct CategoriesView: View {
                 Form {
                     TextField("Category Name", text: $newCategoryName)
                         .focused($isCategoryNameFieldFocused)  // Ensure the TextField is focused
-                    ColorPicker("Choose Color", selection: $newCategoryColor)
+                    ColorPicker("Color", selection: $newCategoryColor)
                 }
                 .formStyle(GroupedFormStyle())  // Add this line
                 .navigationBarTitle("Add Category", displayMode: .inline)  // Add this line
@@ -124,10 +133,35 @@ struct CategoriesView: View {
             }
             .presentationDetents([.medium])  // Add this line to set the sheet size to medium
         }
+        
+        // Edit Category Sheet
+        .sheet(isPresented: $showingEditCategorySheet) {
+            EditCategorySheet(categoryToEdit: $categoryToEdit, showingEditCategorySheet: $showingEditCategorySheet)
+                .environmentObject(appData)
+        }
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
                 appData.defaultCategory = firstCategory
+            }
+        }
+        .onChange(of: editMode?.wrappedValue) { newEditMode in
+            if newEditMode == .active {
+                // Initialize tempCategoryNames with current category names
+                tempCategoryNames = appData.categories.map { $0.name }
+            } else {
+                // Apply changes
+                for index in appData.categories.indices {
+                    if index < tempCategoryNames.count {
+                        let oldName = appData.categories[index].name
+                        let newName = tempCategoryNames[index]
+                        if oldName != newName {
+                            appData.categories[index].name = newName
+                            updateEventsForCategoryChange(oldName: oldName, newName: newName)
+                        }
+                    }
+                }
+                appData.saveCategories()  // Save categories to user defaults
             }
         }
     }
@@ -189,5 +223,50 @@ struct CategoriesView: View {
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+    }
+}
+
+struct EditCategorySheet: View {
+    @Binding var categoryToEdit: (index: Int, name: String, color: Color)?
+    @Binding var showingEditCategorySheet: Bool
+    @EnvironmentObject var appData: AppData
+    @FocusState private var isCategoryNameFieldFocused: Bool
+
+    var body: some View {
+        NavigationView {
+            if let categoryToEdit = categoryToEdit {
+                Form {
+                    TextField("Category Name", text: Binding(
+                        get: { categoryToEdit.name },
+                        set: { self.categoryToEdit?.name = $0 }
+                    ))
+                    .focused($isCategoryNameFieldFocused)  // Ensure the TextField is focused
+                    ColorPicker("Choose Color", selection: Binding(
+                        get: { categoryToEdit.color },
+                        set: { self.categoryToEdit?.color = $0 }
+                    ))
+                }
+                .formStyle(GroupedFormStyle())  // Add this line
+                .navigationBarTitle("Edit Category", displayMode: .inline)  // Add this line
+                .navigationBarItems(
+                    leading: Button("Cancel") {
+                        showingEditCategorySheet = false
+                    },
+                    trailing: Button("Save") {
+                        let index = categoryToEdit.index
+                        appData.categories[index].name = categoryToEdit.name
+                        appData.categories[index].color = categoryToEdit.color
+                        appData.saveCategories()  // Save categories to user defaults
+                        showingEditCategorySheet = false
+                    }
+                )
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isCategoryNameFieldFocused = true  // Delay focusing the TextField
+            }
+        }
+        .presentationDetents([.medium])  // Ensure the sheet size is set to medium
     }
 }
