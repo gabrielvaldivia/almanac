@@ -15,6 +15,7 @@ struct EventForm: View {
     @Binding var showCategoryManagementView: Bool
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool
+    @State private var showingAddCategorySheet = false
 
     var body: some View {
         Form {
@@ -107,18 +108,28 @@ struct EventForm: View {
                     ForEach(appData.categories, id: \.name) { category in
                         Text(category.name).tag(category.name as String?)
                     }
+                    HStack {
+                        Text("Add Category")
+                        Image(systemName: "plus")
+                    }.tag("addCategory" as String?)
+                }
+                .onChange(of: selectedCategory) { newValue in
+                    if newValue == "addCategory" {
+                        showingAddCategorySheet = true
+                        selectedCategory = nil // Reset the selection
+                    }
                 }
                 .onAppear {
                     if selectedCategory == nil {
                         selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
                     }
                 }
-
-                Button(action: {
-                    showCategoryManagementView = true
-                }) {
-                    Text("Manage Categories")
-                        .foregroundColor(.blue)
+                .sheet(isPresented: $showingAddCategorySheet) {
+                    NavigationView {
+                        CategoriesView()
+                            .environmentObject(appData)
+                    }
+                    .presentationDetents([.medium, .large], selection: .constant(.medium))
                 }
             }
             Section {
