@@ -110,13 +110,15 @@ struct EventForm: View {
                     }
                     HStack {
                         Text("Add Category")
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
                     }.tag("addCategory" as String?)
                 }
-                .onChange(of: selectedCategory) { newValue in
+                .onChange(of: selectedCategory) { oldValue, newValue in
                     if newValue == "addCategory" {
                         showingAddCategorySheet = true
                         selectedCategory = nil // Reset the selection
+                    } else if let category = appData.categories.first(where: { $0.name == newValue }) {
+                        selectedColor = CodableColor(color: category.color)
                     }
                 }
                 .onAppear {
@@ -131,6 +133,11 @@ struct EventForm: View {
                     }
                     .presentationDetents([.medium, .large], selection: .constant(.medium))
                 }
+                
+                ColorPicker("Color", selection: Binding(
+                    get: { selectedColor.color },
+                    set: { selectedColor = CodableColor(color: $0) }
+                ))
             }
             Section {
                 Toggle("Notify me", isOn: $notificationsEnabled)
