@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4011A1512C3CE97D00F275DE /* EventForm.swift */; };
 		4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403EA2F22C2F69EE003207ED /* FontModifier.swift */; };
@@ -81,6 +82,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4011A1512C3CE97D00F275DE /* EventForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventForm.swift; sourceTree = "<group>"; };
 		4038EA9D2C33832400E0CE8E /* EventLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLoader.swift; sourceTree = "<group>"; };
 		403EA2F22C2F69EE003207ED /* FontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontModifier.swift; sourceTree = "<group>"; };
 		40549BC12C290E9300DA0EB6 /* PastEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastEventsView.swift; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 				40790D772C23286C005DDC65 /* Preview Content */,
 				40FEEC4A2C2919E0008AA61D /* Utilities.swift */,
 				40FEEC4C2C291BA0008AA61D /* EventRow.swift */,
+				4011A1512C3CE97D00F275DE /* EventForm.swift */,
 			);
 			path = "Up Next";
 			sourceTree = "<group>";
@@ -424,6 +427,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */,
 				4061918B2C38FAA100BC3D4A /* SettingsView.swift in Sources */,
 				40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */,
 				40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */,

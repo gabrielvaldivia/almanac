@@ -44,125 +44,31 @@ struct EditEventView: View {
     @State private var repeatIndefinitely: Bool = false // New state variable
     @State private var showDeleteActionSheet = false
     @State private var deleteOption: DeleteOption = .thisEvent
+    @State private var showCategoryManagementView = false
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
     var body: some View {
         NavigationView {
-            Form {
-                Section() {
-                    TextField("Title", text: $newEventTitle)
-                }
-                Section() {
-                    DatePicker(showEndDate ? "Start Date" : "Date", selection: $newEventDate, displayedComponents: .date)
-                        .datePickerStyle(DefaultDatePickerStyle())
-                    if showEndDate {
-                        DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                            .datePickerStyle(DefaultDatePickerStyle())
-                    }
-                    Toggle("Multi-Day", isOn: $showEndDate)
-                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                }
-                Section() {
-                    Menu {
-                        ForEach(RepeatOption.allCases, id: \.self) { option in
-                            Button(action: {
-                                repeatOption = option
-                            }) {
-                                Text(option.rawValue)
-                                    .foregroundColor(option == repeatOption ? .gray : .primary)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text("Repeat")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text(repeatOption.rawValue)
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .foregroundColor(.gray)
-                                .font(.footnote)
-                        }
-                    }
-
-                    if repeatOption != .never {
-                        Menu {
-                            Button(action: {
-                                repeatUntilOption = .indefinitely
-                            }) {
-                                Text("Never")
-                                    .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
-                            }
-                            Button(action: {
-                                repeatUntilOption = .after
-                            }) {
-                                Text("After")
-                                    .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
-                            }
-                            Button(action: {
-                                repeatUntilOption = .onDate
-                            }) {
-                                Text("On")
-                                    .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
-                            }
-                        } label: {
-                            HStack {
-                                Text("End Repeat")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(repeatUntilOption.rawValue)
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
-                                    .font(.footnote)
-                            }
-                        }
-
-                        if repeatUntilOption == .after {
-                            HStack {
-                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                    .keyboardType(.numberPad)
-                                    .frame(width: 24)
-                                    .multilineTextAlignment(.center)
-                                Stepper(value: $repeatCount, in: 1...100) {
-                                    Text(" times")
-                                }
-                            }
-                        } else if repeatUntilOption == .onDate {
-                            DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
-                        }
-                    }
-                }
-                Section() {
-                    HStack {
-                        Text("Category")
-                        Spacer()
-                        Menu {
-                            Picker("Select Category", selection: $selectedCategory) {
-                                ForEach(appData.categories, id: \.name) { category in
-                                    Text(category.name).tag(category.name as String?)
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text(selectedCategory ?? "Select")
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-                Section() {
-                    Toggle("Notify me", isOn: $notificationsEnabled)
-                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                }
-            }
+            EventForm(
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                selectedCategory: $selectedCategory,
+                selectedColor: $selectedColor,
+                notificationsEnabled: $notificationsEnabled,
+                repeatOption: $repeatOption,
+                repeatUntil: $repeatUntil,
+                repeatUntilOption: $repeatUntilOption,
+                repeatCount: $repeatCount,
+                showCategoryManagementView: $showCategoryManagementView
+            )
+            .environmentObject(appData)
             .navigationTitle("Edit Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { 
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showEditSheet = false
                     }) {
