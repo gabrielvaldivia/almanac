@@ -7,8 +7,8 @@
 
 import Foundation
 import SwiftUI
-import UIKit  
-import WidgetKit 
+import UIKit  // Ensure UIKit is imported for UIColor
+import WidgetKit  // Add this import
 
 extension Color {
     func toHex() -> String? {
@@ -145,8 +145,8 @@ struct CategoriesView: View {
                 appData.defaultCategory = firstCategory
             }
         }
-        .onChange(of: editMode?.wrappedValue) { oldValue, newValue in
-            if let newValue = newValue, newValue == .active {
+        .onChange(of: editMode?.wrappedValue) {
+            if let newValue = editMode?.wrappedValue, newValue == .active {
                 // Initialize tempCategoryNames with current category names
                 tempCategoryNames = appData.categories.map { $0.name }
             } else {
@@ -163,7 +163,7 @@ struct CategoriesView: View {
                 }
                 appData.saveCategories()  // Save categories to user defaults
             }
-        }
+}
     }
 
     private func removeCategory(at offsets: IndexSet) {
