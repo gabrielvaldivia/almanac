@@ -106,16 +106,6 @@ struct EditEventView: View {
                     }
                     .disabled(newEventTitle.isEmpty)
                 }
-                if selectedEvent?.repeatOption == .never {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            showDeleteActionSheet = true
-                        }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
             }
             .alert(isPresented: $showDeleteActionSheet) {
                 Alert(
