@@ -91,7 +91,11 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showUpdateActionSheet = true
+                        if selectedEvent?.repeatOption == .never {
+                            applyChanges(to: .thisEvent)
+                        } else {
+                            showUpdateActionSheet = true
+                        }
                     }) {
                         Group {
                             ZStack {
@@ -135,16 +139,8 @@ struct EditEventView: View {
                         ]
                     )
                 } else {
-                    return ActionSheet(
-                        title: Text("Update Event"),
-                        message: Text("Do you want to save the changes?"),
-                        buttons: [
-                            .default(Text("Save")) {
-                                applyChanges(to: .thisEvent)
-                            },
-                            .cancel()
-                        ]
-                    )
+                    applyChanges(to: .thisEvent)
+                    return ActionSheet(title: Text(""), message: Text(""), buttons: [])
                 }
             }
         }
