@@ -39,7 +39,15 @@ struct EventForm: View {
             }
             Section {
                 Menu {
-                    ForEach(RepeatOption.allCases, id: \.self) { option in
+                    ForEach(RepeatOption.allCases.filter { option in
+                        if option == .daily && showEndDate {
+                            return false
+                        }
+                        if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                            return false
+                        }
+                        return true
+                    }, id: \.self) { option in
                         Button(action: {
                             repeatOption = option
                         }) {
