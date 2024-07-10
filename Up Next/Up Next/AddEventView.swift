@@ -182,13 +182,15 @@ struct AddEventView: View {
             maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
         }
         
-        while let nextDate = getNextRepeatDate(for: currentEvent), 
-              nextDate <= (event.repeatUntil ?? Date.distantFuture), 
+        let duration = Calendar.current.dateComponents([.day], from: event.date, to: event.endDate ?? event.date).day ?? 0
+        
+        while let nextDate = getNextRepeatDate(for: currentEvent),
+              nextDate <= (event.repeatUntil ?? Date.distantFuture),
               repetitionCount < maxRepetitions {
             currentEvent = Event(
                 title: event.title,
                 date: nextDate,
-                endDate: event.endDate,
+                endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
                 color: event.color,
                 category: event.category,
                 notificationsEnabled: event.notificationsEnabled,

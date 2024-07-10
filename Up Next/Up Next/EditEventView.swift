@@ -319,12 +319,14 @@ struct EditEventView: View {
     func applyChanges(to option: DeleteOption) {
         guard let selectedEvent = selectedEvent else { return }
 
+        let duration = Calendar.current.dateComponents([.day], from: selectedEvent.date, to: selectedEvent.endDate ?? selectedEvent.date).day ?? 0
+
         switch option {
         case .thisEvent:
             if let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
                 events[index].title = newEventTitle
                 events[index].date = newEventDate
-                events[index].endDate = showEndDate ? newEventEndDate : nil
+                events[index].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
                 events[index].category = selectedCategory
                 events[index].color = selectedColor
                 events[index].notificationsEnabled = notificationsEnabled
@@ -334,7 +336,6 @@ struct EditEventView: View {
             break
         case .allEvents:
             let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
-            let duration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
             let originalStartDate = selectedEvent.date
             let newStartDate = newEventDate
             let dateDifference = Calendar.current.dateComponents([.day], from: originalStartDate, to: newStartDate).day ?? 0
@@ -349,7 +350,7 @@ struct EditEventView: View {
 
                     if index == 0 {
                         events[eventIndex].date = newEventDate
-                        events[eventIndex].endDate = showEndDate ? newEventEndDate : nil
+                        events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
                     } else {
                         let previousEventDate = events[eventIndex - 1].date
                         let newEventDate: Date?
