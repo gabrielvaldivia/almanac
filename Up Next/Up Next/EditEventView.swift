@@ -119,16 +119,27 @@ struct EditEventView: View {
                 )
             }
             .alert(isPresented: $showUpdateActionSheet) {
-                Alert(
-                    title: Text("Update Event"),
-                    message: Text("Do you want to apply the changes to this event only or all events in the series?"),
-                    primaryButton: .default(Text("This Event Only")) {
-                        applyChanges(to: .thisEvent)
-                    },
-                    secondaryButton: .default(Text("All Events in Series")) {
-                        applyChanges(to: .allEvents)
-                    }
-                )
+                if selectedEvent?.repeatOption != .never {
+                    return Alert(
+                        title: Text("Update Event"),
+                        message: Text("Do you want to apply the changes to this event only or all events in the series?"),
+                        primaryButton: .default(Text("This Event Only")) {
+                            applyChanges(to: .thisEvent)
+                        },
+                        secondaryButton: .default(Text("All Events in Series")) {
+                            applyChanges(to: .allEvents)
+                        }
+                    )
+                } else {
+                    return Alert(
+                        title: Text("Update Event"),
+                        message: Text("Do you want to save the changes?"),
+                        primaryButton: .default(Text("Save")) {
+                            applyChanges(to: .thisEvent)
+                        },
+                        secondaryButton: .cancel()
+                    )
+                }
             }
         }
         .onAppear {
