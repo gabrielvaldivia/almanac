@@ -166,6 +166,8 @@ struct AddEventView: View {
     func generateRepeatingEvents(for event: Event) -> [Event] {
         var repeatingEvents = [Event]()
         var currentEvent = event
+        let seriesID = UUID() // Generate a new series ID
+        currentEvent.seriesID = seriesID
         repeatingEvents.append(currentEvent)
         
         var repetitionCount = 1
@@ -180,11 +182,6 @@ struct AddEventView: View {
             maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
         }
         
-        print("Generating repeating events for \(event.title)")
-        print("Repeat option: \(event.repeatOption)")
-        print("Repeat until: \(String(describing: event.repeatUntil))")
-        print("Max repetitions: \(maxRepetitions)")
-        
         while let nextDate = getNextRepeatDate(for: currentEvent), 
               nextDate <= (event.repeatUntil ?? Date.distantFuture), 
               repetitionCount < maxRepetitions {
@@ -196,15 +193,13 @@ struct AddEventView: View {
                 category: event.category,
                 notificationsEnabled: event.notificationsEnabled,
                 repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil
+                repeatUntil: event.repeatUntil,
+                seriesID: seriesID // Assign the same series ID
             )
             repeatingEvents.append(currentEvent)
             repetitionCount += 1
-            
-            print("Added event on \(nextDate)")
         }
         
-        print("Generated \(repeatingEvents.count) events")
         return repeatingEvents
     }
 

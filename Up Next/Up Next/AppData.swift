@@ -20,8 +20,9 @@ struct Event: Identifiable, Codable {
     var notificationsEnabled: Bool = true
     var repeatOption: RepeatOption = .never
     var repeatUntil: Date?
+    var seriesID: UUID? // Add this property
 
-    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil) {
+    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil) {
         self.title = title
         self.date = date
         self.endDate = endDate
@@ -30,6 +31,7 @@ struct Event: Identifiable, Codable {
         self.notificationsEnabled = notificationsEnabled
         self.repeatOption = repeatOption
         self.repeatUntil = repeatUntil
+        self.seriesID = repeatOption == .never ? nil : seriesID // Only assign seriesID for repeating events
         print("Event initialized: \(self)")
     }
 }

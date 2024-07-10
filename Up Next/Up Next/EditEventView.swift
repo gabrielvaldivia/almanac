@@ -24,7 +24,8 @@ struct EditEventView: View {
                 notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                repeatIndefinitely = event.repeatUntil == nil // Adjust logic
+                repeatIndefinitely = event.repeatUntil == nil
+                repeatCount = calculateRepeatCount(for: event)
                 updateRepeatUntilOption(for: event)
             }
         }
@@ -41,12 +42,12 @@ struct EditEventView: View {
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
     @State private var repeatCount: Int = 1
-    @State private var repeatIndefinitely: Bool = false // New state variable
+    @State private var repeatIndefinitely: Bool = false
     @State private var showDeleteActionSheet = false
     @State private var deleteOption: DeleteOption = .thisEvent
     @State private var showCategoryManagementView = false
     @State private var showUpdateActionSheet = false
-    @State private var showDeleteSeriesAlert = false // New state variable
+    @State private var showDeleteSeriesAlert = false
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -65,10 +66,10 @@ struct EditEventView: View {
                 repeatUntilOption: $repeatUntilOption,
                 repeatCount: $repeatCount,
                 showCategoryManagementView: $showCategoryManagementView,
-                showDeleteActionSheet: $showDeleteActionSheet, // Pass the binding
-                selectedEvent: $selectedEvent, // Pass the binding
-                deleteEvent: deleteEvent, // Pass the function
-                deleteSeries: { showDeleteSeriesAlert = true } // Show alert
+                showDeleteActionSheet: $showDeleteActionSheet,
+                selectedEvent: $selectedEvent,
+                deleteEvent: deleteEvent,
+                deleteSeries: { showDeleteSeriesAlert = true }
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")
@@ -118,26 +119,31 @@ struct EditEventView: View {
                     secondaryButton: .cancel()
                 )
             }
-            .alert(isPresented: $showUpdateActionSheet) {
+            .actionSheet(isPresented: $showUpdateActionSheet) {
                 if selectedEvent?.repeatOption != .never {
-                    return Alert(
+                    return ActionSheet(
                         title: Text("Update Event"),
                         message: Text("Do you want to apply the changes to this event only or all events in the series?"),
-                        primaryButton: .default(Text("This Event Only")) {
-                            applyChanges(to: .thisEvent)
-                        },
-                        secondaryButton: .default(Text("All Events in Series")) {
-                            applyChanges(to: .allEvents)
-                        }
+                        buttons: [
+                            .default(Text("This Event Only")) {
+                                applyChanges(to: .thisEvent)
+                            },
+                            .default(Text("All Events in Series")) {
+                                applyChanges(to: .allEvents)
+                            },
+                            .cancel()
+                        ]
                     )
                 } else {
-                    return Alert(
+                    return ActionSheet(
                         title: Text("Update Event"),
                         message: Text("Do you want to save the changes?"),
-                        primaryButton: .default(Text("Save")) {
-                            applyChanges(to: .thisEvent)
-                        },
-                        secondaryButton: .cancel()
+                        buttons: [
+                            .default(Text("Save")) {
+                                applyChanges(to: .thisEvent)
+                            },
+                            .cancel()
+                        ]
                     )
                 }
             }
@@ -148,6 +154,7 @@ struct EditEventView: View {
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
                 repeatIndefinitely = event.repeatUntil == nil
+                repeatCount = calculateRepeatCount(for: event)
                 updateRepeatUntilOption(for: event)
             }
         }
@@ -174,7 +181,7 @@ struct EditEventView: View {
 
     func deleteSeries() {
         guard let event = selectedEvent else { return }
-        events.removeAll { $0.title == event.title && $0.category == event.category }
+        events.removeAll { $0.seriesID == event.seriesID }
         saveEvents()
         showEditSheet = false
     }
@@ -225,6 +232,8 @@ struct EditEventView: View {
     func generateRepeatingEvents(for event: Event) -> [Event] {
         var repeatingEvents = [Event]()
         var currentEvent = event
+        let seriesID = UUID()
+        currentEvent.seriesID = seriesID
         repeatingEvents.append(currentEvent)
         
         var repetitionCount = 1
@@ -250,7 +259,8 @@ struct EditEventView: View {
                 category: event.category,
                 notificationsEnabled: event.notificationsEnabled,
                 repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil
+                repeatUntil: event.repeatUntil,
+                seriesID: seriesID
             )
             repeatingEvents.append(currentEvent)
             repetitionCount += 1
@@ -282,15 +292,31 @@ struct EditEventView: View {
 
     private func updateRepeatUntilOption(for event: Event) {
         if let repeatUntil = event.repeatUntil {
-            if Calendar.current.isDate(repeatUntil, inSameDayAs: event.date) {
+            if repeatUntil == Calendar.current.date(byAdding: .day, value: repeatCount - 1, to: event.date) {
+                repeatUntilOption = .after
+            } else if Calendar.current.isDate(repeatUntil, inSameDayAs: event.date) {
                 repeatUntilOption = .indefinitely
             } else if repeatUntil > event.date {
                 repeatUntilOption = .onDate
-            } else {
-                repeatUntilOption = .after
             }
         } else {
             repeatUntilOption = .indefinitely
+        }
+    }
+    
+    private func calculateRepeatCount(for event: Event) -> Int {
+        guard let repeatUntil = event.repeatUntil else { return 1 }
+        switch event.repeatOption {
+        case .daily:
+            return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! + 1
+        case .weekly:
+            return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! + 1
+        case .monthly:
+            return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! + 1
+        case .yearly:
+            return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! + 1
+        case .never:
+            return 1
         }
     }
     
@@ -311,7 +337,7 @@ struct EditEventView: View {
             // Handle thisAndUpcoming if needed, otherwise you can leave it empty or add a comment
             break
         case .allEvents:
-            let repeatingEvents = events.filter { $0.title == selectedEvent.title && $0.category == selectedEvent.category }
+            let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
             let duration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
             let originalStartDate = selectedEvent.date
             let newStartDate = newEventDate
@@ -319,32 +345,34 @@ struct EditEventView: View {
             let repeatOption = selectedEvent.repeatOption
 
             for (index, event) in repeatingEvents.enumerated() {
-                events[index].title = newEventTitle
-                events[index].category = selectedCategory
-                events[index].color = selectedColor
-                events[index].notificationsEnabled = notificationsEnabled
+                if let eventIndex = events.firstIndex(where: { $0.id == event.id }) {
+                    events[eventIndex].title = newEventTitle
+                    events[eventIndex].category = selectedCategory
+                    events[eventIndex].color = selectedColor
+                    events[eventIndex].notificationsEnabled = notificationsEnabled
 
-                if index == 0 {
-                    events[index].date = newEventDate
-                    events[index].endDate = showEndDate ? newEventEndDate : nil
-                } else {
-                    let previousEventDate = events[index - 1].date
-                    let newEventDate: Date?
-                    switch repeatOption {
-                    case .daily:
-                        newEventDate = Calendar.current.date(byAdding: .day, value: 1, to: previousEventDate)
-                    case .weekly:
-                        newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: previousEventDate)
-                    case .monthly:
-                        newEventDate = Calendar.current.date(byAdding: .month, value: 1, to: previousEventDate)
-                    case .yearly:
-                        newEventDate = Calendar.current.date(byAdding: .year, value: 1, to: previousEventDate)
-                    case .never:
-                        newEventDate = nil
-                    }
-                    if let newEventDate = newEventDate {
-                        events[index].date = newEventDate
-                        events[index].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
+                    if index == 0 {
+                        events[eventIndex].date = newEventDate
+                        events[eventIndex].endDate = showEndDate ? newEventEndDate : nil
+                    } else {
+                        let previousEventDate = events[eventIndex - 1].date
+                        let newEventDate: Date?
+                        switch repeatOption {
+                        case .daily:
+                            newEventDate = Calendar.current.date(byAdding: .day, value: 1, to: previousEventDate)
+                        case .weekly:
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: previousEventDate)
+                        case .monthly:
+                            newEventDate = Calendar.current.date(byAdding: .month, value: 1, to: previousEventDate)
+                        case .yearly:
+                            newEventDate = Calendar.current.date(byAdding: .year, value: 1, to: previousEventDate)
+                        case .never:
+                            newEventDate = nil
+                        }
+                        if let newEventDate = newEventDate {
+                            events[eventIndex].date = newEventDate
+                            events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
+                        }
                     }
                 }
             }
@@ -352,23 +380,25 @@ struct EditEventView: View {
             // Adjust past events
             for (index, event) in repeatingEvents.enumerated().reversed() {
                 if index == 0 { continue }
-                let nextEventDate = events[index].date
-                let newEventDate: Date?
-                switch repeatOption {
-                case .daily:
-                    newEventDate = Calendar.current.date(byAdding: .day, value: -1, to: nextEventDate)
-                case .weekly:
-                    newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: nextEventDate)
-                case .monthly:
-                    newEventDate = Calendar.current.date(byAdding: .month, value: -1, to: nextEventDate)
-                case .yearly:
-                    newEventDate = Calendar.current.date(byAdding: .year, value: -1, to: nextEventDate)
-                case .never:
-                    newEventDate = nil
-                }
-                if let newEventDate = newEventDate {
-                    events[index - 1].date = newEventDate
-                    events[index - 1].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
+                if let eventIndex = events.firstIndex(where: { $0.id == event.id }) {
+                    let nextEventDate = events[eventIndex].date
+                    let newEventDate: Date?
+                    switch repeatOption {
+                    case .daily:
+                        newEventDate = Calendar.current.date(byAdding: .day, value: -1, to: nextEventDate)
+                    case .weekly:
+                        newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: nextEventDate)
+                    case .monthly:
+                        newEventDate = Calendar.current.date(byAdding: .month, value: -1, to: nextEventDate)
+                    case .yearly:
+                        newEventDate = Calendar.current.date(byAdding: .year, value: -1, to: nextEventDate)
+                    case .never:
+                        newEventDate = nil
+                    }
+                    if let newEventDate = newEventDate {
+                        events[eventIndex - 1].date = newEventDate
+                        events[eventIndex - 1].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: newEventDate) : nil
+                    }
                 }
             }
         }
