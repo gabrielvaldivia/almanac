@@ -344,9 +344,10 @@ struct ContentView: View {
     }
     
     func hasMoreEventsToLoad() -> Bool {
-        let lastEventDate = events.last?.date ?? Date()
-        let lastLoadedDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: Date())!
-        return lastEventDate > lastLoadedDate
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
+        return events.contains { $0.date > endDate || ($0.endDate != nil && $0.endDate! > endDate) }
     }
 }
 
