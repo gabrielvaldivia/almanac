@@ -338,7 +338,7 @@ struct EditEventView: View {
             let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
             let originalStartDate = selectedEvent.date
             let newStartDate = newEventDate
-            let dateDifference = Calendar.current.dateComponents([.day], from: originalStartDate, to: newStartDate).day ?? 0
+            _ = Calendar.current.dateComponents([.day], from: originalStartDate, to: newStartDate).day ?? 0
             let repeatOption = selectedEvent.repeatOption
 
             for (index, event) in repeatingEvents.enumerated() {

@@ -107,6 +107,11 @@ struct EventForm: View {
                                 .keyboardType(.numberPad)
                                 .frame(width: 24)
                                 .multilineTextAlignment(.center)
+                                .onChange(of: repeatCount) {
+                                    if repeatCount < 1 {
+                                        repeatCount = 1
+                                    }
+                                }
                             Stepper(value: $repeatCount, in: 1...100) {
                                 Text(" times")
                             }
@@ -179,9 +184,6 @@ struct EventForm: View {
         }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isTitleFocused = true
-            }
             if selectedCategory == nil {
                 selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
                 selectedColor = CodableColor(color: .blue) // Set default color to blue
