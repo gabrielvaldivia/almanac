@@ -45,6 +45,7 @@ struct EditEventView: View {
     @State private var showDeleteActionSheet = false
     @State private var deleteOption: DeleteOption = .thisEvent
     @State private var showCategoryManagementView = false
+    @State private var showUpdateActionSheet = false
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -87,7 +88,7 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        saveEvent()
+                        showUpdateActionSheet = true
                     }) {
                         Group {
                             ZStack {
@@ -125,6 +126,21 @@ struct EditEventView: View {
                     ]
                 )
             }
+            .actionSheet(isPresented: $showUpdateActionSheet) {
+                ActionSheet(
+                    title: Text("Update Event"),
+                    message: Text("Do you want to apply the changes to this event only or all events in the series?"),
+                    buttons: [
+                        .default(Text("This Event Only")) {
+                            applyChanges(to: .thisEvent)
+                        },
+                        .default(Text("All Events in Series")) {
+                            applyChanges(to: .allEvents)
+                        },
+                        .cancel()
+                    ]
+                )
+            }
         }
         .onAppear {
             if let event = selectedEvent {
@@ -146,7 +162,7 @@ struct EditEventView: View {
                 events.remove(at: index)
             }
         case .thisAndUpcoming:
-            events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
+            events.removeAll { $0.id == event.id || ($0.title == event.title && $0.category == event.category && $0.date >= event.date) }
         case .allEvents:
             events.removeAll { $0.title == event.title && $0.category == event.category }
         }
@@ -257,5 +273,43 @@ struct EditEventView: View {
         } else {
             repeatUntilOption = .indefinitely
         }
+    }
+    
+    func applyChanges(to option: DeleteOption) {
+        guard let selectedEvent = selectedEvent else { return }
+
+        switch option {
+        case .thisEvent:
+            if let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
+                events[index].title = newEventTitle
+                events[index].date = newEventDate
+                events[index].endDate = showEndDate ? newEventEndDate : nil
+                events[index].category = selectedCategory
+                events[index].color = selectedColor
+                events[index].notificationsEnabled = notificationsEnabled
+            }
+        case .thisAndUpcoming:
+            // Handle thisAndUpcoming if needed, otherwise you can leave it empty or add a comment
+            break
+        case .allEvents:
+            let repeatingEvents = events.filter { $0.title == selectedEvent.title && $0.category == selectedEvent.category }
+            let duration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
+
+            for (index, event) in repeatingEvents.enumerated() {
+                events[index].title = newEventTitle
+                events[index].category = selectedCategory
+                events[index].color = selectedColor
+                events[index].notificationsEnabled = notificationsEnabled
+                if index == 0 {
+                    events[index].date = newEventDate
+                    events[index].endDate = showEndDate ? newEventEndDate : nil
+                } else {
+                    events[index].date = getNextRepeatDate(for: events[index - 1]) ?? events[index].date
+                    events[index].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: events[index].date) : nil
+                }
+            }
+        }
+        saveEvents()
+        showEditSheet = false
     }
 }
