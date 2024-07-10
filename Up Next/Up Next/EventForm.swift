@@ -150,25 +150,25 @@ struct EventForm: View {
                     .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
             }
             Section {
-                if let event = selectedEvent {
-                    if event.repeatOption == .never {
-                        Button("Delete Event") {
-                            showDeleteActionSheet = true
-                        }
-                        .foregroundColor(.red)
-                    } else {
-                        Button("Delete Event") {
-                            deleteEvent()
-                        }
-                        .foregroundColor(.red)
-                        
-                        Button("Delete Series") {
-                            deleteSeries()
-                        }
-                        .foregroundColor(.red)
+            if let event = selectedEvent {
+                if event.repeatOption == .never {
+                    Button("Delete Event") {
+                        showDeleteActionSheet = true
                     }
+                    .foregroundColor(.red)
+                } else {
+                    Button("Delete Event") {
+                        deleteEvent()
+                    }
+                    .foregroundColor(.red)
+                    
+                    Button("Delete Series") {
+                        deleteSeries()
+                    }
+                    .foregroundColor(.red)
                 }
             }
+        }
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
