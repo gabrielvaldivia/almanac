@@ -312,12 +312,9 @@ struct EditEventView: View {
         case .allEvents:
             let repeatingEvents = events.filter { $0.title == selectedEvent.title && $0.category == selectedEvent.category }
             let duration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
-            let originalStartDate = selectedEvent.date
-            let newStartDate = newEventDate
-            let dateDifference = Calendar.current.dateComponents([.day], from: originalStartDate, to: newStartDate).day ?? 0
             let repeatOption = selectedEvent.repeatOption
 
-            for (index, event) in repeatingEvents.enumerated() {
+            for (index, _) in repeatingEvents.enumerated() {
                 events[index].title = newEventTitle
                 events[index].category = selectedCategory
                 events[index].color = selectedColor
@@ -349,7 +346,7 @@ struct EditEventView: View {
             }
 
             // Adjust past events
-            for (index, event) in repeatingEvents.enumerated().reversed() {
+            for (index, _) in repeatingEvents.enumerated().reversed() {
                 if index == 0 { continue }
                 let nextEventDate = events[index].date
                 let newEventDate: Date?
