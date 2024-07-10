@@ -35,6 +35,11 @@ struct EventForm: View {
                     DatePicker("End Date", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
                 }
                 Toggle("Multi-Day", isOn: $showEndDate)
+                    .onChange(of: showEndDate) { value in
+                        if value {
+                            newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate
+                        }
+                    }
                     .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
             }
             Section {

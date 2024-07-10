@@ -45,10 +45,10 @@ struct AddEventView: View {
                 repeatUntilOption: $repeatUntilOption,
                 repeatCount: $repeatCount,
                 showCategoryManagementView: $showCategoryManagementView,
-                showDeleteActionSheet: $showDeleteActionSheet, // Pass the binding
-                selectedEvent: $selectedEvent, // Pass the binding
-                deleteEvent: {}, // Pass an empty closure
-                deleteSeries: {} // Pass an empty closure
+                showDeleteActionSheet: $showDeleteActionSheet,
+                selectedEvent: $selectedEvent,
+                deleteEvent: {},
+                deleteSeries: {}
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
