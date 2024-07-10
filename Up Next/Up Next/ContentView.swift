@@ -131,7 +131,7 @@ struct ContentView: View {
                                 }
                             }
                             
-                            if hasMoreEventsToLoad() { // Check if there are more events to load
+                            if selectedCategoryFilter == nil || hasMoreEventsToLoad() { // Check if there are more events to load
                                 Button(action: {
                                     self.monthsToLoad += 12 // Increment monthsToLoad by 12
                                     loadEvents() // Reload events
@@ -347,7 +347,14 @@ struct ContentView: View {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
         let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
-        return events.contains { $0.date > endDate || ($0.endDate != nil && $0.endDate! > endDate) }
+        return events.contains { event in
+            let eventDate = event.endDate ?? event.date
+            if let filter = selectedCategoryFilter {
+                return event.category == filter && eventDate > endDate
+            } else {
+                return eventDate > endDate
+            }
+        }
     }
 }
 
