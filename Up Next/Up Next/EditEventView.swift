@@ -90,7 +90,11 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showUpdateActionSheet = true
+                        if selectedEvent?.repeatOption != .never {
+                            showUpdateActionSheet = true
+                        } else {
+                            applyChanges(to: .thisEvent)
+                        }
                     }) {
                         Group {
                             ZStack {
