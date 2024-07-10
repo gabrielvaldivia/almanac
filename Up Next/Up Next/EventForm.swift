@@ -1,5 +1,7 @@
 import SwiftUI
 
+import WidgetKit
+
 struct EventForm: View {
     @Binding var newEventTitle: String
     @Binding var newEventDate: Date
@@ -16,6 +18,7 @@ struct EventForm: View {
     @Binding var showDeleteActionSheet: Bool
     @Binding var selectedEvent: Event?
     var deleteEvent: () -> Void
+    var deleteSeries: () -> Void
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool
     @State private var showingAddCategorySheet = false
@@ -147,13 +150,27 @@ struct EventForm: View {
                     .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
             }
             Section {
-                if selectedEvent != nil {
+                if selectedEvent != nil && selectedEvent?.repeatOption == .never {
                     Button("Delete Event") {
                         if selectedEvent?.repeatOption != .never {
                             showDeleteActionSheet = true
                         } else {
                             deleteEvent()
                         }
+                    }
+                    .foregroundColor(.red)
+                }
+                
+                if selectedEvent != nil && selectedEvent?.repeatOption != .never {
+                    Button("Delete Event") {
+                        deleteEvent()
+                    }
+                    .foregroundColor(.red)
+                }
+                
+                if selectedEvent?.repeatOption != .never {
+                    Button("Delete Series") {
+                        deleteSeries()
                     }
                     .foregroundColor(.red)
                 }

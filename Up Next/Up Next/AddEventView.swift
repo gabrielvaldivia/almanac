@@ -47,7 +47,8 @@ struct AddEventView: View {
                 showCategoryManagementView: $showCategoryManagementView,
                 showDeleteActionSheet: $showDeleteActionSheet, // Pass the binding
                 selectedEvent: $selectedEvent, // Pass the binding
-                deleteEvent: deleteEvent // Pass the function
+                deleteEvent: {}, // Pass an empty closure
+                deleteSeries: {} // Pass an empty closure
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
