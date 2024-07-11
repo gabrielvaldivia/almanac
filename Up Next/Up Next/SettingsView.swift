@@ -51,7 +51,7 @@ struct SettingsView: View {
                 }
             }
             
-            Section(header: Text("Feedback")) {
+            Section(header: Text("Support")) {
                 Button(action: {
                     if let url = URL(string: "https://twitter.com/gabrielvaldivia") {
                         openURL(url)
@@ -59,6 +59,13 @@ struct SettingsView: View {
                 }) {
                     Text("Send Feedback")
                 }
+                Button(action: {
+                    showingPaymentSheet = true
+                }) {
+                    Text("Subscribe for $2.99/month")
+                        .foregroundColor(.blue)
+                }
+                .background(PaymentViewControllerWrapper(isPresented: $showingPaymentSheet))
             }
             
             Section(header: Text("Danger Zone")) {
@@ -80,18 +87,6 @@ struct SettingsView: View {
                         secondaryButton: .cancel()
                     )
                 }
-            }
-            
-            // Add a new section for subscription
-            Section {
-                Button(action: {
-                    showingPaymentSheet = true
-                }) {
-                    Text("Subscribe")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                }
-                .background(PaymentViewControllerWrapper(isPresented: $showingPaymentSheet))
             }
             
         }
@@ -118,7 +113,7 @@ struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         if isPresented {
             let request = PKPaymentRequest()
-            request.merchantIdentifier = "merchant.valdiviaworks.upnext" // Replace with your merchant identifier
+            request.merchantIdentifier = "merchant.valdiviaworks.upnext"
             request.supportedNetworks = [.visa, .masterCard, .amex]
             request.merchantCapabilities = .threeDSecure // Changed from .capability3DS
             request.countryCode = "US"
@@ -129,7 +124,9 @@ struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
             
             if let paymentController = PKPaymentAuthorizationViewController(paymentRequest: request) {
                 paymentController.delegate = context.coordinator
-                uiViewController.present(paymentController, animated: true, completion: nil)
+                if let rootViewController = uiViewController.view.window?.rootViewController {
+                    rootViewController.present(paymentController, animated: true, completion: nil)
+                }
             }
             isPresented = false
         }
