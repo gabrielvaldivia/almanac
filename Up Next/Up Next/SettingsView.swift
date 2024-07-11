@@ -120,7 +120,7 @@ struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
             let request = PKPaymentRequest()
             request.merchantIdentifier = "merchant.valdiviaworks.upnext" // Replace with your merchant identifier
             request.supportedNetworks = [.visa, .masterCard, .amex]
-            request.merchantCapabilities = .capability3DS
+            request.merchantCapabilities = .threeDSecure // Changed from .capability3DS
             request.countryCode = "US"
             request.currencyCode = "USD"
             request.paymentSummaryItems = [

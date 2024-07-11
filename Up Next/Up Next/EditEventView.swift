@@ -348,7 +348,7 @@ struct EditEventView: View {
 
             // Update future events
             var eventCount = 1
-            for (index, event) in repeatingEvents.enumerated() {
+            for (_, event) in repeatingEvents.enumerated() {
                 if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex > selectedIndex {
                     let previousEventDate = events[eventIndex - 1].date
                     let newEventDate: Date?
@@ -376,7 +376,7 @@ struct EditEventView: View {
 
             // Update past events
             eventCount = 1
-            for (index, event) in repeatingEvents.enumerated().reversed() {
+            for (_, event) in repeatingEvents.enumerated().reversed() {
                 if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex < selectedIndex {
                     let nextEventDate = events[eventIndex + 1].date
                     let newEventDate: Date?
