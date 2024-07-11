@@ -330,10 +330,11 @@ struct EditEventView: View {
                 events[index].category = selectedCategory
                 events[index].color = selectedColor
                 events[index].notificationsEnabled = notificationsEnabled
+                events[index].repeatOption = repeatOption
             }
         case .allEvents:
             let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
-            let repeatOption = selectedEvent.repeatOption
+            let repeatOption = self.repeatOption
 
             // Update the selected event
             guard let selectedIndex = events.firstIndex(where: { $0.id == selectedEvent.id }) else { return }
@@ -343,8 +344,10 @@ struct EditEventView: View {
             events[selectedIndex].category = selectedCategory
             events[selectedIndex].color = selectedColor
             events[selectedIndex].notificationsEnabled = notificationsEnabled
+            events[selectedIndex].repeatOption = repeatOption
 
             // Update future events
+            var eventCount = 1
             for (index, event) in repeatingEvents.enumerated() {
                 if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex > selectedIndex {
                     let previousEventDate = events[eventIndex - 1].date
@@ -361,14 +364,18 @@ struct EditEventView: View {
                     case .never:
                         newEventDate = nil
                     }
-                    if let newEventDate = newEventDate {
+                    if let newEventDate = newEventDate, eventCount < 100 {
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        eventCount += 1
+                    } else {
+                        events.remove(at: eventIndex)
                     }
                 }
             }
 
             // Update past events
+            eventCount = 1
             for (index, event) in repeatingEvents.enumerated().reversed() {
                 if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex < selectedIndex {
                     let nextEventDate = events[eventIndex + 1].date
@@ -385,9 +392,12 @@ struct EditEventView: View {
                     case .never:
                         newEventDate = nil
                     }
-                    if let newEventDate = newEventDate {
+                    if let newEventDate = newEventDate, eventCount < 100 {
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        eventCount += 1
+                    } else {
+                        events.remove(at: eventIndex)
                     }
                 }
             }
