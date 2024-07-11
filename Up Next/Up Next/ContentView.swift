@@ -19,20 +19,22 @@ struct ContentView: View {
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
     @State private var showEndDate: Bool = false
-    @State private var showPastEventsSheet: Bool = false // State for showing past events
-    @State private var selectedCategoryFilter: String? = nil // State to track selected category for filtering
-    @State private var showCategoryManagementView: Bool = false // State to show category management view
-    @State private var selectedColor: CodableColor = CodableColor(color: .blue) // Default color set to Blue
-    @State private var selectedCategory: String? = nil // Default category set to nil
-    @State private var notificationsEnabled: Bool = true // New state to track notification status
-    @State private var monthsToLoad: Int = 12 // State to track the number of months to load
+    @State private var showPastEventsSheet: Bool = false
+    @State private var selectedCategoryFilter: String? = nil
+    @State private var showCategoryManagementView: Bool = false
+    @State private var selectedColor: CodableColor = CodableColor(color: .blue)
+    @State private var selectedCategory: String? = nil
+    @State private var notificationsEnabled: Bool = true
+    @State private var monthsToLoad: Int = 12
 
     @EnvironmentObject var appData: AppData
-    @Environment(\.colorScheme) var colorScheme // Inject the color scheme environment variable
+    @Environment(\.colorScheme) var colorScheme
+
+    @FocusState private var isFocused: Bool
 
     let itemDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy" // Updated format to include full month and year
+        formatter.dateFormat = "MMMM yyyy"
         return formatter
     }()
 
@@ -43,10 +45,9 @@ struct ContentView: View {
     }()
 
     var body: some View {
-         NavigationView {
+        NavigationView {
             ZStack(alignment: .bottom) {
-                VStack(spacing: 0) { // Remove vertical padding by setting spacing to 0
-                    // List of events
+                VStack(spacing: 0) {
                     let groupedEventsByMonth = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
                         let components = Calendar.current.dateComponents([.year, .month], from: event.date)
                         return Calendar.current.date(from: components)!
@@ -72,10 +73,10 @@ struct ContentView: View {
                                 ) {
                                     ForEach(sortedMonths, id: \.self) { month in
                                         VStack(alignment: .leading) {
-                                            Text(itemDateFormatter.string(from: month)) // Ensure month is formatted correctly
+                                            Text(itemDateFormatter.string(from: month))
                                                 .roundedFont(.headline)
                                                 .padding(.horizontal)
-                                                .padding(.top, 10) // Add padding above each month
+                                                .padding(.top, 10)
                                             
                                             let eventsInMonth = groupedEventsByMonth[month]!
                                             let groupedEventsByDate = Dictionary(grouping: eventsInMonth, by: { event in
@@ -113,7 +114,7 @@ struct ContentView: View {
                                                                     self.selectedEvent = event
                                                                     self.newEventTitle = event.title
                                                                     self.newEventDate = event.date
-                                                                    self.newEventEndDate = event.endDate ?? Date()
+                                                                    self.newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
                                                                     self.showEndDate = event.endDate != nil
                                                                     self.selectedCategory = event.category
                                                                     self.showEditSheet = true
@@ -131,23 +132,23 @@ struct ContentView: View {
                                 }
                             }
                             
-                            if selectedCategoryFilter == nil || hasMoreEventsToLoad() { // Check if there are more events to load
+                            if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
                                 Button(action: {
-                                    self.monthsToLoad += 12 // Increment monthsToLoad by 12
-                                    loadEvents() // Reload events
+                                    self.monthsToLoad += 12
+                                    loadEvents()
                                 }) {
                                     Text("View More")
                                         .font(.system(size: 13, weight: .medium, design: .rounded))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 5)
-                                        .background(Color.gray.opacity(0.2)) // Use a light gray background
-                                        .foregroundColor(.gray) // Use gray text color
+                                        .background(Color.gray.opacity(0.2))
+                                        .foregroundColor(.gray)
                                         .cornerRadius(20)
                                 }
                                 .padding(.vertical, 10)
                             }
                             
-                            Spacer(minLength: 80) // Add a spacer to ensure the content is not clipped
+                            Spacer(minLength: 80)
                         }
                         .listStyle(PlainListStyle())
                         .listRowSeparator(.hidden)
@@ -171,12 +172,12 @@ struct ContentView: View {
                 .onAppear {
                     print("ContentView appeared")
                     loadEvents()
-                    appData.loadCategories() // Load categories from UserDefaults
+                    appData.loadCategories()
                 }
 
                 .onOpenURL { url in
                     if url.scheme == "upnext" && url.host == "addEvent" {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Add a 0.5 second delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.newEventTitle = ""
                             self.newEventDate = Date()
                             self.newEventEndDate = Date()
@@ -187,7 +188,6 @@ struct ContentView: View {
                     }
                 }
 
-                // Custom Add Event Button
                 AddEventButton(
                     selectedCategoryFilter: $selectedCategoryFilter,
                     showAddEventSheet: $showAddEventSheet,
@@ -199,11 +199,11 @@ struct ContentView: View {
                 )
                 .padding(0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .environmentObject(appData) // Pass appData as an environment object
+                .environmentObject(appData)
             }
         }
+        .focused($isFocused)
 
-        // Add Event Sheet
         .sheet(isPresented: $showAddEventSheet) {
             AddEventView(
                 events: $events,
@@ -216,11 +216,11 @@ struct ContentView: View {
                 selectedCategory: $selectedCategory,
                 selectedColor: $selectedColor,
                 notificationsEnabled: $notificationsEnabled,
-                appData: _appData // Ensure this is correctly passed
+                appData: _appData
             )
+            .focused($isFocused)
         }
 
-        // Edit Event Sheet
         .sheet(isPresented: $showEditSheet) {
             EditEventView(
                 events: $events,
@@ -236,22 +236,22 @@ struct ContentView: View {
                 saveEvent: saveEvent
             )
             .environmentObject(appData)
+            .focused($isFocused)
         }
 
-        // Past events Sheet
         .sheet(isPresented: $showPastEventsSheet) {
             PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
                 .environmentObject(appData)
+                .focused($isFocused)
         }
 
-        // Categories Sheet
         .sheet(isPresented: $showCategoryManagementView) {
             CategoriesView()
                 .environmentObject(appData)
+                .focused($isFocused)
         }
     }
 
-    // Filtered events
     func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
@@ -276,13 +276,12 @@ struct ContentView: View {
     func deleteEvent(at event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
-            saveEvents()  // Save after deleting
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
+            saveEvents()
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         }
     }
 
-    // Load events from UserDefaults
     func loadEvents() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -290,21 +289,19 @@ struct ContentView: View {
            let data = sharedDefaults.data(forKey: "events"),
            let decoded = try? decoder.decode([Event].self, from: data) {
             events = decoded
-            // print("Loaded events: \(events)")
         } else {
             print("No events found in shared UserDefaults.")
         }
     }
 
-    // Save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         } else {
             print("Failed to encode events.")
         }
@@ -320,8 +317,8 @@ struct ContentView: View {
             events[index].color = selectedColor
             events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         }
         showEditSheet = false
     }
@@ -339,8 +336,8 @@ struct ContentView: View {
         newEventDate = Date()
         newEventEndDate = Date()
         showEndDate = false
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget") // Reload NextEventWidget timelines
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
     
     func hasMoreEventsToLoad() -> Bool {
@@ -358,11 +355,10 @@ struct ContentView: View {
     }
 }
 
-// Preview Provider
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .environmentObject(AppData())
-            .preferredColorScheme(.dark) // Preview in dark mode
+            .preferredColorScheme(.dark)
     }
 }

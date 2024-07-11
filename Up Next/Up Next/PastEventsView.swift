@@ -41,7 +41,7 @@ struct PastEventsView: View {
                                     selectedEvent = event
                                     newEventTitle = event.title
                                     newEventDate = event.date
-                                    newEventEndDate = event.endDate ?? event.date
+                                    newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
                                     showEndDate = event.endDate != nil
                                     selectedCategory = event.category
                                     selectedColor = event.color
@@ -56,8 +56,8 @@ struct PastEventsView: View {
                                                  newEventEndDate: $newEventEndDate,
                                                  showEndDate: $showEndDate,
                                                  selectedCategory: $selectedCategory,
-                                                 showEditSheet: $showEditSheet,
-                                                 categories: categories)
+                                                 showEditSheet: $isEditSheetPresented,
+                                                 categories: appData.categories)
                                     }
                                     .listRowSeparator(.hidden)
                                 }
