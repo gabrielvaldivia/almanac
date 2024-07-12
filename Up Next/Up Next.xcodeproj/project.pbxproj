@@ -111,6 +111,7 @@
 		40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITests.swift; sourceTree = "<group>"; };
 		40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		409726472C2DE2CB0050988E /* CategoryPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPillsView.swift; sourceTree = "<group>"; };
+		40A70B2A2C40DB380080132E /* Almanac Calendar Pro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Almanac Calendar Pro.storekit"; sourceTree = "<group>"; };
 		40FEEC462C2911DD008AA61D /* CategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesView.swift; sourceTree = "<group>"; };
 		40FEEC482C291558008AA61D /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
 		40FEEC4A2C2919E0008AA61D /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
@@ -180,6 +181,7 @@
 			isa = PBXGroup;
 			children = (
 				405920F22C23B887008A9CF2 /* UpNextWidgetExtension.entitlements */,
+				40A70B2A2C40DB380080132E /* Almanac Calendar Pro.storekit */,
 				40790D702C23286B005DDC65 /* Up Next */,
 				40790D812C23286C005DDC65 /* Up NextTests */,
 				40790D8B2C23286C005DDC65 /* Up NextUITests */,
