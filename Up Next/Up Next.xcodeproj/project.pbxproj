@@ -21,7 +21,6 @@
 		405920E92C23B863008A9CF2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 405920E82C23B863008A9CF2 /* Assets.xcassets */; };
 		405920ED2C23B863008A9CF2 /* UpNextWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 405920DC2C23B862008A9CF2 /* UpNextWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		405F66792C33A5C4003C9DC4 /* AddEventButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405F66782C33A5C4003C9DC4 /* AddEventButton.swift */; };
-		405F667B2C33A651003C9DC4 /* CircleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405F667A2C33A651003C9DC4 /* CircleButton.swift */; };
 		4061918B2C38FAA100BC3D4A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406191892C38FA6700BC3D4A /* SettingsView.swift */; };
 		4061918C2C38FAA200BC3D4A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406191892C38FA6700BC3D4A /* SettingsView.swift */; };
 		40790D722C23286B005DDC65 /* Up_NextApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D712C23286B005DDC65 /* Up_NextApp.swift */; };
@@ -98,7 +97,6 @@
 		405920F12C23B87A008A9CF2 /* Up Next.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Up Next.entitlements"; sourceTree = "<group>"; };
 		405920F22C23B887008A9CF2 /* UpNextWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UpNextWidgetExtension.entitlements; sourceTree = SOURCE_ROOT; };
 		405F66782C33A5C4003C9DC4 /* AddEventButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButton.swift; sourceTree = "<group>"; };
-		405F667A2C33A651003C9DC4 /* CircleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircleButton.swift; sourceTree = "<group>"; };
 		406191892C38FA6700BC3D4A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		40790D6E2C23286B005DDC65 /* Up Next.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Up Next.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D712C23286B005DDC65 /* Up_NextApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextApp.swift; sourceTree = "<group>"; };
@@ -209,7 +207,6 @@
 				40790D712C23286B005DDC65 /* Up_NextApp.swift */,
 				40790D732C23286B005DDC65 /* ContentView.swift */,
 				406191892C38FA6700BC3D4A /* SettingsView.swift */,
-				405F667A2C33A651003C9DC4 /* CircleButton.swift */,
 				405F66782C33A5C4003C9DC4 /* AddEventButton.swift */,
 				403EA2F22C2F69EE003207ED /* FontModifier.swift */,
 				409726472C2DE2CB0050988E /* CategoryPillsView.swift */,
@@ -438,7 +435,6 @@
 				40FEEC532C292617008AA61D /* EditEventView.swift in Sources */,
 				40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */,
 				40FEEC512C292612008AA61D /* AddEventView.swift in Sources */,
-				405F667B2C33A651003C9DC4 /* CircleButton.swift in Sources */,
 				40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */,
 				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
 				4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */,
@@ -691,9 +687,13 @@
 				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -723,9 +723,13 @@
 				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

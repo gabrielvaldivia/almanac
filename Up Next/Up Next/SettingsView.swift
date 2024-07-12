@@ -19,6 +19,7 @@ struct SettingsView: View {
     @State private var subscriptionProduct: Product? // Add state for subscription product
     @State private var isPurchasing = false // Add state for purchase process
     @State private var isSubscribed = false // Add state for subscription status
+    @State private var errorMessage: String? // Add state for error message
 
     var body: some View {
         Form {
@@ -80,6 +81,10 @@ struct SettingsView: View {
                 } else {
                     Text("Loading subscription...")
                 }
+                if let errorMessage = errorMessage {
+                    Text("Error: \(errorMessage)")
+                        .foregroundColor(.red)
+                }
             }
             
             Section(header: Text("Danger Zone")) {
@@ -102,7 +107,6 @@ struct SettingsView: View {
                     )
                 }
             }
-            
         }
         .navigationTitle("Settings")
         .onAppear {
@@ -121,10 +125,36 @@ struct SettingsView: View {
 
     private func fetchSubscriptionProduct() async {
         do {
+            print("Fetching products...")
             let products = try await Product.products(for: ["AP0001"])
-            subscriptionProduct = products.first
+            if let product = products.first {
+                subscriptionProduct = product
+                print("Product fetched successfully: \(product.displayName)")
+            } else {
+                print("No products found")
+                errorMessage = "No products found"
+            }
         } catch {
-            print("Failed to fetch products: \(error)")
+            print("Failed to fetch products: \(error.localizedDescription)")
+            errorMessage = "Failed to fetch products: \(error.localizedDescription)"
+            if let skError = error as? SKError {
+                switch skError.code {
+                case .unknown:
+                    errorMessage = "Unknown error occurred."
+                case .clientInvalid:
+                    errorMessage = "Client is not allowed to issue the request."
+                case .paymentCancelled:
+                    errorMessage = "Payment was cancelled."
+                case .paymentInvalid:
+                    errorMessage = "The purchase identifier was invalid."
+                case .paymentNotAllowed:
+                    errorMessage = "The device is not allowed to make the payment."
+                case .storeProductNotAvailable:
+                    errorMessage = "The product is not available in the current storefront."
+                default:
+                    errorMessage = "Other error: \(skError.localizedDescription)"
+                }
+            }
         }
     }
 
