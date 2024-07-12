@@ -20,5 +20,9 @@
 			<string>Almanac</string>
 		</dict>
 	</array>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer> <!-- iPhone -->
+	</array>
 </dict>
 </plist>
