@@ -8,13 +8,17 @@
 import Foundation
 import SwiftUI
 import WidgetKit
-import PassKit // Add this import
+import PassKit
+import StoreKit // Add this import
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingDeleteAllAlert = false
     @Environment(\.openURL) var openURL
-    @State private var showingPaymentSheet = false // Add state for payment sheet
+    @State private var showingPaymentSheet = false
+    @State private var subscriptionProduct: Product? // Add state for subscription product
+    @State private var isPurchasing = false // Add state for purchase process
+    @State private var isSubscribed = false // Add state for subscription status
 
     var body: some View {
         Form {
@@ -59,13 +63,23 @@ struct SettingsView: View {
                 }) {
                     Text("Send Feedback")
                 }
-                Button(action: {
-                    showingPaymentSheet = true
-                }) {
-                    Text("Subscribe for $2.99/month")
-                        .foregroundColor(.blue)
+                if let product = subscriptionProduct {
+                    if isSubscribed {
+                        Text("Thank you for being a subscriber")
+                            .foregroundColor(.green)
+                    } else {
+                        Button(action: {
+                            Task {
+                                await purchaseSubscription(product: product)
+                            }
+                        }) {
+                            Text("Subscribe for \(product.displayPrice)/month")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                } else {
+                    Text("Loading subscription...")
                 }
-                .background(PaymentViewControllerWrapper(isPresented: $showingPaymentSheet))
             }
             
             Section(header: Text("Danger Zone")) {
@@ -91,6 +105,11 @@ struct SettingsView: View {
             
         }
         .navigationTitle("Settings")
+        .onAppear {
+            Task {
+                await fetchSubscriptionProduct()
+            }
+        }
     }
     
     private func deleteAllEvents() {
@@ -98,6 +117,59 @@ struct SettingsView: View {
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+    }
+
+    private func fetchSubscriptionProduct() async {
+        do {
+            let products = try await Product.products(for: ["AP0001"])
+            subscriptionProduct = products.first
+        } catch {
+            print("Failed to fetch products: \(error)")
+        }
+    }
+
+    private func purchaseSubscription(product: Product) async {
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    // Handle successful purchase
+                    isSubscribed = true // Update subscription status
+                    await transaction.finish()
+                case .unverified(_, let error):
+                    // Handle unverified transaction
+                    print("Unverified transaction: \(error)")
+                }
+            case .userCancelled, .pending:
+                break
+            @unknown default:
+                break
+            }
+        } catch {
+            print("Purchase failed: \(error)")
+        }
+    }
+
+    private func listenForTransactions() {
+        Task {
+            for await verification in Transaction.updates {
+                switch verification {
+                case .verified(let transaction):
+                    // Handle successful purchase
+                    isSubscribed = true // Update subscription status
+                    await transaction.finish()
+                case .unverified(_, let error):
+                    // Handle unverified transaction
+                    print("Unverified transaction: \(error)")
+                }
+            }
+        }
+    }
+
+    init() {
+        listenForTransactions()
     }
 }
 
