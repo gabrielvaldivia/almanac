@@ -25,6 +25,9 @@ struct SettingsView: View {
         Form {
             Section(header: Text("Notifications")) {
                 DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                NavigationLink(destination: NotificationsView().environmentObject(appData)) {
+                    Text("Manage Notifications")
+                }
             }
             
             Section(header: Text("Categories")) {

@@ -35,6 +35,8 @@
 		40D9263C2C42414700DCDBFB /* SubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */; };
 		40D9263E2C42423000DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
+		40D926462C42E66800DCDBFB /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D926452C42E66800DCDBFB /* NotificationsView.swift */; };
+		40D926472C42E66C00DCDBFB /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D926452C42E66800DCDBFB /* NotificationsView.swift */; };
 		40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
 		40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
@@ -116,6 +118,7 @@
 		40A70B2A2C40DB380080132E /* Almanac Calendar Pro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Almanac Calendar Pro.storekit"; sourceTree = "<group>"; };
 		40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionSheet.swift; sourceTree = "<group>"; };
 		40D9263D2C42423000DCDBFB /* AddCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategoryView.swift; sourceTree = "<group>"; };
+		40D926452C42E66800DCDBFB /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		40FEEC462C2911DD008AA61D /* CategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesView.swift; sourceTree = "<group>"; };
 		40FEEC482C291558008AA61D /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
 		40FEEC4A2C2919E0008AA61D /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
@@ -227,6 +230,7 @@
 				40FEEC4C2C291BA0008AA61D /* EventRow.swift */,
 				4011A1512C3CE97D00F275DE /* EventForm.swift */,
 				40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */,
+				40D926452C42E66800DCDBFB /* NotificationsView.swift */,
 				40D9263D2C42423000DCDBFB /* AddCategoryView.swift */,
 			);
 			path = "Up Next";
@@ -429,6 +433,7 @@
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
 				40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */,
 				40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */,
+				40D926472C42E66C00DCDBFB /* NotificationsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -453,6 +458,7 @@
 				40790D722C23286B005DDC65 /* Up_NextApp.swift in Sources */,
 				40FEEC492C291558008AA61D /* AppData.swift in Sources */,
 				405F66792C33A5C4003C9DC4 /* AddEventButton.swift in Sources */,
+				40D926462C42E66800DCDBFB /* NotificationsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
