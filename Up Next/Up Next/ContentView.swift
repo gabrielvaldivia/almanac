@@ -133,19 +133,21 @@ struct ContentView: View {
                             }
                             
                             if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
-                                Button(action: {
-                                    self.monthsToLoad += 12
-                                    loadEvents()
-                                }) {
-                                    Text("View More")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 5)
-                                        .background(Color.gray.opacity(0.2))
-                                        .foregroundColor(.gray)
-                                        .cornerRadius(20)
+                                if hasMoreEventsToLoad() {
+                                    Button(action: {
+                                        self.monthsToLoad += 12
+                                        loadEvents()
+                                    }) {
+                                        Text("View More")
+                                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 5)
+                                            .background(Color.gray.opacity(0.2))
+                                            .foregroundColor(.gray)
+                                            .cornerRadius(20)
+                                    }
+                                    .padding(.vertical, 10)
                                 }
-                                .padding(.vertical, 10)
                             }
                             
                             Spacer(minLength: 80)
