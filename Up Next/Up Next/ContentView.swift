@@ -182,7 +182,7 @@ struct ContentView: View {
                             self.newEventDate = Date()
                             self.newEventEndDate = Date()
                             self.showEndDate = false
-                            self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory)
+                            self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
                             self.showAddEventSheet = true
                         }
                     }
@@ -325,7 +325,7 @@ struct ContentView: View {
     
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: selectedCategory, notificationsEnabled: notificationsEnabled)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: nil, notificationsEnabled: notificationsEnabled)
         if let index = events.firstIndex(where: { $0.date > newEvent.date }) {
             events.insert(newEvent, at: index)
         } else {

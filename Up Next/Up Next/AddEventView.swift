@@ -102,7 +102,7 @@ struct AddEventView: View {
             }
             selectedColor = CodableColor(color: .blue) // Set default color to blue
             if selectedCategory == nil {
-                selectedCategory = "None" // Set default category to "None"
+                selectedCategory = nil // Set default category to nil
             }
         }
         .onDisappear {
