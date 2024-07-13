@@ -135,27 +135,25 @@ struct SettingsView: View {
                 print("Product fetched successfully: \(product.displayName)")
             } else {
                 print("No products found")
-                errorMessage = "No products found"
             }
         } catch {
             print("Failed to fetch products: \(error.localizedDescription)")
-            errorMessage = "Failed to fetch products: \(error.localizedDescription)"
             if let skError = error as? SKError {
                 switch skError.code {
                 case .unknown:
-                    errorMessage = "Unknown error occurred."
+                    print("Unknown error occurred.")
                 case .clientInvalid:
-                    errorMessage = "Client is not allowed to issue the request."
+                    print("Client is not allowed to issue the request.")
                 case .paymentCancelled:
-                    errorMessage = "Payment was cancelled."
+                    print("Payment was cancelled.")
                 case .paymentInvalid:
-                    errorMessage = "The purchase identifier was invalid."
+                    print("The purchase identifier was invalid.")
                 case .paymentNotAllowed:
-                    errorMessage = "The device is not allowed to make the payment."
+                    print("The device is not allowed to make the payment.")
                 case .storeProductNotAvailable:
-                    errorMessage = "The product is not available in the current storefront."
+                    print("The product is not available in the current storefront.")
                 default:
-                    errorMessage = "Other error: \(skError.localizedDescription)"
+                    print("Other error: \(skError.localizedDescription)")
                 }
             }
         }
