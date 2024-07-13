@@ -34,7 +34,7 @@ struct EventForm: View {
                 Section {
                     HStack {
                         DatePicker("Day", selection: $newEventDate, displayedComponents: .date)
-                            .onChange(of: newEventDate) { newValue in
+                            .onChange(of: newEventDate) { oldValue, newValue in
                                 let minimumEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newValue) ?? newValue
                                 if newEventEndDate < minimumEndDate {
                                     newEventEndDate = minimumEndDate
@@ -268,7 +268,7 @@ struct CustomDatePicker: View {
         VStack {
             DatePicker("End Date", selection: $date, in: minimumDate..., displayedComponents: .date)
                 .datePickerStyle(GraphicalDatePickerStyle())
-                .onChange(of: date) { _ in
+                .onChange(of: date) { _, newValue in
                     withAnimation {
                         showCustomEndDatePicker = false
                     }
