@@ -36,7 +36,23 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor
-    @Binding var notificationsEnabled: Bool
+    @Binding var notificationsEnabled: Bool {
+        didSet {
+            if let event = selectedEvent {
+                if !notificationsEnabled {
+                    appData.removeNotification(for: event)
+                } else {
+                    appData.scheduleNotification(for: event)
+                }
+                if let eventIndex = appData.events.firstIndex(where: { $0.id == event.id }) {
+                    appData.events[eventIndex].notificationsEnabled = notificationsEnabled
+                    appData.objectWillChange.send()
+                    appData.saveEvents()
+                    appData.scheduleDailyNotification() // Ensure daily notification is updated immediately
+                }
+            }
+        }
+    }
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
@@ -402,7 +418,26 @@ struct EditEventView: View {
                 }
             }
         }
+        
+        // Check if the event will be included in the daily notification for the date of the event
+        let calendar = Calendar.current
+        let eventDayStart = calendar.startOfDay(for: newEventDate)
+        let eventDayEnd = calendar.date(byAdding: .day, value: 1, to: eventDayStart)!
+        
+        let eventsOnEventDay = events.filter { event in
+            let eventStart = calendar.startOfDay(for: event.date)
+            return eventStart >= eventDayStart && eventStart < eventDayEnd && event.notificationsEnabled
+        }
+        
+        if eventsOnEventDay.contains(where: { $0.id == selectedEvent.id }) {
+            print("The event '\(newEventTitle)' will be included in the daily notification for \(newEventDate).")
+        } else {
+            print("The event '\(newEventTitle)' will NOT be included in the daily notification for \(newEventDate).")
+        }
+
+        appData.objectWillChange.send() // Notify observers of changes
         saveEvents()
+        appData.scheduleDailyNotification() // Reschedule daily notification
         showEditSheet = false
     }
 }

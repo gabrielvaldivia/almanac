@@ -307,6 +307,37 @@ class AppData: NSObject, ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
         center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
+    
+    func addEvent(_ event: Event) {
+        events.append(event)
+        saveEvents()
+        scheduleDailyNotification() // Reschedule notification when an event is added
+    }
+    
+    func editEvent(_ event: Event) {
+        if let index = events.firstIndex(where: { $0.id == event.id }) {
+            events[index] = event
+            saveEvents()
+            scheduleDailyNotification() // Reschedule notification when an event is edited
+        }
+    }
+    
+    func scheduleNotification(for event: Event) {
+        let content = UNMutableNotificationContent()
+        content.title = event.title
+        content.body = "Event reminder for \(event.title)"
+        content.sound = .default
+
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
+    }
 }
 
 // Extend AppData to conform to UNUserNotificationCenterDelegate

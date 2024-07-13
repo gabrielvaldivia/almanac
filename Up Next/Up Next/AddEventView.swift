@@ -146,6 +146,8 @@ struct AddEventView: View {
 
         saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+        appData.objectWillChange.send() // Notify observers of changes
+        appData.scheduleDailyNotification() // Reschedule notification when an event is added
     }
 
     func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
