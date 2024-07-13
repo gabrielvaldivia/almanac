@@ -7,8 +7,9 @@
 
 import Foundation
 import SwiftUI
-import UIKit  // Ensure UIKit is imported for UIColor
-import WidgetKit  // Add this import
+import UIKit
+import WidgetKit
+import StoreKit
 
 extension Color {
     func toHex() -> String? {
@@ -32,6 +33,7 @@ struct CategoriesView: View {
     @Environment(\.editMode) private var editMode  // Access the edit mode
     @State private var showingEditCategorySheet = false  // Add this line
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
+    @State private var showingSubscriptionSheet = false  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -104,32 +106,14 @@ struct CategoriesView: View {
         .navigationBarTitle("Manage Categories", displayMode: .inline)
         .navigationBarItems(trailing: EditButton())  // Use the existing Edit button
         
-        // Add Category Sheet
+        // Add Category View
         .sheet(isPresented: $showingAddCategorySheet) {
             NavigationView {
-                Form {
-                    TextField("Category Name", text: $newCategoryName)
-                        .focused($isCategoryNameFieldFocused)  // Ensure the TextField is focused
-                    ColorPicker("Color", selection: $newCategoryColor)
+                AddCategoryView(showingAddCategorySheet: $showingAddCategorySheet) { newCategory in
+                    appData.categories.append((name: newCategory.name, color: newCategory.color))
+                    appData.saveCategories()  // Save categories to user defaults
                 }
-                .formStyle(GroupedFormStyle())  // Add this line
-                .navigationBarTitle("Add Category", displayMode: .inline)  // Add this line
-                .navigationBarItems(
-                    leading: Button("Cancel") {
-                        showingAddCategorySheet = false
-                    },
-                    trailing: Button("Save") {
-                        let newCategory = (name: newCategoryName, color: newCategoryColor)
-                        appData.categories.append(newCategory)
-                        appData.saveCategories()  // Save categories to user defaults
-                        showingAddCategorySheet = false
-                    }
-                )
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isCategoryNameFieldFocused = true  // Delay focusing the TextField
-                }
+                .environmentObject(appData)
             }
             .presentationDetents([.medium])  // Add this line to set the sheet size to medium
         }
@@ -139,6 +123,14 @@ struct CategoriesView: View {
             EditCategorySheet(categoryToEdit: $categoryToEdit, showingEditCategorySheet: $showingEditCategorySheet)
                 .environmentObject(appData)
         }
+        
+        // Subscription Sheet
+        /*
+        .sheet(isPresented: $showingSubscriptionSheet) {
+            SubscriptionSheet(isPresented: $showingSubscriptionSheet)
+                .environmentObject(appData)
+        }
+        */
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
@@ -163,7 +155,7 @@ struct CategoriesView: View {
                 }
                 appData.saveCategories()  // Save categories to user defaults
             }
-}
+        }
     }
 
     private func removeCategory(at offsets: IndexSet) {

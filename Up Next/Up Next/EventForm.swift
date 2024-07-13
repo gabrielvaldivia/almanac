@@ -152,8 +152,11 @@ struct EventForm: View {
                 }
                 .sheet(isPresented: $showingAddCategorySheet) {
                     NavigationView {
-                        CategoriesView()
-                            .environmentObject(appData)
+                        AddCategoryView(showingAddCategorySheet: $showingAddCategorySheet) { newCategory in
+                            selectedCategory = newCategory.name
+                            selectedColor = CodableColor(color: newCategory.color)
+                        }
+                        .environmentObject(appData)
                     }
                     .presentationDetents([.medium, .large], selection: .constant(.medium))
                 }

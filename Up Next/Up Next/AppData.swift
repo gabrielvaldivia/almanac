@@ -127,6 +127,14 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
+    @Published var isSubscribed: Bool = false { // Add this property
+        didSet {
+            if isDataLoaded {
+                UserDefaults.standard.set(isSubscribed, forKey: "isSubscribed")
+                objectWillChange.send() // Notify observers
+            }
+        }
+    }
 
     private var isDataLoaded = false
 

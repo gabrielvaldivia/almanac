@@ -65,7 +65,7 @@ struct SettingsView: View {
                     Text("Send Feedback")
                 }
                 if let product = subscriptionProduct {
-                    if isSubscribed {
+                    if appData.isSubscribed {
                         Text("Thank you for being a subscriber")
                             .foregroundColor(.green)
                     } else {
