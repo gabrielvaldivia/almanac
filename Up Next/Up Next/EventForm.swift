@@ -155,44 +155,49 @@ struct EventForm: View {
                     }
                 }
                 Section {
-                    Picker("Category", selection: $selectedCategory) {
-                        Text("None").tag(nil as String?) // Show "Select" when no category is selected
-                        ForEach(appData.categories, id: \.name) { category in
-                            Text(category.name).tag(category.name as String?)
-                        }
-                        HStack {
-                            Text("Add Category")
-                            Image(systemName: "plus.circle.fill")
-                        }.tag("addCategory" as String?)
-                    }
-                    .onChange(of: selectedCategory) { oldValue, newValue in
-                        if newValue == "addCategory" {
-                            showingAddCategorySheet = true
-                            selectedCategory = nil // Reset the selection
-                        } else if let category = appData.categories.first(where: { $0.name == newValue }) {
-                            selectedColor = CodableColor(color: category.color)
-                        }
-                    }
-                    .onAppear {
-                        if selectedCategory == nil {
-                            selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
-                        }
-                    }
-                    .sheet(isPresented: $showingAddCategorySheet) {
-                        NavigationView {
-                            AddCategoryView(showingAddCategorySheet: $showingAddCategorySheet) { newCategory in
-                                selectedCategory = newCategory.name
-                                selectedColor = CodableColor(color: newCategory.color)
+                    HStack {
+                        Text("Category")
+                        Spacer()
+                        Picker("", selection: $selectedCategory) {
+                            Text("None").tag(nil as String?) // Show "Select" when no category is selected
+                            ForEach(appData.categories, id: \.name) { category in
+                                Text(category.name).tag(category.name as String?)
                             }
-                            .environmentObject(appData)
+                            HStack {
+                                Text("Add Category")
+                                Image(systemName: "plus.circle.fill")
+                            }.tag("addCategory" as String?)
                         }
-                        .presentationDetents([.medium, .large], selection: .constant(.medium))
+                        .onChange(of: selectedCategory) { oldValue, newValue in
+                            if newValue == "addCategory" {
+                                showingAddCategorySheet = true
+                                selectedCategory = nil // Reset the selection
+                            } else if let category = appData.categories.first(where: { $0.name == newValue }) {
+                                selectedColor = CodableColor(color: category.color)
+                            }
+                        }
+                        .onAppear {
+                            if selectedCategory == nil {
+                                selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+                            }
+                        }
+                        .sheet(isPresented: $showingAddCategorySheet) {
+                            NavigationView {
+                                AddCategoryView(showingAddCategorySheet: $showingAddCategorySheet) { newCategory in
+                                    selectedCategory = newCategory.name
+                                    selectedColor = CodableColor(color: newCategory.color)
+                                }
+                                .environmentObject(appData)
+                            }
+                            .presentationDetents([.medium, .large], selection: .constant(.medium))
+                        }
+                        
+                        ColorPicker("", selection: Binding(
+                            get: { selectedColor.color },
+                            set: { selectedColor = CodableColor(color: $0) }
+                        ))
+                        .frame(width: 40)
                     }
-                    
-                    ColorPicker("Color", selection: Binding(
-                        get: { selectedColor.color },
-                        set: { selectedColor = CodableColor(color: $0) }
-                    ))
                 }
                 Section {
                     Toggle("Notify me", isOn: $notificationsEnabled)
@@ -230,12 +235,11 @@ struct EventForm: View {
                 VStack {
                     Spacer()
                     CustomDatePicker(date: $newEventEndDate, showEndDate: $showEndDate, showCustomEndDatePicker: $showCustomEndDatePicker, minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate)
-                        .frame(width: 300, height: 350)
+                        .frame(width: 350, height: 380)
                         .background(Color.white)
                         .cornerRadius(12)
                         .shadow(radius: 20)
                         .transition(.scale)
-                        .animation(.easeInOut(duration: 0.3), value: showCustomEndDatePicker)
                     Spacer()
                 }
             }
