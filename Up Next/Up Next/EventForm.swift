@@ -56,7 +56,8 @@ struct EventForm: View {
                         }) {
                             Text(newEventDate, formatter: dateFormatter)
                                 .foregroundColor(.primary)
-                                .padding(6)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
                                 .background(Color.gray.opacity(0.2))
                                 .cornerRadius(8)
                         }
@@ -66,7 +67,7 @@ struct EventForm: View {
                         if showEndDate {
                             Text(" - ")
                                 .foregroundColor(.primary)
-                                .padding(.horizontal, 4)
+                                .padding(.trailing, 6)
                             Button(action: {
                                 print("End Date Button Tapped")
                                 showCustomEndDatePicker = true
@@ -75,7 +76,8 @@ struct EventForm: View {
                             }) {
                                 Text(newEventEndDate, formatter: dateFormatter)
                                     .foregroundColor(.primary)
-                                    .padding(6)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
                                     .background(Color.gray.opacity(0.2))
                                     .cornerRadius(8)
                             }
@@ -91,7 +93,8 @@ struct EventForm: View {
                             }) {
                                 Image(systemName: "calendar.badge.plus")
                                     .foregroundColor(.primary)
-                                    .padding(6)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
                                     .background(Color.gray.opacity(0.2))
                                     .cornerRadius(8)
                             }
@@ -144,7 +147,6 @@ struct EventForm: View {
                         }
                     }
                     .padding(.vertical, 6)
-                    .padding(.horizontal, 2)
 
                     // REPEAT
                     if showRepeatOptions {
@@ -178,7 +180,10 @@ struct EventForm: View {
                                 .foregroundColor(.gray)
                             }
                             .padding(.leading)
-                            .padding(.vertical, 8)
+
+                            Divider()
+                                .padding(.leading)
+
 
                             // END REPEAT
                             if repeatOption != .never {
@@ -201,10 +206,13 @@ struct EventForm: View {
                                     .foregroundColor(.gray)
                                 }
                                 .padding(.leading)
-                                .padding(.vertical, 8)
+                                .padding(.bottom, repeatUntilOption == .indefinitely ? 8 : 0) // Conditional bottom padding
 
-                                // REPEAT COUNT
+                                // AFTER
                                 if repeatUntilOption == .after {
+                                    Divider()
+                                    .padding(.leading)
+
                                     HStack {
                                         TextField("", value: $repeatCount, formatter: NumberFormatter())
                                             .keyboardType(.numberPad)
@@ -223,8 +231,11 @@ struct EventForm: View {
                                     .padding(.trailing, 6)
                                     .padding(.bottom, 6)
                                 
-                                // REPEAT UNTIL ON DATE
+                                // ON DATE
                                 } else if repeatUntilOption == .onDate {
+                                    Divider()
+                                    .padding(.leading)
+
                                     DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
                                         .padding(.leading)
                                         .padding(.trailing, 6)
@@ -301,7 +312,7 @@ struct EventForm: View {
                     .padding(.trailing, 6)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(8)
+                .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
 
@@ -314,7 +325,7 @@ struct EventForm: View {
                         .padding(.trailing, 10)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(8)
+                .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
 
@@ -339,6 +350,8 @@ struct EventForm: View {
                         }
                     }
                 }
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
             }
@@ -352,6 +365,9 @@ struct EventForm: View {
                             showCustomStartDatePicker = false
                         }
                     }
+                    .transition(.opacity) // Add transition for the overlay
+                    .animation(.easeInOut, value: showCustomStartDatePicker) // Animation for the overlay
+
                 VStack {
                     Spacer()
                     VStack {
@@ -372,8 +388,8 @@ struct EventForm: View {
                     .background(Color.white)
                     .cornerRadius(12)
                     .shadow(radius: 20)
-                    .scaleEffect(showCustomStartDatePicker ? 1 : 0.5) // Scale effect
-                    .animation(.spring(), value: showCustomStartDatePicker) // Animation
+                    .transition(.move(edge: .bottom)) // Add transition
+                    .animation(.easeInOut, value: showCustomStartDatePicker) // Animation
                     Spacer()
                 }
             }
@@ -387,6 +403,9 @@ struct EventForm: View {
                             tempEndDate = nil
                         }
                     }
+                    .transition(.opacity) // Add transition for the overlay
+                    .animation(.easeInOut, value: showCustomEndDatePicker) // Animation for the overlay
+
                 VStack {
                     Spacer()
                     VStack {
@@ -415,8 +434,8 @@ struct EventForm: View {
                     .background(Color.white)
                     .cornerRadius(12)
                     .shadow(radius: 20)
-                    .scaleEffect(showCustomEndDatePicker ? 1 : 0.5) // Scale effect
-                    .animation(.spring(), value: showCustomEndDatePicker) // Animation
+                    .transition(.move(edge: .bottom)) // Add transition
+                    .animation(.easeInOut, value: showCustomEndDatePicker) // Animation
                     Spacer()
                 }
             }
