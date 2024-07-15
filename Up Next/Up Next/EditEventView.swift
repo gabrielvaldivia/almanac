@@ -20,7 +20,6 @@ struct EditEventView: View {
     @Binding var selectedEvent: Event? {
         didSet {
             if let event = selectedEvent {
-                notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
                 repeatIndefinitely = event.repeatUntil == nil
@@ -36,20 +35,6 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor
-    @Binding var notificationsEnabled: Bool {
-        didSet {
-            if let event = selectedEvent {
-                if notificationsEnabled {
-                    appData.scheduleNotification(for: event)
-                }
-                if let eventIndex = appData.events.firstIndex(where: { $0.id == event.id }) {
-                    appData.events[eventIndex].notificationsEnabled = notificationsEnabled
-                    appData.objectWillChange.send()
-                    appData.saveEvents()
-                }
-            }
-        }
-    }
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
@@ -72,7 +57,6 @@ struct EditEventView: View {
                 showEndDate: $showEndDate,
                 selectedCategory: $selectedCategory,
                 selectedColor: $selectedColor,
-                notificationsEnabled: $notificationsEnabled,
                 repeatOption: $repeatOption,
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
@@ -158,7 +142,6 @@ struct EditEventView: View {
         }
         .onAppear {
             if let event = selectedEvent {
-                notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
                 repeatIndefinitely = event.repeatUntil == nil
@@ -265,7 +248,6 @@ struct EditEventView: View {
                 endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
                 color: event.color,
                 category: event.category,
-                notificationsEnabled: event.notificationsEnabled,
                 repeatOption: event.repeatOption,
                 repeatUntil: event.repeatUntil,
                 seriesID: seriesID
@@ -342,7 +324,6 @@ struct EditEventView: View {
                 events[index].endDate = showEndDate ? newEventEndDate : nil
                 events[index].category = selectedCategory
                 events[index].color = selectedColor
-                events[index].notificationsEnabled = notificationsEnabled
                 events[index].repeatOption = repeatOption
             }
         case .allEvents:
@@ -356,7 +337,6 @@ struct EditEventView: View {
             events[selectedIndex].endDate = showEndDate ? newEventEndDate : nil
             events[selectedIndex].category = selectedCategory
             events[selectedIndex].color = selectedColor
-            events[selectedIndex].notificationsEnabled = notificationsEnabled
             events[selectedIndex].repeatOption = repeatOption
 
             // Update future events
@@ -423,7 +403,7 @@ struct EditEventView: View {
         
         let eventsOnEventDay = events.filter { event in
             let eventStart = calendar.startOfDay(for: event.date)
-            return eventStart >= eventDayStart && eventStart < eventDayEnd && event.notificationsEnabled
+            return eventStart >= eventDayStart && eventStart < eventDayEnd
         }
         
         if eventsOnEventDay.contains(where: { $0.id == selectedEvent.id }) {

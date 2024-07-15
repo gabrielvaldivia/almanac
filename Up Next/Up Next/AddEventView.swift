@@ -20,7 +20,6 @@ struct AddEventView: View {
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor // Use CodableColor to store color
-    @Binding var notificationsEnabled: Bool // New binding for notificationsEnabled
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
     @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
@@ -39,7 +38,6 @@ struct AddEventView: View {
                 showEndDate: $showEndDate,
                 selectedCategory: $selectedCategory,
                 selectedColor: $selectedColor,
-                notificationsEnabled: $notificationsEnabled,
                 repeatOption: $repeatOption,
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
@@ -135,7 +133,6 @@ struct AddEventView: View {
             endDate: showEndDate ? newEventEndDate : nil,
             color: selectedColor,
             category: selectedCategory,
-            notificationsEnabled: notificationsEnabled,
             repeatOption: repeatOption,
             repeatUntil: repeatUntilDate
         )
@@ -195,7 +192,6 @@ struct AddEventView: View {
                 endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
                 color: event.color,
                 category: event.category,
-                notificationsEnabled: event.notificationsEnabled,
                 repeatOption: event.repeatOption,
                 repeatUntil: event.repeatUntil,
                 seriesID: seriesID // Assign the same series ID

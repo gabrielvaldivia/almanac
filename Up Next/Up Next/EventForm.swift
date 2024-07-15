@@ -8,7 +8,6 @@ struct EventForm: View {
     @Binding var showEndDate: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor
-    @Binding var notificationsEnabled: Bool
     @Binding var repeatOption: RepeatOption
     @Binding var repeatUntil: Date
     @Binding var repeatUntilOption: RepeatUntilOption
@@ -402,19 +401,6 @@ struct EventForm: View {
                         .padding(.bottom, 6)
                         .padding(.leading)
                         .padding(.trailing, 6)
-                    }
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-
-                    // NOTIFY ME
-                    VStack {
-                        Toggle("Notify me", isOn: $notificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                            .padding(.vertical, 6)
-                            .padding(.leading)
-                            .padding(.trailing, 10)
                     }
                     .background(Color(UIColor.secondarySystemGroupedBackground))
                     .cornerRadius(12)

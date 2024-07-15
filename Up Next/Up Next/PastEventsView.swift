@@ -24,13 +24,15 @@ struct PastEventsView: View {
     var saveEvents: () -> Void
     @EnvironmentObject var appData: AppData
     @State private var isEditSheetPresented = false
-    @State private var notificationsEnabled: Bool = true
 
     var body: some View {
         NavigationView {
             ScrollView {
                 LazyVStack {
-                    ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+                    let groupedEvents = groupedPastEvents()
+                    let sortedGroupedEvents = groupedEvents.sorted(by: { $1.key > $0.key })
+                    
+                    ForEach(sortedGroupedEvents, id: \.key) { monthYear, events in
                         Section(header: Text(monthYear)
                                     .roundedFont(.subheadline)
                                     .fontWeight(.semibold)
@@ -45,7 +47,6 @@ struct PastEventsView: View {
                                     showEndDate = event.endDate != nil
                                     selectedCategory = event.category
                                     selectedColor = event.color
-                                    notificationsEnabled = event.notificationsEnabled
                                     isEditSheetPresented = true
                                 }) {
                                     VStack {
@@ -87,7 +88,6 @@ struct PastEventsView: View {
                               showEditSheet: $showEditSheet,
                               selectedCategory: $selectedCategory,
                               selectedColor: $selectedColor,
-                              notificationsEnabled: $notificationsEnabled,
                               saveEvent: saveEvent)
             }
         }
@@ -152,7 +152,6 @@ struct PastEventsView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
-            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
         }
         isEditSheetPresented = false

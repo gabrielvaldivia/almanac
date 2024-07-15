@@ -21,10 +21,8 @@ struct ContentView: View {
     @State private var showEndDate: Bool = false
     @State private var showPastEventsSheet: Bool = false
     @State private var selectedCategoryFilter: String? = nil
-    @State private var showCategoryManagementView: Bool = false
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
-    @State private var notificationsEnabled: Bool = true
     @State private var monthsToLoad: Int = 12
 
     @EnvironmentObject var appData: AppData
@@ -45,214 +43,227 @@ struct ContentView: View {
     }()
 
     var body: some View {
-        NavigationView {
-            ZStack(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    let groupedEventsByMonth = Dictionary(grouping: filteredEvents().sorted(by: { $0.date < $1.date }), by: { event in
-                        let components = Calendar.current.dateComponents([.year, .month], from: event.date)
-                        return Calendar.current.date(from: components)!
-                    })
-                    let sortedMonths = groupedEventsByMonth.keys.sorted()
+    NavigationView {
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                let sortedEvents = filteredEvents().sorted(by: { $0.date < $1.date })
+                let groupedEventsByMonth = groupEventsByMonth(events: sortedEvents)
+                let sortedMonths = groupedEventsByMonth.keys.sorted()
 
-                    if sortedMonths.isEmpty {
-                        VStack {
-                            Spacer()
-                            Text("No upcoming events")
-                                .roundedFont(.headline)
-                            Text("Add something you're looking forward to")
-                                .roundedFont(.subheadline)
-                                .foregroundColor(.gray)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        ScrollView {
-                            LazyVStack {
-                                Section(header: CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
-                                            .padding(.vertical, 10)
-                                ) {
-                                    ForEach(sortedMonths, id: \.self) { month in
-                                        VStack(alignment: .leading) {
-                                            Text(itemDateFormatter.string(from: month))
-                                                .roundedFont(.headline)
-                                                .padding(.horizontal)
-                                                .padding(.top, 10)
-                                            
-                                            let eventsInMonth = groupedEventsByMonth[month]!
-                                            let groupedEventsByDate = Dictionary(grouping: eventsInMonth, by: { event in
-                                                if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
-                                                    return "Today"
-                                                } else {
-                                                    return event.date.relativeDate()
-                                                }
-                                            })
-                                            let sortedKeys = groupedEventsByDate.keys.sorted { key1, key2 in
-                                                let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
-                                                let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
-                                                return date1 < date2
-                                            }
-                                            
-                                            ForEach(sortedKeys, id: \.self) { key in
-                                                HStack(alignment: .top) {
-                                                    Text(key.uppercased())
-                                                        .font(.system(.caption, design: .monospaced, weight: .medium))
-                                                        .foregroundColor(.gray)
-                                                        .frame(width: 100, alignment: .leading)
-                                                        .padding(.vertical, 14)
-                                                    VStack(alignment: .leading) {
-                                                        ForEach(groupedEventsByDate[key]!, id: \.id) { event in
-                                                            EventRow(event: event, formatter: itemDateFormatter,
-                                                                     selectedEvent: $selectedEvent,
-                                                                     newEventTitle: $newEventTitle,
-                                                                     newEventDate: $newEventDate,
-                                                                     newEventEndDate: $newEventEndDate,
-                                                                     showEndDate: $showEndDate,
-                                                                     selectedCategory: $selectedCategory,
-                                                                     showEditSheet: $showEditSheet,
-                                                                     categories: appData.categories)
-                                                                .onTapGesture {
-                                                                    self.selectedEvent = event
-                                                                    self.newEventTitle = event.title
-                                                                    self.newEventDate = event.date
-                                                                    self.newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
-                                                                    self.showEndDate = event.endDate != nil
-                                                                    self.selectedCategory = event.category
-                                                                    self.showEditSheet = true
-                                                                }
-                                                                .listRowSeparator(.hidden)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            .listRowSeparator(.hidden)
+                if sortedMonths.isEmpty {
+                    emptyStateView()
+                } else {
+                    ScrollView {
+                        LazyVStack {
+                            Section(header: CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+                                        .padding(.vertical, 10)
+                            ) {
+                                ForEach(sortedMonths, id: \.self) { month in
+                                    VStack(alignment: .leading) {
+                                        Text(itemDateFormatter.string(from: month))
+                                            .roundedFont(.headline)
                                             .padding(.horizontal)
-                                            .padding(.bottom, 10)
+                                            .padding(.top, 10)
+                                        
+                                        let eventsInMonth = groupedEventsByMonth[month]!
+                                        let groupedEventsByDate = groupEventsByDate(events: eventsInMonth)
+                                        let sortedKeys = sortKeys(Array(groupedEventsByDate.keys))
+
+                                        ForEach(sortedKeys, id: \.self) { key in
+                                            eventRowView(key: key, events: groupedEventsByDate[key]!)
                                         }
+                                        .listRowSeparator(.hidden)
+                                        .padding(.horizontal)
+                                        .padding(.bottom, 10)
                                     }
                                 }
                             }
-                            
-                            if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
-                                if hasMoreEventsToLoad() {
-                                    Button(action: {
-                                        self.monthsToLoad += 12
-                                        loadEvents()
-                                    }) {
-                                        Text("View More")
-                                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 5)
-                                            .background(Color.gray.opacity(0.2))
-                                            .foregroundColor(.gray)
-                                            .cornerRadius(20)
-                                    }
-                                    .padding(.vertical, 10)
+                        }
+                        
+                        if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
+                            if hasMoreEventsToLoad() {
+                                Button(action: {
+                                    self.monthsToLoad += 12
+                                    loadEvents()
+                                }) {
+                                    Text("View More")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 5)
+                                        .background(Color.gray.opacity(0.2))
+                                        .foregroundColor(.gray)
+                                        .cornerRadius(20)
                                 }
+                                .padding(.vertical, 10)
                             }
-                            
-                            Spacer(minLength: 80)
                         }
-                        .listStyle(PlainListStyle())
-                        .listRowSeparator(.hidden)
-                        .background(Color.clear)
-                    } 
-                }
-                .navigationTitle("Up Next")
-                .navigationBarItems(
-                    leading: Button(action: {
-                        self.showPastEventsSheet = true
-                    }) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .imageScale(.large)
-                            .fontWeight(.bold)
-                    },
-                    trailing: NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gearshape.fill")
-                            .imageScale(.large)
+                        
+                        Spacer(minLength: 80)
                     }
-                )
-                .onAppear {
-                    print("ContentView appeared")
-                    loadEvents()
-                    appData.loadCategories()
-                }
-
-                .onOpenURL { url in
-                    if url.scheme == "upnext" && url.host == "addEvent" {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.newEventTitle = ""
-                            self.newEventDate = Date()
-                            self.newEventEndDate = Date()
-                            self.showEndDate = false
-                            self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-                            self.showAddEventSheet = true
-                        }
-                    }
-                }
-
-                AddEventButton(
-                    selectedCategoryFilter: $selectedCategoryFilter,
-                    showAddEventSheet: $showAddEventSheet,
-                    newEventTitle: $newEventTitle,
-                    newEventDate: $newEventDate,
-                    newEventEndDate: $newEventEndDate,
-                    showEndDate: $showEndDate,
-                    selectedCategory: $selectedCategory
-                )
-                .padding(0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .environmentObject(appData)
+                    .listStyle(PlainListStyle())
+                    .listRowSeparator(.hidden)
+                    .background(Color.clear)
+                } 
             }
-        }
-        .focused($isFocused)
+            .navigationTitle("Up Next")
+            .navigationBarItems(
+                leading: Button(action: {
+                    self.showPastEventsSheet = true
+                }) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .imageScale(.large)
+                        .fontWeight(.bold)
+                },
+                trailing: NavigationLink(destination: SettingsView()) {
+                    Image(systemName: "gearshape.fill")
+                        .imageScale(.large)
+                }
+            )
+            .onAppear {
+                print("ContentView appeared")
+                loadEvents()
+                appData.loadCategories()
+            }
+            .onOpenURL { url in
+                handleOpenURL(url)
+            }
 
-        .sheet(isPresented: $showAddEventSheet) {
-            AddEventView(
-                events: $events,
-                selectedEvent: $selectedEvent,
-                newEventTitle: $newEventTitle,
-                newEventDate: $newEventDate,
-                newEventEndDate: $newEventEndDate,
-                showEndDate: $showEndDate,
+            AddEventButton(
+                selectedCategoryFilter: $selectedCategoryFilter,
                 showAddEventSheet: $showAddEventSheet,
-                selectedCategory: $selectedCategory,
-                selectedColor: $selectedColor,
-                notificationsEnabled: $notificationsEnabled,
-                appData: _appData
-            )
-            .focused($isFocused)
-        }
-
-        .sheet(isPresented: $showEditSheet) {
-            EditEventView(
-                events: $events,
-                selectedEvent: $selectedEvent,
                 newEventTitle: $newEventTitle,
                 newEventDate: $newEventDate,
                 newEventEndDate: $newEventEndDate,
                 showEndDate: $showEndDate,
-                showEditSheet: $showEditSheet,
-                selectedCategory: $selectedCategory,
-                selectedColor: $selectedColor,
-                notificationsEnabled: $notificationsEnabled,
-                saveEvent: saveEvent
+                selectedCategory: $selectedCategory
             )
+            .padding(0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .environmentObject(appData)
-            .focused($isFocused)
-        }
-
-        .sheet(isPresented: $showPastEventsSheet) {
-            PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
-                .environmentObject(appData)
-                .focused($isFocused)
-        }
-
-        .sheet(isPresented: $showCategoryManagementView) {
-            CategoriesView()
-                .environmentObject(appData)
-                .focused($isFocused)
         }
     }
+    .focused($isFocused)
+    .sheet(isPresented: $showAddEventSheet) {
+        AddEventView(
+            events: $events,
+            selectedEvent: $selectedEvent,
+            newEventTitle: $newEventTitle,
+            newEventDate: $newEventDate,
+            newEventEndDate: $newEventEndDate,
+            showEndDate: $showEndDate,
+            showAddEventSheet: $showAddEventSheet,
+            selectedCategory: $selectedCategory,
+            selectedColor: $selectedColor,
+            appData: _appData
+        )
+        .focused($isFocused)
+    }
+    .sheet(isPresented: $showEditSheet) {
+        EditEventView(
+            events: $events,
+            selectedEvent: $selectedEvent,
+            newEventTitle: $newEventTitle,
+            newEventDate: $newEventDate,
+            newEventEndDate: $newEventEndDate,
+            showEndDate: $showEndDate,
+            showEditSheet: $showEditSheet,
+            selectedCategory: $selectedCategory,
+            selectedColor: $selectedColor,
+            saveEvent: saveEvent
+        )
+        .environmentObject(appData)
+        .focused($isFocused)
+    }
+    .sheet(isPresented: $showPastEventsSheet) {
+        PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
+            .environmentObject(appData)
+            .focused($isFocused)
+    }
+}
+
+func groupEventsByMonth(events: [Event]) -> [Date: [Event]] {
+    return Dictionary(grouping: events, by: { event in
+        let components = Calendar.current.dateComponents([.year, .month], from: event.date)
+        return Calendar.current.date(from: components)!
+    })
+}
+
+func groupEventsByDate(events: [Event]) -> [String: [Event]] {
+    return Dictionary(grouping: events, by: { event in
+        if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
+            return "Today"
+        } else {
+            return event.date.relativeDate()
+        }
+    })
+}
+
+func sortKeys(_ keys: [String]) -> [String] {
+    return keys.sorted { key1, key2 in
+        let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
+        let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
+        return date1 < date2
+    }
+}
+
+func eventRowView(key: String, events: [Event]) -> some View {
+    HStack(alignment: .top) {
+        Text(key.uppercased())
+            .font(.system(.caption, design: .monospaced, weight: .medium))
+            .foregroundColor(.gray)
+            .frame(width: 100, alignment: .leading)
+            .padding(.vertical, 14)
+        VStack(alignment: .leading) {
+            ForEach(events, id: \.id) { event in
+                EventRow(event: event, formatter: itemDateFormatter,
+                         selectedEvent: $selectedEvent,
+                         newEventTitle: $newEventTitle,
+                         newEventDate: $newEventDate,
+                         newEventEndDate: $newEventEndDate,
+                         showEndDate: $showEndDate,
+                         selectedCategory: $selectedCategory,
+                         showEditSheet: $showEditSheet,
+                         categories: appData.categories)
+                    .onTapGesture {
+                        self.selectedEvent = event
+                        self.newEventTitle = event.title
+                        self.newEventDate = event.date
+                        self.newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
+                        self.showEndDate = event.endDate != nil
+                        self.selectedCategory = event.category
+                        self.showEditSheet = true
+                    }
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+}
+
+func emptyStateView() -> some View {
+    VStack {
+        Spacer()
+        Text("No upcoming events")
+            .roundedFont(.headline)
+        Text("Add something you're looking forward to")
+            .roundedFont(.subheadline)
+            .foregroundColor(.gray)
+        Spacer()
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+}
+
+func handleOpenURL(_ url: URL) {
+    if url.scheme == "upnext" && url.host == "addEvent" {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.newEventTitle = ""
+            self.newEventDate = Date()
+            self.newEventEndDate = Date()
+            self.showEndDate = false
+            self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
+            self.showAddEventSheet = true
+        }
+    }
+}
 
     func filteredEvents() -> [Event] {
         let now = Date()
@@ -317,7 +328,6 @@ struct ContentView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
-            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
@@ -327,7 +337,7 @@ struct ContentView: View {
     
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil
-        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: nil, notificationsEnabled: notificationsEnabled)
+        let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: nil)
         if let index = events.firstIndex(where: { $0.date > newEvent.date }) {
             events.insert(newEvent, at: index)
         } else {

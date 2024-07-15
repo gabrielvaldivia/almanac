@@ -20,20 +20,17 @@ struct SettingsView: View {
     @State private var isPurchasing = false // Add state for purchase process
     @State private var isSubscribed = false // Add state for subscription status
     @State private var errorMessage: String? // Add state for error message
-    @State private var dailyNotificationEnabled = false // Add state for daily notification
+    @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
 
     var body: some View {
         Form {
             Section(header: Text("Notifications")) {
                 Toggle("Daily Notification", isOn: $dailyNotificationEnabled)
-                    .onChange(of: dailyNotificationEnabled) { value in
-                        handleDailyNotificationToggle(value)
+                    .onChange(of: dailyNotificationEnabled) { oldValue, newValue in
+                        handleDailyNotificationToggle(newValue)
                     }
                 if dailyNotificationEnabled {
                     DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
-                }
-                NavigationLink(destination: NotificationsView().environmentObject(appData)) {
-                    Text("Manage Notifications")
                 }
             }
             
@@ -130,8 +127,7 @@ struct SettingsView: View {
             Task {
                 await fetchSubscriptionProduct()
             }
-            // Remove or conditionally call this line
-            // scheduleDailyNotification()
+            dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
         }
     }
     
@@ -217,6 +213,7 @@ struct SettingsView: View {
 
     private func handleDailyNotificationToggle(_ isEnabled: Bool) {
         appData.setDailyNotification(enabled: isEnabled)
+        UserDefaults.standard.set(isEnabled, forKey: "dailyNotificationEnabled") // Save state to UserDefaults
     }
 
     init() {

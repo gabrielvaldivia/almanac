@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-import WidgetKit // Add this import
+import WidgetKit
 import UserNotifications
 
 struct Event: Identifiable, Codable {
@@ -20,7 +20,7 @@ struct Event: Identifiable, Codable {
     var notificationsEnabled: Bool = true
     var repeatOption: RepeatOption = .never
     var repeatUntil: Date?
-    var seriesID: UUID? // Add this property
+    var seriesID: UUID?
 
     init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil) {
         self.title = title
@@ -31,7 +31,7 @@ struct Event: Identifiable, Codable {
         self.notificationsEnabled = notificationsEnabled
         self.repeatOption = repeatOption
         self.repeatUntil = repeatUntil
-        self.seriesID = repeatOption == .never ? nil : seriesID // Only assign seriesID for repeating events
+        self.seriesID = repeatOption == .never ? nil : seriesID
         print("Event initialized: \(self)")
     }
 }
@@ -122,17 +122,24 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
-                // Conditionally call this function
-                // scheduleDailyNotification()
                 saveState()
+                scheduleDailyNotification()
             }
         }
     }
-    @Published var isSubscribed: Bool = false { // Add this property
+    @Published var isSubscribed: Bool = false {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(isSubscribed, forKey: "isSubscribed")
                 objectWillChange.send() // Notify observers
+            }
+        }
+    }
+    @Published var dailyNotificationEnabled: Bool = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") {
+        didSet {
+            if isDataLoaded {
+                UserDefaults.standard.set(dailyNotificationEnabled, forKey: "dailyNotificationEnabled")
+                scheduleDailyNotification()
             }
         }
     }
@@ -169,7 +176,6 @@ class AppData: NSObject, ObservableObject {
             self.categories = decoded.map { categoryData in
                 return (name: categoryData.name, color: categoryData.color.color)
             }
-            // print("Decoded categories: \(self.categories)")
         } else {
             self.categories = [
                 ("Work", .blue),
@@ -177,17 +183,13 @@ class AppData: NSObject, ObservableObject {
                 ("Birthdays", .red),
                 ("Holidays", .purple)
             ]
-            // print("Default categories set: \(self.categories)")
         }
         
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
-            // print("Notification time loaded: \(notificationTime)")
         }
     }
 
-    
-    // Filtered events
     func filteredEvents(selectedCategoryFilter: String?) -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
@@ -215,7 +217,6 @@ class AppData: NSObject, ObservableObject {
            let data = sharedDefaults.data(forKey: "events") {
             do {
                 var decodedEvents = try decoder.decode([Event].self, from: data)
-                // Ensure all events have the new properties
                 for i in 0..<decodedEvents.count {
                     if decodedEvents[i].repeatUntil == nil {
                         decodedEvents[i].repeatUntil = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
@@ -237,37 +238,36 @@ class AppData: NSObject, ObservableObject {
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
-            // print("Saved events: \(events)")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+            scheduleDailyNotification() // Reschedule daily notification
         } else {
-            // print("Failed to encode events.")
+            print("Failed to encode events.")
         }
     }
 
     func setDailyNotification(enabled: Bool) {
-        if enabled {
-            scheduleDailyNotification()
-        } else {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
-            print("Daily notifications OFF")
-        }
+        dailyNotificationEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "dailyNotificationEnabled")
+        scheduleDailyNotification()
     }
 
-    // Change access level from private to internal (default) or public
     func scheduleDailyNotification() {
+        guard dailyNotificationEnabled else {
+            print("Daily notifications are disabled.")
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
+            return
+        }
+
         let content = UNMutableNotificationContent()
-        content.title = "Event Reminder"
         
-        // Fetch today's events with notifications enabled
-        let todayEvents = getTodayEvents().filter { $0.notificationsEnabled }
+        let todayEvents = getTodayEvents()
         let eventsCount = todayEvents.count
         
-        // If there are no events, do not schedule the notification
         if eventsCount == 0 {
-            print("No events for today. Notification will not be scheduled.")
             return
         }
         
+        content.title = "You have \(eventsCount) event(s) today"
         content.body = todayEvents.map { $0.title }.joined(separator: ", ")
         content.sound = .default
         content.categoryIdentifier = "DAILY_NOTIFICATION"
@@ -277,23 +277,14 @@ class AppData: NSObject, ObservableObject {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"]) // Remove any existing daily notification
+        
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Error scheduling daily notification: \(error)")
             } else {
                 print("Daily notification scheduled successfully.")
-                if let nextEvent = todayEvents.first {
-                    print("Daily notifications ON. \(eventsCount) notifications scheduled. Next notification on \(self.notificationTime) for \(nextEvent.title) event")
-                }
             }
         }
-
-        // Define the custom action
-        let action = UNNotificationAction(identifier: "VIEW_ACTION", title: "View", options: .foreground)
-        let category = UNNotificationCategory(identifier: "DAILY_NOTIFICATION", actions: [action], intentIdentifiers: [], options: [])
-        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     func getTodayEvents() -> [Event] {
@@ -308,11 +299,11 @@ class AppData: NSObject, ObservableObject {
 
         return todayEvents
     }
-    
+
     func saveState() {
         UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
     }
-    
+
     func removeNotification(for event: Event) {
         let center = UNUserNotificationCenter.current()
         let identifier = event.id.uuidString
@@ -320,41 +311,16 @@ class AppData: NSObject, ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
         center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
-    
+
     func addEvent(_ event: Event) {
         events.append(event)
         saveEvents()
-        scheduleDailyNotification() // Reschedule notification when an event is added
     }
-    
+
     func editEvent(_ event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
-            let oldEvent = events[index]
             events[index] = event
             saveEvents()
-            
-            // Check if the event's date or other relevant properties have changed
-            if oldEvent.date != event.date || oldEvent.notificationsEnabled != event.notificationsEnabled {
-                scheduleNotification(for: event)
-                scheduleDailyNotification() // Reschedule notification only if necessary
-            }
-        }
-    }
-    
-    func scheduleNotification(for event: Event) {
-        let content = UNMutableNotificationContent()
-        content.title = event.title
-        content.body = "Event reminder for \(event.title)"
-        content.sound = .default
-
-        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: event.date)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
-
-        let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error)")
-            }
         }
     }
 }
