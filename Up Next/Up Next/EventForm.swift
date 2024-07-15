@@ -1,5 +1,4 @@
 import SwiftUI
-
 import WidgetKit
 
 struct EventForm: View {
@@ -22,139 +21,250 @@ struct EventForm: View {
     @EnvironmentObject var appData: AppData
     @FocusState private var isTitleFocused: Bool
     @State private var showingAddCategorySheet = false
+    @State private var showCustomStartDatePicker = false
     @State private var showCustomEndDatePicker = false
+    @State private var tempEndDate: Date?
+    @State private var showRepeatOptions = false
 
     var body: some View {
         ZStack {
-            Form {
-                Section {
+            Color(UIColor.systemGroupedBackground) // Set the background color to match the Form's background
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack {
+                
+                // TITLE
+                VStack {
                     TextField("Title", text: $newEventTitle)
                         .focused($isTitleFocused)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                 }
-                Section {
-                    HStack {
-                        DatePicker("Day", selection: $newEventDate, displayedComponents: .date)
-                            .onChange(of: newEventDate) { oldValue, newValue in
-                                let minimumEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newValue) ?? newValue
-                                if newEventEndDate < minimumEndDate {
-                                    newEventEndDate = minimumEndDate
-                                }
-                            }
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                // DATE
+                VStack {
+                    HStack(alignment: .center, spacing: 0) {
+                        Button(action: {
+                            print("Start Date Button Tapped")
+                            showCustomStartDatePicker = true
+                            showCustomEndDatePicker = false // Ensure end date picker is closed
+                            print("showCustomStartDatePicker: \(showCustomStartDatePicker), showCustomEndDatePicker: \(showCustomEndDatePicker)")
+                        }) {
+                            Text(newEventDate, formatter: dateFormatter)
+                                .foregroundColor(.primary)
+                                .padding(6)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
+                        }
+                        .padding(.horizontal, 6)
+
+                        // END DATE
                         if showEndDate {
                             Text(" - ")
                                 .foregroundColor(.primary)
+                                .padding(.horizontal, 4)
                             Button(action: {
-                                showCustomEndDatePicker.toggle()
+                                print("End Date Button Tapped")
+                                showCustomEndDatePicker = true
+                                showCustomStartDatePicker = false // Ensure start date picker is closed
+                                print("showCustomStartDatePicker: \(showCustomStartDatePicker), showCustomEndDatePicker: \(showCustomEndDatePicker)")
                             }) {
-                                Text("\(newEventEndDate, formatter: dateFormatter)")
-                                    .padding(8)
+                                Text(newEventEndDate, formatter: dateFormatter)
+                                    .foregroundColor(.primary)
+                                    .padding(6)
                                     .background(Color.gray.opacity(0.2))
                                     .cornerRadius(8)
-                                    .foregroundColor(.primary)
                             }
+                            Spacer()
                         } else {
                             Spacer()
                             Button(action: {
-                                showEndDate = true
-                                newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate
+                                print("Add End Date Button Tapped")
+                                tempEndDate = nil
                                 showCustomEndDatePicker = true
+                                showCustomStartDatePicker = false // Ensure start date picker is closed
+                                print("showCustomStartDatePicker: \(showCustomStartDatePicker), showCustomEndDatePicker: \(showCustomEndDatePicker)")
                             }) {
-                                HStack {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(8)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                            }
-                        }
-                    }
-                }
-                Section {
-                    Menu {
-                        ForEach(RepeatOption.allCases.filter { option in
-                            if option == .daily && showEndDate {
-                                return false
-                            }
-                            if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
-                                return false
-                            }
-                            return true
-                        }, id: \.self) { option in
-                            Button(action: {
-                                repeatOption = option
-                            }) {
-                                Text(option.rawValue)
-                                    .foregroundColor(option == repeatOption ? .gray : .primary)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text("Repeat")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text(repeatOption.rawValue)
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .foregroundColor(.gray)
-                                .font(.footnote)
-                        }
-                    }
-
-                    if repeatOption != .never {
-                        Menu {
-                            Button(action: {
-                                repeatUntilOption = .indefinitely
-                            }) {
-                                Text("Never")
-                                    .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
-                            }
-                            Button(action: {
-                                repeatUntilOption = .after
-                            }) {
-                                Text("After")
-                                    .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
-                            }
-                            Button(action: {
-                                repeatUntilOption = .onDate
-                            }) {
-                                Text("On")
-                                    .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
-                            }
-                        } label: {
-                            HStack {
-                                Text("End Repeat")
+                                Image(systemName: "calendar.badge.plus")
                                     .foregroundColor(.primary)
-                                Spacer()
-                                Text(repeatUntilOption.rawValue)
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
-                                    .font(.footnote)
+                                    .padding(6)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
                             }
+                            .padding(.trailing, 6)
                         }
 
-                        if repeatUntilOption == .after {
-                            HStack {
-                                TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                    .keyboardType(.numberPad)
-                                    .frame(width: 24)
-                                    .multilineTextAlignment(.center)
-                                    .onChange(of: repeatCount) {
-                                        if repeatCount < 1 {
-                                            repeatCount = 1
+                        // Repeat Button
+                        if showRepeatOptions {
+                            Button(action: {
+                                repeatOption = .never
+                                showRepeatOptions = false
+                            }) {
+                                Image(systemName: "repeat")
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(getCategoryColor())
+                                    .cornerRadius(8)
+                            }
+                            .padding(.trailing, 6)
+                        } else {
+                            Menu {
+                                ForEach(RepeatOption.allCases.filter { option in
+                                    if option == .never {
+                                        return false
+                                    }
+                                    if option == .daily && showEndDate {
+                                        return false
+                                    }
+                                    if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                        return false
+                                    }
+                                    return true
+                                }, id: \.self) { option in
+                                    Button(action: {
+                                        repeatOption = option
+                                        showRepeatOptions = (option != .never)
+                                    }) {
+                                        Text(option.rawValue)
+                                            .foregroundColor(option == repeatOption ? .gray : .primary)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "repeat")
+                                    .foregroundColor(.primary)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
+                            }
+                            .padding(.trailing, 6)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 2)
+
+                    // REPEAT
+                    if showRepeatOptions {
+                        VStack {
+                            // REPEAT OPTIONS
+                            Menu {
+                                ForEach(RepeatOption.allCases.filter { option in
+                                    if option == .never {
+                                        return false
+                                    }
+                                    if option == .daily && showEndDate {
+                                        return false
+                                    }
+                                    if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                        return false
+                                    }
+                                    return true
+                                }, id: \.self) { option in
+                                    Button(action: {
+                                        repeatOption = option
+                                        showRepeatOptions = (option != .never)
+                                    }) {
+                                        Text(option.rawValue)
+                                            .foregroundColor(option == repeatOption ? .gray : .primary)
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text("Repeat")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(repeatOption.rawValue)
+                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.gray)
+                                        .font(.footnote)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+
+                            // REPEAT UNTIL
+                            if repeatOption != .never {
+                                Menu {
+                                    Button(action: {
+                                        repeatUntilOption = .indefinitely
+                                    }) {
+                                        Text("Never")
+                                            .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
+                                    }
+                                    Button(action: {
+                                        repeatUntilOption = .after
+                                    }) {
+                                        Text("After")
+                                            .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
+                                    }
+                                    Button(action: {
+                                        repeatUntilOption = .onDate
+                                    }) {
+                                        Text("On")
+                                            .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text("End Repeat")
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Text(repeatUntilOption.rawValue)
+                                            .foregroundColor(.gray)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundColor(.gray)
+                                            .font(.footnote)
+                                    }
+                                    .padding(.bottom, 6)
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+
+                                // REPEAT COUNT
+                                if repeatUntilOption == .after {
+                                    HStack {
+                                        TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                            .keyboardType(.numberPad)
+                                            .frame(width: 24)
+                                            .multilineTextAlignment(.center)
+                                            .onChange(of: repeatCount) {
+                                                if repeatCount < 1 {
+                                                    repeatCount = 1
+                                                }
+                                            }
+                                        Stepper(value: $repeatCount, in: 1...100) {
+                                            Text(" times")
                                         }
                                     }
-                                Stepper(value: $repeatCount, in: 1...100) {
-                                    Text(" times")
+                                    .padding(.leading)
+                                    .padding(.trailing, 6)
+                                    .padding(.vertical, 8)
+                                
+                                // REPEAT UNTIL ON DATE
+                                } else if repeatUntilOption == .onDate {
+                                    DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
+                                        .padding(.leading)
+                                        .padding(.trailing, 6)
+                                        .padding(.vertical, 8)
                                 }
                             }
-                        } else if repeatUntilOption == .onDate {
-                            DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
                         }
+
                     }
+
                 }
-                Section {
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(12)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                
+
+                // CATEGORY
+                VStack {
                     HStack {
                         Text("Category")
                         Spacer()
@@ -198,48 +308,123 @@ struct EventForm: View {
                         ))
                         .frame(width: 40)
                     }
+                    .padding(6)
                 }
-                Section {
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                // NOTIFY ME
+                VStack {
                     Toggle("Notify me", isOn: $notificationsEnabled)
                         .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
+                        .padding(6)
                 }
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                // DELETE EVENT
                 Section {
-                if let event = selectedEvent {
-                    if event.repeatOption == .never {
-                        Button("Delete Event") {
-                            showDeleteActionSheet = true
+                    if let event = selectedEvent {
+                        if event.repeatOption == .never {
+                            Button("Delete Event") {
+                                showDeleteActionSheet = true
+                            }
+                            .foregroundColor(.red)
+                        } else {
+                            Button("Delete Event") {
+                                deleteEvent()
+                            }
+                            .foregroundColor(.red)
+                            
+                            Button("Delete Series") {
+                                deleteSeries()
+                            }
+                            .foregroundColor(.red)
                         }
-                        .foregroundColor(.red)
-                    } else {
-                        Button("Delete Event") {
-                            deleteEvent()
-                        }
-                        .foregroundColor(.red)
-                        
-                        Button("Delete Series") {
-                            deleteSeries()
-                        }
-                        .foregroundColor(.red)
                     }
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
             }
-        }
+            .frame(maxHeight: .infinity, alignment: .top) 
+            if showCustomStartDatePicker {
+                Color.black.opacity(0.4)
+                    .edgesIgnoringSafeArea(.all)
+                    .onTapGesture {
+                        withAnimation {
+                            print("Dismiss Start Date Picker")
+                            showCustomStartDatePicker = false
+                        }
+                    }
+                VStack {
+                    Spacer()
+                    VStack {
+                        CustomDatePicker(
+                            selectedDate: $newEventDate,
+                            showCustomDatePicker: $showCustomStartDatePicker,
+                            minimumDate: Date(),
+                            onDateSelected: {
+                                print("Start Date Selected: \(newEventDate)")
+                                showCustomStartDatePicker = false
+                            }
+                        )
+                    }
+                    .frame(maxWidth: 350)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(radius: 20)
+                    .scaleEffect(showCustomStartDatePicker ? 1 : 0.5) // Scale effect
+                    .animation(.spring(), value: showCustomStartDatePicker) // Animation
+                    Spacer()
+                }
+            }
             if showCustomEndDatePicker {
                 Color.black.opacity(0.4)
                     .edgesIgnoringSafeArea(.all)
                     .onTapGesture {
                         withAnimation {
+                            print("Dismiss End Date Picker")
                             showCustomEndDatePicker = false
+                            tempEndDate = nil
                         }
                     }
                 VStack {
                     Spacer()
-                    CustomDatePicker(date: $newEventEndDate, showEndDate: $showEndDate, showCustomEndDatePicker: $showCustomEndDatePicker, minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate)
-                        .frame(width: 350, height: 380)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(radius: 20)
-                        .transition(.scale)
+                    VStack {
+                        CustomDatePicker(
+                            selectedDate: Binding(
+                                get: { tempEndDate ?? newEventEndDate },
+                                set: { tempEndDate = $0 }
+                            ),
+                            showCustomDatePicker: $showCustomEndDatePicker,
+                            minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
+                            onDateSelected: {
+                                if let selectedDate = tempEndDate {
+                                    print("End Date Selected: \(selectedDate)")
+                                    showEndDate = true
+                                    newEventEndDate = selectedDate
+                                }
+                                showCustomEndDatePicker = false
+                            },
+                            onRemoveEndDate: {
+                                print("Remove End Date")
+                                showEndDate = false
+                                newEventEndDate = newEventDate
+                                tempEndDate = nil
+                                showCustomEndDatePicker = false
+                            }
+                        )
+                    }
+                    .frame(maxWidth: 350)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(radius: 20)
+                    .scaleEffect(showCustomEndDatePicker ? 1 : 0.5) // Scale effect
+                    .animation(.spring(), value: showCustomEndDatePicker) // Animation
                     Spacer()
                 }
             }
@@ -254,6 +439,9 @@ struct EventForm: View {
         }
         .onDisappear {
             isTitleFocused = false
+            tempEndDate = nil
+            showCustomEndDatePicker = false
+            showCustomStartDatePicker = false
         }
     }
 
@@ -263,30 +451,33 @@ struct EventForm: View {
 }
 
 struct CustomDatePicker: View {
-    @Binding var date: Date
-    @Binding var showEndDate: Bool
-    @Binding var showCustomEndDatePicker: Bool
+    @Binding var selectedDate: Date
+    @Binding var showCustomDatePicker: Bool
     var minimumDate: Date
+    var onDateSelected: () -> Void
+    var onRemoveEndDate: (() -> Void)?
 
     var body: some View {
         VStack {
-            DatePicker("End Date", selection: $date, in: minimumDate..., displayedComponents: .date)
-                .datePickerStyle(GraphicalDatePickerStyle())
-                .onChange(of: date) { _, newValue in
-                    withAnimation {
-                        showCustomEndDatePicker = false
-                    }
-                }
-            Button("Remove End Date") {
-                withAnimation {
-                    showEndDate = false
-                    showCustomEndDatePicker = false
-                }
+            DatePicker(
+                "Date",
+                selection: $selectedDate,
+                in: minimumDate...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(GraphicalDatePickerStyle())
+            .onChange(of: selectedDate) { _, _ in
+                onDateSelected()
             }
-            .foregroundColor(.red)
-            .padding()
+            if let onRemoveEndDate = onRemoveEndDate {
+                Button("Remove End Date") {
+                    onRemoveEndDate()
+                }
+                .foregroundColor(.red)
+                .padding()
+            }
         }
-        .padding()
+        .padding(.horizontal)
     }
 }
 
