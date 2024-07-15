@@ -244,12 +244,22 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
+    func setDailyNotification(enabled: Bool) {
+        if enabled {
+            scheduleDailyNotification()
+        } else {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
+            print("Daily notifications OFF")
+        }
+    }
+
+    // Change access level from private to internal (default) or public
     func scheduleDailyNotification() {
-        print("scheduleDailyNotification called")
         let content = UNMutableNotificationContent()
+        content.title = "Event Reminder"
         
-        // Fetch today's events
-        let todayEvents = getTodayEvents()
+        // Fetch today's events with notifications enabled
+        let todayEvents = getTodayEvents().filter { $0.notificationsEnabled }
         let eventsCount = todayEvents.count
         
         // If there are no events, do not schedule the notification
@@ -258,9 +268,7 @@ class AppData: NSObject, ObservableObject {
             return
         }
         
-        content.title = "You have \(eventsCount) event\(eventsCount > 1 ? "s" : "") today"
-        let eventsString = todayEvents.map { $0.title }.joined(separator: ", ")
-        content.body = eventsString
+        content.body = todayEvents.map { $0.title }.joined(separator: ", ")
         content.sound = .default
         content.categoryIdentifier = "DAILY_NOTIFICATION"
         
@@ -276,6 +284,9 @@ class AppData: NSObject, ObservableObject {
                 print("Error scheduling daily notification: \(error)")
             } else {
                 print("Daily notification scheduled successfully.")
+                if let nextEvent = todayEvents.first {
+                    print("Daily notifications ON. \(eventsCount) notifications scheduled. Next notification on \(self.notificationTime) for \(nextEvent.title) event")
+                }
             }
         }
 
@@ -344,25 +355,6 @@ class AppData: NSObject, ObservableObject {
             if let error = error {
                 print("Error scheduling notification: \(error)")
             }
-        }
-    }
-
-    func countTodayNotifications() {
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            let today = Calendar.current.startOfDay(for: Date())
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-
-            let todayRequests = requests.filter { request in
-                if let trigger = request.trigger as? UNCalendarNotificationTrigger,
-                   let triggerDate = trigger.nextTriggerDate() {
-                    return triggerDate >= today && triggerDate < tomorrow
-                }
-                return false
-            }
-
-            let eventBodies = todayRequests.map { $0.content.body }
-            print("Number of notifications scheduled for today: \(todayRequests.count)")
-            print("Events included in today's notifications: \(eventBodies.joined(separator: ", "))")
         }
     }
 }

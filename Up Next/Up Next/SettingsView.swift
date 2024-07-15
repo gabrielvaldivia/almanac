@@ -29,7 +29,9 @@ struct SettingsView: View {
                     .onChange(of: dailyNotificationEnabled) { value in
                         handleDailyNotificationToggle(value)
                     }
-                DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                if dailyNotificationEnabled {
+                    DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                }
                 NavigationLink(destination: NotificationsView().environmentObject(appData)) {
                     Text("Manage Notifications")
                 }
@@ -213,38 +215,8 @@ struct SettingsView: View {
         }
     }
 
-    private func scheduleDailyNotification() {
-        guard dailyNotificationEnabled else { return }
-        
-        let content = UNMutableNotificationContent()
-        content.title = "Event Reminder"
-        content.body = "You have events today with notifications enabled."
-        content.sound = .default
-
-        var dateComponents = DateComponents()
-        dateComponents.hour = Calendar.current.component(.hour, from: appData.notificationTime)
-        dateComponents.minute = Calendar.current.component(.minute, from: appData.notificationTime)
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling daily notification: \(error)")
-            }
-        }
-    }
-
     private func handleDailyNotificationToggle(_ isEnabled: Bool) {
-        if isEnabled {
-            let nextNotificationTime = appData.notificationTime
-            let events = appData.events.filter { $0.notificationsEnabled }
-            print("Next notification time: \(nextNotificationTime)")
-            print("Events with notifications:")
-            for event in events {
-                print("Event: \(event.title) at \(event.date)")
-            }
-        }
+        appData.setDailyNotification(enabled: isEnabled)
     }
 
     init() {

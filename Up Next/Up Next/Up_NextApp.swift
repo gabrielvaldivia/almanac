@@ -15,7 +15,6 @@ struct Up_NextApp: App {
     init() {
         requestNotificationPermissions()
         UNUserNotificationCenter.current().delegate = appData
-        appData.countTodayNotifications() // Call the function to count today's notifications
     }
 
     var body: some Scene {
