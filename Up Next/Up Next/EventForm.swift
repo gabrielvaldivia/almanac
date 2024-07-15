@@ -30,9 +30,6 @@ struct EventForm: View {
         ZStack {
             Color(UIColor.systemGroupedBackground) // Set the background color to match the Form's background
                 .edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    hideKeyboard()
-                }
             
             VStack {
                 
@@ -41,10 +38,10 @@ struct EventForm: View {
                     TextField("Title", text: $newEventTitle)
                         .focused($isTitleFocused)
                         .padding(.horizontal)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 8)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(12)
+                .cornerRadius(8)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
 
@@ -52,7 +49,6 @@ struct EventForm: View {
                 VStack {
                     HStack(alignment: .center, spacing: 0) {
                         Button(action: {
-                            hideKeyboard()
                             print("Start Date Button Tapped")
                             showCustomStartDatePicker = true
                             showCustomEndDatePicker = false // Ensure end date picker is closed
@@ -73,7 +69,6 @@ struct EventForm: View {
                                 .foregroundColor(.primary)
                                 .padding(.trailing, 6)
                             Button(action: {
-                                hideKeyboard()
                                 print("End Date Button Tapped")
                                 showCustomEndDatePicker = true
                                 showCustomStartDatePicker = false // Ensure start date picker is closed
@@ -90,7 +85,6 @@ struct EventForm: View {
                         } else {
                             Spacer()
                             Button(action: {
-                                hideKeyboard()
                                 print("Add End Date Button Tapped")
                                 tempEndDate = nil
                                 showCustomEndDatePicker = true
@@ -110,7 +104,6 @@ struct EventForm: View {
                         // Repeat Button
                         if showRepeatOptions {
                             Button(action: {
-                                hideKeyboard()
                                 repeatOption = .never
                                 showRepeatOptions = false
                             }) {
@@ -136,7 +129,6 @@ struct EventForm: View {
                                     return true
                                 }, id: \.self) { option in
                                     Button(action: {
-                                        hideKeyboard()
                                         repeatOption = option
                                         showRepeatOptions = (option != .never)
                                     }) {
@@ -183,7 +175,7 @@ struct EventForm: View {
                                 }
                                 .pickerStyle(MenuPickerStyle())
                                 .onChange(of: repeatOption) {
-                                    showRepeatOptions = (repeatOption != .never)
+                                    showRepeatOptions = ($0 != .never)
                                 }
                                 .foregroundColor(.gray)
                             }
@@ -304,18 +296,16 @@ struct EventForm: View {
 
                     Divider()
                         .padding(.leading)
-                        .padding(.bottom, 6)
 
                     HStack {
                         Text("Color")
                         Spacer()
                         ColorPicker("", selection: Binding(
                             get: { selectedColor.color },
-                            set: { newColor in
-                                selectedColor = CodableColor(color: newColor)
-                            }
+                            set: { selectedColor = CodableColor(color: $0) }
                         ))
                         .labelsHidden()
+                        .frame(width: 30, height: 30)
                     }
                     .padding(.bottom, 6)
                     .padding(.leading)
@@ -366,9 +356,6 @@ struct EventForm: View {
                 .padding(.vertical, 8)
             }
             .frame(maxHeight: .infinity, alignment: .top) 
-            .onTapGesture {
-                hideKeyboard()
-            }
             if showCustomStartDatePicker {
                 Color.black.opacity(0.4)
                     .edgesIgnoringSafeArea(.all)
@@ -460,9 +447,6 @@ struct EventForm: View {
             } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
                 selectedColor = CodableColor(color: category.color)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isTitleFocused = true // Focus the title after a slight delay
-            }
         }
         .onDisappear {
             isTitleFocused = false
@@ -474,10 +458,6 @@ struct EventForm: View {
 
     private func getCategoryColor() -> Color {
         return selectedColor.color
-    }
-
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
