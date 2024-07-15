@@ -38,11 +38,11 @@ struct EventRow: View {
                     if today > event.date && today < endDate {
                         let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
-                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
+                        Text("\(event.date, formatter: monthDayFormatter) → \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .roundedFont(.footnote)
                             .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                     } else {
-                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
+                        Text("\(event.date, formatter: monthDayFormatter) → \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .roundedFont(.footnote)
                             .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                     }

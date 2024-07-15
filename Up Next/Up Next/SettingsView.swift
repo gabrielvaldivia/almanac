@@ -60,7 +60,7 @@ struct SettingsView: View {
                                 .foregroundColor(.gray)
                         }
                         // .padding(.horizontal)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 6)
                         .background(Color(UIColor.secondarySystemGroupedBackground))
                         .cornerRadius(8)
                     }

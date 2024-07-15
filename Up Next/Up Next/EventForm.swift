@@ -23,8 +23,8 @@ struct EventForm: View {
     @State private var showCustomStartDatePicker = false
     @State private var showCustomEndDatePicker = false
     @State private var tempEndDate: Date?
-    @State private var showRepeatOptions = false
     var showDeleteButtons: Bool
+    @Binding var showRepeatOptions: Bool // Change this to a Binding
 
     var body: some View {
         ZStack {
@@ -79,7 +79,7 @@ struct EventForm: View {
 
                             // END DATE
                             if showEndDate {
-                                Text(" - ")
+                                Text(" → ")
                                     .foregroundColor(.primary)
                                     .padding(.trailing, 6)
                                 Button(action: {
@@ -94,6 +94,24 @@ struct EventForm: View {
                                 }
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
+                                        HStack {
+                                            Text("Select End Date") // Added title
+                                                .font(.headline)
+                                                .padding()
+                                            Spacer()
+                                            Button(action: {
+                                                showEndDate = false
+                                                newEventEndDate = newEventDate
+                                                tempEndDate = nil
+                                                showCustomEndDatePicker = false
+                                            }) {
+                                                Image(systemName: "trash")
+                                                    .font(.headline)
+                                                    .foregroundColor(.red)
+                                            }
+                                            .padding()
+                                        }
+                                        .padding(.horizontal)
                                         CustomDatePicker(
                                             selectedDate: $tempEndDate,
                                             showCustomDatePicker: $showCustomEndDatePicker,
@@ -103,12 +121,6 @@ struct EventForm: View {
                                                     showEndDate = true
                                                     newEventEndDate = selectedDate
                                                 }
-                                                showCustomEndDatePicker = false
-                                            },
-                                            onRemoveEndDate: {
-                                                showEndDate = false
-                                                newEventEndDate = newEventDate
-                                                tempEndDate = nil
                                                 showCustomEndDatePicker = false
                                             }
                                         )
@@ -133,6 +145,25 @@ struct EventForm: View {
                                 .padding(.trailing, 6)
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
+                                        HStack {
+                                            Text("End Date") // Added title
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .padding()
+                                            Spacer()
+                                            Button(action: {
+                                                showEndDate = false
+                                                newEventEndDate = newEventDate
+                                                tempEndDate = nil
+                                                showCustomEndDatePicker = false
+                                            }) {
+                                                Image(systemName: "trash")
+                                                    .font(.headline)
+                                                    .foregroundColor(.red)
+                                            }
+                                            .padding(.horizontal)
+                                        }
+                                        .padding(.horizontal)
                                         CustomDatePicker(
                                             selectedDate: $tempEndDate,
                                             showCustomDatePicker: $showCustomEndDatePicker,
@@ -143,12 +174,6 @@ struct EventForm: View {
                                                     newEventEndDate = selectedDate
                                                 }
                                                 showCustomEndDatePicker = false
-                                            },
-                                            onRemoveEndDate: {
-                                                showEndDate = false
-                                                newEventEndDate = newEventDate
-                                                tempEndDate = nil
-                                                showCustomEndDatePicker = false
                                             }
                                         )
                                         .presentationDetents([.medium])
@@ -158,49 +183,35 @@ struct EventForm: View {
                             }
 
                             // Repeat Button
-                            if showRepeatOptions {
-                                Button(action: {
-                                    repeatOption = .never
-                                    showRepeatOptions = false
-                                }) {
-                                    Image(systemName: "repeat")
-                                        .foregroundColor(.white)
-                                        .padding(8)
-                                        .background(getCategoryColor())
-                                        .cornerRadius(8)
-                                }
-                                .padding(.trailing, 6)
-                            } else {
-                                Menu {
-                                    ForEach(RepeatOption.allCases.filter { option in
-                                        if option == .never {
-                                            return false
-                                        }
-                                        if option == .daily && showEndDate {
-                                            return false
-                                        }
-                                        if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
-                                            return false
-                                        }
-                                        return true
-                                    }, id: \.self) { option in
-                                        Button(action: {
-                                            repeatOption = option
-                                            showRepeatOptions = (option != .never)
-                                        }) {
-                                            Text(option.rawValue)
-                                                .foregroundColor(option == repeatOption ? .gray : .primary)
-                                        }
+                            Menu {
+                                ForEach(RepeatOption.allCases.filter { option in
+                                    if option == .never {
+                                        return false
                                     }
-                                } label: {
-                                    Image(systemName: "repeat")
-                                        .foregroundColor(.primary)
-                                        .padding(8)
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(8)
+                                    if option == .daily && showEndDate {
+                                        return false
+                                    }
+                                    if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                        return false
+                                    }
+                                    return true
+                                }, id: \.self) { option in
+                                    Button(action: {
+                                        repeatOption = option
+                                        showRepeatOptions = option != .never
+                                    }) {
+                                        Text(option.rawValue)
+                                            .foregroundColor(option == repeatOption ? .gray : .primary)
+                                    }
                                 }
-                                .padding(.trailing, 6)
+                            } label: {
+                                Image(systemName: "repeat")
+                                    .foregroundColor(.primary)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
                             }
+                            .padding(.trailing, 6)
                         }
                         .padding(.vertical, 6)
 
@@ -227,7 +238,6 @@ struct EventForm: View {
                                         }, id: \.self) { option in
                                             Button(action: {
                                                 repeatOption = option
-                                                showRepeatOptions = (option != .never)
                                             }) {
                                                 Text(option.rawValue)
                                                     .foregroundColor(option == repeatOption ? .gray : .primary)
@@ -410,28 +420,41 @@ struct EventForm: View {
 
                     // DELETE EVENT
                     if showDeleteButtons {
-                        Section {
+                        VStack {
                             if let event = selectedEvent {
                                 if event.repeatOption == .never {
                                     Button("Delete Event") {
                                         showDeleteActionSheet = true
                                     }
                                     .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
                                 } else {
                                     Button("Delete Event") {
                                         deleteEvent()
                                     }
                                     .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 12)
+                                    .padding(.bottom, 6)
+
+                                    Divider()
+                                    // .padding(.leading)
                                     
                                     Button("Delete Series") {
                                         deleteSeries()
                                     }
                                     .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 6)
+                                    .padding(.bottom, 12)
                                 }
                             }
                         }
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(12)
                         .padding(.horizontal)
-                        .padding(.vertical, 8)
+                        // .padding(.vertical, 8)
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: .top) 
@@ -481,10 +504,13 @@ struct CustomDatePicker: View {
                 onDateSelected()
             }
             if let onRemoveEndDate = onRemoveEndDate {
-                Button("Remove End Date") {
+                Button(action: {
                     onRemoveEndDate()
+                }) {
+                    Image(systemName: "trash")
+                        .font(.headline)
+                        .foregroundColor(.red)
                 }
-                .foregroundColor(.red)
                 .padding()
             }
         }

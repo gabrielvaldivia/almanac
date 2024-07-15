@@ -45,6 +45,7 @@ struct EditEventView: View {
     @State private var showCategoryManagementView = false
     @State private var showUpdateActionSheet = false
     @State private var showDeleteSeriesAlert = false
+    @State private var showRepeatOptions = true // Add this state variable
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -66,7 +67,8 @@ struct EditEventView: View {
                 selectedEvent: $selectedEvent,
                 deleteEvent: deleteEvent,
                 deleteSeries: { showDeleteSeriesAlert = true },
-                showDeleteButtons: true // Ensure delete buttons are shown in EditEventView
+                showDeleteButtons: true, // Ensure delete buttons are shown in EditEventView
+                showRepeatOptions: $showRepeatOptions // Pass the binding
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")

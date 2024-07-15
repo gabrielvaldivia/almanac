@@ -28,6 +28,7 @@ struct AddEventView: View {
     @State private var repeatCount: Int = 1 // New state variable for number of repetitions
     @State private var showCategoryManagementView = false // Add this state variable
     @State private var showDeleteActionSheet = false // Add this state variable
+    @State private var showRepeatOptions = false // Set this to false by default
 
     var body: some View {
         NavigationView {
@@ -48,7 +49,8 @@ struct AddEventView: View {
                 isTitleFocused: _isTitleFocused, // Pass FocusState directly
                 deleteEvent: {}, // Remove deleteEvent functionality
                 deleteSeries: {}, // Remove deleteSeries functionality
-                showDeleteButtons: false // Do not show delete buttons
+                showDeleteButtons: false, // Do not show delete buttons
+                showRepeatOptions: $showRepeatOptions // Pass the binding
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
