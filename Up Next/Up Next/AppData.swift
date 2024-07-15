@@ -122,7 +122,8 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
-                scheduleDailyNotification()
+                // Conditionally call this function
+                // scheduleDailyNotification()
                 saveState()
             }
         }
@@ -246,18 +247,19 @@ class AppData: NSObject, ObservableObject {
     func scheduleDailyNotification() {
         print("scheduleDailyNotification called")
         let content = UNMutableNotificationContent()
-        content.title = "Today's Events"
         
         // Fetch today's events
         let todayEvents = getTodayEvents()
-        let eventsString = todayEvents.map { $0.title }.joined(separator: ", ")
+        let eventsCount = todayEvents.count
         
         // If there are no events, do not schedule the notification
-        if eventsString.isEmpty {
+        if eventsCount == 0 {
             print("No events for today. Notification will not be scheduled.")
             return
         }
         
+        content.title = "You have \(eventsCount) event\(eventsCount > 1 ? "s" : "") today"
+        let eventsString = todayEvents.map { $0.title }.joined(separator: ", ")
         content.body = eventsString
         content.sound = .default
         content.categoryIdentifier = "DAILY_NOTIFICATION"
@@ -316,9 +318,15 @@ class AppData: NSObject, ObservableObject {
     
     func editEvent(_ event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
+            let oldEvent = events[index]
             events[index] = event
             saveEvents()
-            scheduleDailyNotification() // Reschedule notification when an event is edited
+            
+            // Check if the event's date or other relevant properties have changed
+            if oldEvent.date != event.date || oldEvent.notificationsEnabled != event.notificationsEnabled {
+                scheduleNotification(for: event)
+                scheduleDailyNotification() // Reschedule notification only if necessary
+            }
         }
     }
     
@@ -336,6 +344,25 @@ class AppData: NSObject, ObservableObject {
             if let error = error {
                 print("Error scheduling notification: \(error)")
             }
+        }
+    }
+
+    func countTodayNotifications() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let today = Calendar.current.startOfDay(for: Date())
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+
+            let todayRequests = requests.filter { request in
+                if let trigger = request.trigger as? UNCalendarNotificationTrigger,
+                   let triggerDate = trigger.nextTriggerDate() {
+                    return triggerDate >= today && triggerDate < tomorrow
+                }
+                return false
+            }
+
+            let eventBodies = todayRequests.map { $0.content.body }
+            print("Number of notifications scheduled for today: \(todayRequests.count)")
+            print("Events included in today's notifications: \(eventBodies.joined(separator: ", "))")
         }
     }
 }

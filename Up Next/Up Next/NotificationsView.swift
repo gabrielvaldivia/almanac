@@ -23,11 +23,19 @@ struct NotificationsView: View {
                 }
             }
             .navigationTitle("Notifications")
-            .navigationBarItems(trailing: Button(action: {
-                loadNotifications()
-                groupedEvents = eventsGroupedByDate()
-            }) {
-                Image(systemName: "arrow.clockwise")
+            .navigationBarItems(trailing: HStack {
+                Button(action: {
+                    print("Clear and re-add notifications button tapped")
+                    clearAndReAddNotifications()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                Button(action: {
+                    print("Clear all notifications and disable events button tapped")
+                    clearAllNotificationsAndDisableEvents()
+                }) {
+                    Image(systemName: "trash.fill")
+                }
             })
             .onAppear {
                 loadNotifications()
@@ -84,6 +92,38 @@ struct NotificationsView: View {
             }
         }
         groupedEvents = eventsGroupedByDate() // Update groupedEvents after deletion
+    }
+
+    private func clearAllPendingNotifications() {
+        let count = notifications.count
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        notifications.removeAll()
+        print("\(count) notifications were deleted.")
+    }
+
+    private func reAddNotifications() {
+        var addedCount = 0
+        for event in appData.events where event.notificationsEnabled {
+            appData.scheduleNotification(for: event)
+            addedCount += 1
+        }
+        print("\(addedCount) notifications were added.")
+    }
+
+    private func clearAndReAddNotifications() {
+        clearAllPendingNotifications()
+        reAddNotifications()
+        groupedEvents = eventsGroupedByDate() // Update groupedEvents after re-adding notifications
+    }
+
+    private func clearAllNotificationsAndDisableEvents() {
+        clearAllPendingNotifications()
+        for index in appData.events.indices {
+            appData.events[index].notificationsEnabled = false
+        }
+        appData.objectWillChange.send() // Notify the view of changes
+        appData.saveEvents() // Save the updated events
+        groupedEvents = eventsGroupedByDate() // Update groupedEvents after clearing notifications
     }
 }
 

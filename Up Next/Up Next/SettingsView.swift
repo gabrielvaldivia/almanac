@@ -20,10 +20,15 @@ struct SettingsView: View {
     @State private var isPurchasing = false // Add state for purchase process
     @State private var isSubscribed = false // Add state for subscription status
     @State private var errorMessage: String? // Add state for error message
+    @State private var dailyNotificationEnabled = false // Add state for daily notification
 
     var body: some View {
         Form {
             Section(header: Text("Notifications")) {
+                Toggle("Daily Notification", isOn: $dailyNotificationEnabled)
+                    .onChange(of: dailyNotificationEnabled) { value in
+                        handleDailyNotificationToggle(value)
+                    }
                 DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
                 NavigationLink(destination: NotificationsView().environmentObject(appData)) {
                     Text("Manage Notifications")
@@ -31,29 +36,36 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Categories")) {
-                Picker("Default Category", selection: Binding(
-                    get: {
-                        if appData.defaultCategory.isEmpty {
-                            return "None"
-                        }
-                        return appData.defaultCategory
-                    },
-                    set: { newValue in
-                        if newValue == "None" {
+                HStack {
+                    Text("Default Category")
+                        .foregroundColor(.primary) // Use primary color for the label
+                    Spacer()
+                    Menu {
+                        Button(action: {
                             appData.defaultCategory = ""
-                        } else {
-                            appData.defaultCategory = newValue
+                        }) {
+                            Text("None").foregroundColor(.gray)
                         }
-                    }
-                )) {
-                    Text("None").tag("None")
-                    ForEach(appData.categories, id: \.name) { category in
-                        Text(category.name)
-                            .tag(category.name)
-                            .foregroundColor(.gray) // Set the text color to gray
+                        ForEach(appData.categories, id: \.name) { category in
+                            Button(action: {
+                                appData.defaultCategory = category.name
+                            }) {
+                                Text(category.name).foregroundColor(.gray)
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(appData.defaultCategory.isEmpty ? "None" : appData.defaultCategory)
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .foregroundColor(.gray)
+                        }
+                        // .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(8)
                     }
                 }
-                .pickerStyle(MenuPickerStyle())
                 NavigationLink(destination: CategoriesView().environmentObject(appData)) {
                     Text("Manage Categories")
                 }
@@ -116,6 +128,8 @@ struct SettingsView: View {
             Task {
                 await fetchSubscriptionProduct()
             }
+            // Remove or conditionally call this line
+            // scheduleDailyNotification()
         }
     }
     
@@ -195,6 +209,40 @@ struct SettingsView: View {
                     // Handle unverified transaction
                     print("Unverified transaction: \(error)")
                 }
+            }
+        }
+    }
+
+    private func scheduleDailyNotification() {
+        guard dailyNotificationEnabled else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Event Reminder"
+        content.body = "You have events today with notifications enabled."
+        content.sound = .default
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = Calendar.current.component(.hour, from: appData.notificationTime)
+        dateComponents.minute = Calendar.current.component(.minute, from: appData.notificationTime)
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling daily notification: \(error)")
+            }
+        }
+    }
+
+    private func handleDailyNotificationToggle(_ isEnabled: Bool) {
+        if isEnabled {
+            let nextNotificationTime = appData.notificationTime
+            let events = appData.events.filter { $0.notificationsEnabled }
+            print("Next notification time: \(nextNotificationTime)")
+            print("Events with notifications:")
+            for event in events {
+                print("Event: \(event.title) at \(event.date)")
             }
         }
     }

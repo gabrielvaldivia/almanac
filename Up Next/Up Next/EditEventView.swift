@@ -39,16 +39,13 @@ struct EditEventView: View {
     @Binding var notificationsEnabled: Bool {
         didSet {
             if let event = selectedEvent {
-                if !notificationsEnabled {
-                    appData.removeNotification(for: event)
-                } else {
+                if notificationsEnabled {
                     appData.scheduleNotification(for: event)
                 }
                 if let eventIndex = appData.events.firstIndex(where: { $0.id == event.id }) {
                     appData.events[eventIndex].notificationsEnabled = notificationsEnabled
                     appData.objectWillChange.send()
                     appData.saveEvents()
-                    appData.scheduleDailyNotification() // Ensure daily notification is updated immediately
                 }
             }
         }
@@ -437,7 +434,6 @@ struct EditEventView: View {
 
         appData.objectWillChange.send() // Notify observers of changes
         saveEvents()
-        appData.scheduleDailyNotification() // Reschedule daily notification
         showEditSheet = false
     }
 }
