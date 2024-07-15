@@ -308,7 +308,8 @@ struct EventForm: View {
                         ))
                         .frame(width: 40)
                     }
-                    .padding(6)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(8)
@@ -319,7 +320,8 @@ struct EventForm: View {
                 VStack {
                     Toggle("Notify me", isOn: $notificationsEnabled)
                         .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                        .padding(6)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(8)
