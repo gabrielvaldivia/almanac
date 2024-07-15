@@ -150,77 +150,57 @@ struct EventForm: View {
                     if showRepeatOptions {
                         VStack {
                             // REPEAT OPTIONS
-                            Menu {
-                                ForEach(RepeatOption.allCases.filter { option in
-                                    if option == .never {
-                                        return false
-                                    }
-                                    if option == .daily && showEndDate {
-                                        return false
-                                    }
-                                    if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
-                                        return false
-                                    }
-                                    return true
-                                }, id: \.self) { option in
-                                    Button(action: {
-                                        repeatOption = option
-                                        showRepeatOptions = (option != .never)
-                                    }) {
+                            HStack {
+                                Text("Repeat")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Picker("", selection: $repeatOption) {
+                                    ForEach(RepeatOption.allCases.filter { option in
+                                        if option == .never {
+                                            return false
+                                        }
+                                        if option == .daily && showEndDate {
+                                            return false
+                                        }
+                                        if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                            return false
+                                        }
+                                        return true
+                                    }, id: \.self) { option in
                                         Text(option.rawValue)
                                             .foregroundColor(option == repeatOption ? .gray : .primary)
                                     }
                                 }
-                            } label: {
-                                HStack {
-                                    Text("Repeat")
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Text(repeatOption.rawValue)
-                                        .foregroundColor(.gray)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
-                                        .font(.footnote)
+                                .pickerStyle(MenuPickerStyle())
+                                .onChange(of: repeatOption) { newValue in
+                                    showRepeatOptions = (newValue != .never)
                                 }
+                                .foregroundColor(.gray)
                             }
-                            .padding(.horizontal)
+                            .padding(.leading)
                             .padding(.vertical, 8)
 
-                            // REPEAT UNTIL
+                            // END REPEAT
                             if repeatOption != .never {
-                                Menu {
-                                    Button(action: {
-                                        repeatUntilOption = .indefinitely
-                                    }) {
+                                HStack {
+                                    Text("End Repeat")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Picker("", selection: $repeatUntilOption) {
                                         Text("Never")
+                                            .tag(RepeatUntilOption.indefinitely)
                                             .foregroundColor(repeatUntilOption == .indefinitely ? .gray : .primary)
-                                    }
-                                    Button(action: {
-                                        repeatUntilOption = .after
-                                    }) {
                                         Text("After")
+                                            .tag(RepeatUntilOption.after)
                                             .foregroundColor(repeatUntilOption == .after ? .gray : .primary)
-                                    }
-                                    Button(action: {
-                                        repeatUntilOption = .onDate
-                                    }) {
                                         Text("On")
+                                            .tag(RepeatUntilOption.onDate)
                                             .foregroundColor(repeatUntilOption == .onDate ? .gray : .primary)
                                     }
-                                } label: {
-                                    HStack {
-                                        Text("End Repeat")
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                        Text(repeatUntilOption.rawValue)
-                                            .foregroundColor(.gray)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .foregroundColor(.gray)
-                                            .font(.footnote)
-                                    }
-                                    .padding(.bottom, 6)
+                                    .pickerStyle(MenuPickerStyle())
+                                    .foregroundColor(.gray)
                                 }
-                                .padding(.horizontal)
+                                .padding(.leading)
                                 .padding(.vertical, 8)
 
                                 // REPEAT COUNT
@@ -241,20 +221,18 @@ struct EventForm: View {
                                     }
                                     .padding(.leading)
                                     .padding(.trailing, 6)
-                                    .padding(.vertical, 8)
+                                    .padding(.bottom, 6)
                                 
                                 // REPEAT UNTIL ON DATE
                                 } else if repeatUntilOption == .onDate {
                                     DatePicker("Date", selection: $repeatUntil, displayedComponents: .date)
                                         .padding(.leading)
                                         .padding(.trailing, 6)
-                                        .padding(.vertical, 8)
+                                        .padding(.bottom, 6)
                                 }
                             }
                         }
-
                     }
-
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(12)
@@ -263,7 +241,7 @@ struct EventForm: View {
 
                 
 
-                // CATEGORY
+                // CATEGORY AND COLOR
                 VStack {
                     HStack {
                         Text("Category")
@@ -301,15 +279,26 @@ struct EventForm: View {
                             }
                             .presentationDetents([.medium, .large], selection: .constant(.medium))
                         }
-                        
+                    }
+                    .padding(.top, 6)
+                    .padding(.leading)
+
+                    Divider()
+                        .padding(.leading)
+
+                    HStack {
+                        Text("Color")
+                        Spacer()
                         ColorPicker("", selection: Binding(
                             get: { selectedColor.color },
                             set: { selectedColor = CodableColor(color: $0) }
                         ))
-                        .frame(width: 40)
+                        .labelsHidden()
+                        .frame(width: 30, height: 30)
                     }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal)
+                    .padding(.bottom, 6)
+                    .padding(.leading)
+                    .padding(.trailing, 6)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(8)
@@ -321,7 +310,8 @@ struct EventForm: View {
                     Toggle("Notify me", isOn: $notificationsEnabled)
                         .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
                         .padding(.vertical, 6)
-                        .padding(.horizontal)
+                        .padding(.leading)
+                        .padding(.trailing, 10)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(8)
@@ -366,7 +356,10 @@ struct EventForm: View {
                     Spacer()
                     VStack {
                         CustomDatePicker(
-                            selectedDate: $newEventDate,
+                            selectedDate: Binding<Date?>(
+                                get: { newEventDate },
+                                set: { newEventDate = $0 ?? Date() }
+                            ),
                             showCustomDatePicker: $showCustomStartDatePicker,
                             minimumDate: Date(),
                             onDateSelected: {
@@ -398,10 +391,7 @@ struct EventForm: View {
                     Spacer()
                     VStack {
                         CustomDatePicker(
-                            selectedDate: Binding(
-                                get: { tempEndDate ?? newEventEndDate },
-                                set: { tempEndDate = $0 }
-                            ),
+                            selectedDate: $tempEndDate,
                             showCustomDatePicker: $showCustomEndDatePicker,
                             minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
                             onDateSelected: {
@@ -453,7 +443,7 @@ struct EventForm: View {
 }
 
 struct CustomDatePicker: View {
-    @Binding var selectedDate: Date
+    @Binding var selectedDate: Date?
     @Binding var showCustomDatePicker: Bool
     var minimumDate: Date
     var onDateSelected: () -> Void
@@ -463,7 +453,10 @@ struct CustomDatePicker: View {
         VStack {
             DatePicker(
                 "Date",
-                selection: $selectedDate,
+                selection: Binding(
+                    get: { selectedDate ?? minimumDate },
+                    set: { selectedDate = $0 }
+                ),
                 in: minimumDate...,
                 displayedComponents: .date
             )
