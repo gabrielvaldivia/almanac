@@ -95,9 +95,6 @@ struct EventForm: View {
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
                                         HStack {
-                                            Text("Select End Date") // Added title
-                                                .font(.headline)
-                                                .padding()
                                             Spacer()
                                             Button(action: {
                                                 showEndDate = false
@@ -105,7 +102,7 @@ struct EventForm: View {
                                                 tempEndDate = nil
                                                 showCustomEndDatePicker = false
                                             }) {
-                                                Image(systemName: "trash")
+                                                Text("Remove End Date")
                                                     .font(.headline)
                                                     .foregroundColor(.red)
                                             }
@@ -145,25 +142,6 @@ struct EventForm: View {
                                 .padding(.trailing, 6)
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
-                                        HStack {
-                                            Text("End Date") // Added title
-                                                .font(.title3)
-                                                .fontWeight(.semibold)
-                                                .padding()
-                                            Spacer()
-                                            Button(action: {
-                                                showEndDate = false
-                                                newEventEndDate = newEventDate
-                                                tempEndDate = nil
-                                                showCustomEndDatePicker = false
-                                            }) {
-                                                Image(systemName: "trash")
-                                                    .font(.headline)
-                                                    .foregroundColor(.red)
-                                            }
-                                            .padding(.horizontal)
-                                        }
-                                        .padding(.horizontal)
                                         CustomDatePicker(
                                             selectedDate: $tempEndDate,
                                             showCustomDatePicker: $showCustomEndDatePicker,
@@ -176,6 +154,17 @@ struct EventForm: View {
                                                 showCustomEndDatePicker = false
                                             }
                                         )
+                                        Button(action: {
+                                                showEndDate = false
+                                                newEventEndDate = newEventDate
+                                                tempEndDate = nil
+                                                showCustomEndDatePicker = false
+                                            }) {
+                                                Text("Remove End Date")
+                                                    .font(.headline)
+                                                    .foregroundColor(.red)
+                                            }
+                                            .padding()
                                         .presentationDetents([.medium])
                                     }
                                     .frame(maxHeight: .infinity, alignment: .top)
@@ -507,7 +496,7 @@ struct CustomDatePicker: View {
                 Button(action: {
                     onRemoveEndDate()
                 }) {
-                    Image(systemName: "trash")
+                    Text("Remove End Date")
                         .font(.headline)
                         .foregroundColor(.red)
                 }
