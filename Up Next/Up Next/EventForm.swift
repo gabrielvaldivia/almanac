@@ -15,20 +15,20 @@ struct EventForm: View {
     @Binding var showCategoryManagementView: Bool
     @Binding var showDeleteActionSheet: Bool
     @Binding var selectedEvent: Event?
+    @FocusState var isTitleFocused: Bool
     var deleteEvent: () -> Void
     var deleteSeries: () -> Void
     @EnvironmentObject var appData: AppData
-    @FocusState private var isTitleFocused: Bool
     @State private var showingAddCategorySheet = false
     @State private var showCustomStartDatePicker = false
     @State private var showCustomEndDatePicker = false
     @State private var tempEndDate: Date?
     @State private var showRepeatOptions = false
-    var showDeleteButtons: Bool // Add this property
+    var showDeleteButtons: Bool
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground) // Set the background color to match the Form's background
+            Color(UIColor.systemGroupedBackground)
                 .edgesIgnoringSafeArea(.all)
             
             ScrollView {

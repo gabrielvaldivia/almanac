@@ -45,6 +45,7 @@ struct AddEventView: View {
                 showCategoryManagementView: $showCategoryManagementView,
                 showDeleteActionSheet: $showDeleteActionSheet,
                 selectedEvent: $selectedEvent,
+                isTitleFocused: _isTitleFocused, // Pass FocusState directly
                 deleteEvent: {}, // Remove deleteEvent functionality
                 deleteSeries: {}, // Remove deleteSeries functionality
                 showDeleteButtons: false // Do not show delete buttons
@@ -96,9 +97,7 @@ struct AddEventView: View {
             .presentationDetents([.medium, .large], selection: .constant(.medium))
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isTitleFocused = true
-            }
+            isTitleFocused = true
             selectedColor = CodableColor(color: .blue) // Set default color to blue
             if selectedCategory == nil {
                 selectedCategory = nil // Set default category to nil
