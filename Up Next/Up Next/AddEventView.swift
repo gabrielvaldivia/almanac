@@ -45,8 +45,9 @@ struct AddEventView: View {
                 showCategoryManagementView: $showCategoryManagementView,
                 showDeleteActionSheet: $showDeleteActionSheet,
                 selectedEvent: $selectedEvent,
-                deleteEvent: {},
-                deleteSeries: {}
+                deleteEvent: {}, // Remove deleteEvent functionality
+                deleteSeries: {}, // Remove deleteSeries functionality
+                showDeleteButtons: false // Do not show delete buttons
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
@@ -108,14 +109,6 @@ struct AddEventView: View {
         }
     }
 
-    func deleteEvent() {
-        if let event = selectedEvent {
-            if let index = events.firstIndex(where: { $0.id == event.id }) {
-                events.remove(at: index)
-            }
-        }
-    }
-
     func saveNewEvent() {
         let repeatUntilDate: Date?
         switch repeatUntilOption {
@@ -137,7 +130,6 @@ struct AddEventView: View {
             repeatUntil: repeatUntilDate
         )
 
-        // Create new events based on the repeat options
         let newEvents = generateRepeatingEvents(for: newEvent)
         events.append(contentsOf: newEvents)
 

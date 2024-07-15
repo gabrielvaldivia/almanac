@@ -65,7 +65,8 @@ struct EditEventView: View {
                 showDeleteActionSheet: $showDeleteActionSheet,
                 selectedEvent: $selectedEvent,
                 deleteEvent: deleteEvent,
-                deleteSeries: { showDeleteSeriesAlert = true }
+                deleteSeries: { showDeleteSeriesAlert = true },
+                showDeleteButtons: true // Ensure delete buttons are shown in EditEventView
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")

@@ -24,6 +24,7 @@ struct EventForm: View {
     @State private var showCustomEndDatePicker = false
     @State private var tempEndDate: Date?
     @State private var showRepeatOptions = false
+    var showDeleteButtons: Bool // Add this property
 
     var body: some View {
         ZStack {
@@ -408,28 +409,30 @@ struct EventForm: View {
                     .padding(.vertical, 8)
 
                     // DELETE EVENT
-                    Section {
-                        if let event = selectedEvent {
-                            if event.repeatOption == .never {
-                                Button("Delete Event") {
-                                    showDeleteActionSheet = true
+                    if showDeleteButtons {
+                        Section {
+                            if let event = selectedEvent {
+                                if event.repeatOption == .never {
+                                    Button("Delete Event") {
+                                        showDeleteActionSheet = true
+                                    }
+                                    .foregroundColor(.red)
+                                } else {
+                                    Button("Delete Event") {
+                                        deleteEvent()
+                                    }
+                                    .foregroundColor(.red)
+                                    
+                                    Button("Delete Series") {
+                                        deleteSeries()
+                                    }
+                                    .foregroundColor(.red)
                                 }
-                                .foregroundColor(.red)
-                            } else {
-                                Button("Delete Event") {
-                                    deleteEvent()
-                                }
-                                .foregroundColor(.red)
-                                
-                                Button("Delete Series") {
-                                    deleteSeries()
-                                }
-                                .foregroundColor(.red)
                             }
                         }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
                 }
                 .frame(maxHeight: .infinity, alignment: .top) 
             }
