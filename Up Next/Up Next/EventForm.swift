@@ -442,8 +442,6 @@ struct EventForm: View {
                             }
                         }
                     }
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .cornerRadius(12)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                 }
