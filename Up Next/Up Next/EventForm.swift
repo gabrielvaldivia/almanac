@@ -236,7 +236,7 @@ struct EventForm: View {
                                                 }
                                             }
                                         Stepper(value: $repeatCount, in: 1...100) {
-                                            Text(" times")
+                                            Text(" \(repeatCount == 1 ? (repeatOption == .daily ? "day" : repeatOption == .weekly ? "week" : repeatOption == .monthly ? "month" : "year") : (repeatOption == .daily ? "days" : repeatOption == .weekly ? "weeks" : repeatOption == .monthly ? "months" : "years"))")
                                         }
                                     }
                                     .padding(.leading)
