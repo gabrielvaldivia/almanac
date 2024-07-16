@@ -21,8 +21,10 @@ struct Event: Identifiable, Codable {
     var repeatOption: RepeatOption = .never
     var repeatUntil: Date?
     var seriesID: UUID?
+    var customRepeatCount: Int?
+    var repeatUnit: String?
 
-    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil) {
+    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil, customRepeatCount: Int? = nil, repeatUnit: String? = nil) {
         self.title = title
         self.date = date
         self.endDate = endDate
@@ -32,7 +34,30 @@ struct Event: Identifiable, Codable {
         self.repeatOption = repeatOption
         self.repeatUntil = repeatUntil
         self.seriesID = repeatOption == .never ? nil : seriesID
+        self.customRepeatCount = customRepeatCount
+        self.repeatUnit = repeatUnit
         print("Event initialized: \(self)")
+    }
+
+    // Custom decoding to provide default values for new properties
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        date = try container.decode(Date.self, forKey: .date)
+        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        color = try container.decode(CodableColor.self, forKey: .color)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        notificationsEnabled = try container.decode(Bool.self, forKey: .notificationsEnabled)
+        repeatOption = try container.decode(RepeatOption.self, forKey: .repeatOption)
+        repeatUntil = try container.decodeIfPresent(Date.self, forKey: .repeatUntil)
+        seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
+        customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
+        repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit
     }
 }
 

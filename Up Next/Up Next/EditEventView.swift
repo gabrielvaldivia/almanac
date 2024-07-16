@@ -25,6 +25,12 @@ struct EditEventView: View {
                 repeatIndefinitely = event.repeatUntil == nil
                 repeatCount = calculateRepeatCount(for: event)
                 updateRepeatUntilOption(for: event)
+                
+                // Add these lines to handle custom repeat values
+                if event.repeatOption == .custom {
+                    customRepeatCount = event.customRepeatCount ?? 1
+                    repeatUnit = event.repeatUnit ?? "Days"
+                }
             }
         }
     }
@@ -48,6 +54,7 @@ struct EditEventView: View {
     @State private var showRepeatOptions = true // Add this state variable
     @State private var repeatUnit: String = "Days" // Add this line
     @State private var repeatUntilCount: Int = 1 // Add this line
+    @State private var customRepeatCount: Int = 1 // Add this line
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -71,7 +78,8 @@ struct EditEventView: View {
                 deleteSeries: { showDeleteSeriesAlert = true },
                 showDeleteButtons: true, // Ensure delete buttons are shown in EditEventView
                 showRepeatOptions: $showRepeatOptions, // Pass the binding
-                repeatUnit: $repeatUnit // Add this line
+                repeatUnit: $repeatUnit, // Add this line
+                customRepeatCount: $customRepeatCount // Add this line
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")
@@ -209,34 +217,6 @@ struct EditEventView: View {
         }
     }
     
-    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date? {
-        switch option {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
-        case .custom:
-            switch repeatUnit {
-            case "Days":
-                return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
-            case "Weeks":
-                return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
-            case "Months":
-                return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
-            case "Years":
-                return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
-            default:
-                return nil
-            }
-        }
-    }
-    
     func generateRepeatingEvents(for event: Event) -> [Event] {
         var repeatingEvents = [Event]()
         var currentEvent = event
@@ -293,13 +273,13 @@ struct EditEventView: View {
         case .custom:
             switch repeatUnit {
             case "Days":
-                return Calendar.current.date(byAdding: .day, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .day, value: customRepeatCount, to: event.date)
             case "Weeks":
-                return Calendar.current.date(byAdding: .weekOfYear, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: event.date)
             case "Months":
-                return Calendar.current.date(byAdding: .month, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .month, value: customRepeatCount, to: event.date)
             case "Years":
-                return Calendar.current.date(byAdding: .year, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .year, value: customRepeatCount, to: event.date)
             default:
                 return nil
             }
@@ -370,6 +350,8 @@ struct EditEventView: View {
                 events[index].category = selectedCategory
                 events[index].color = selectedColor
                 events[index].repeatOption = repeatOption
+                events[index].customRepeatCount = customRepeatCount
+                events[index].repeatUnit = repeatUnit
             }
         case .allEvents:
             let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
@@ -383,6 +365,8 @@ struct EditEventView: View {
             events[selectedIndex].category = selectedCategory
             events[selectedIndex].color = selectedColor
             events[selectedIndex].repeatOption = repeatOption
+            events[selectedIndex].customRepeatCount = customRepeatCount
+            events[selectedIndex].repeatUnit = repeatUnit
 
             // Update future events
             var eventCount = 1
@@ -404,13 +388,13 @@ struct EditEventView: View {
                     case .custom:
                         switch repeatUnit {
                         case "Days":
-                            newEventDate = Calendar.current.date(byAdding: .day, value: repeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .day, value: customRepeatCount, to: previousEventDate)
                         case "Weeks":
-                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: repeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: previousEventDate)
                         case "Months":
-                            newEventDate = Calendar.current.date(byAdding: .month, value: repeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .month, value: customRepeatCount, to: previousEventDate)
                         case "Years":
-                            newEventDate = Calendar.current.date(byAdding: .year, value: repeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .year, value: customRepeatCount, to: previousEventDate)
                         default:
                             newEventDate = nil
                         }
@@ -445,13 +429,13 @@ struct EditEventView: View {
                     case .custom:
                         switch repeatUnit {
                         case "Days":
-                            newEventDate = Calendar.current.date(byAdding: .day, value: -repeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .day, value: -customRepeatCount, to: nextEventDate)
                         case "Weeks":
-                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -repeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -customRepeatCount, to: nextEventDate)
                         case "Months":
-                            newEventDate = Calendar.current.date(byAdding: .month, value: -repeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .month, value: -customRepeatCount, to: nextEventDate)
                         case "Years":
-                            newEventDate = Calendar.current.date(byAdding: .year, value: -repeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .year, value: -customRepeatCount, to: nextEventDate)
                         default:
                             newEventDate = nil
                         }

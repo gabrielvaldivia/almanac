@@ -11,7 +11,7 @@ struct EventForm: View {
     @Binding var repeatOption: RepeatOption
     @Binding var repeatUntil: Date
     @Binding var repeatUntilOption: RepeatUntilOption
-    @Binding var repeatUntilCount: Int // New binding property for repeat until count
+    @Binding var repeatUntilCount: Int
     @Binding var showCategoryManagementView: Bool
     @Binding var showDeleteActionSheet: Bool
     @Binding var selectedEvent: Event?
@@ -26,7 +26,7 @@ struct EventForm: View {
     var showDeleteButtons: Bool
     @Binding var showRepeatOptions: Bool
     @Binding var repeatUnit: String
-    @State private var customRepeatCount: Int = 1
+    @Binding var customRepeatCount: Int
 
     var body: some View {
         ZStack {
@@ -174,35 +174,49 @@ struct EventForm: View {
                             }
 
                             // Repeat Button
-                            Menu {
-                                ForEach(RepeatOption.allCases.filter { option in
-                                    if option == .never {
-                                        return false
+                            if !showRepeatOptions {
+                                Menu {
+                                    ForEach(RepeatOption.allCases.filter { option in
+                                        if option == .never {
+                                            return false
+                                        }
+                                        if option == .daily && showEndDate {
+                                            return false
+                                        }
+                                        if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                            return false
+                                        }
+                                        return true
+                                    }, id: \.self) { option in
+                                        Button(action: {
+                                            repeatOption = option
+                                            showRepeatOptions = option != .never
+                                        }) {
+                                            Text(option.rawValue)
+                                                .foregroundColor(option == repeatOption ? .gray : .primary)
+                                        }
                                     }
-                                    if option == .daily && showEndDate {
-                                        return false
-                                    }
-                                    if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
-                                        return false
-                                    }
-                                    return true
-                                }, id: \.self) { option in
-                                    Button(action: {
-                                        repeatOption = option
-                                        showRepeatOptions = option != .never
-                                    }) {
-                                        Text(option.rawValue)
-                                            .foregroundColor(option == repeatOption ? .gray : .primary)
-                                    }
+                                } label: {
+                                    Image(systemName: "repeat")
+                                        .foregroundColor(.primary)
+                                        .padding(8)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(8)
                                 }
-                            } label: {
-                                Image(systemName: "repeat")
-                                    .foregroundColor(.primary)
-                                    .padding(8)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(8)
+                                .padding(.trailing, 6)
+                            } else {
+                                Button(action: {
+                                    repeatOption = .never
+                                    showRepeatOptions = false
+                                }) {
+                                    Image(systemName: "repeat")
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(getCategoryColor())
+                                        .cornerRadius(8)
+                                }
+                                .padding(.trailing, 6)
                             }
-                            .padding(.trailing, 6)
                         }
                         .padding(.vertical, 6)
 
@@ -259,8 +273,8 @@ struct EventForm: View {
                                             .keyboardType(.numberPad)
                                             .frame(width: 40)
                                             .multilineTextAlignment(.center)
-                                            .onChange(of: customRepeatCount) {
-                                                if customRepeatCount < 1 {
+                                            .onChange(of: customRepeatCount) { newValue in
+                                                if newValue < 1 {
                                                     customRepeatCount = 1
                                                 }
                                             }
@@ -343,7 +357,7 @@ struct EventForm: View {
                                                     }
                                                 }
                                             Stepper(value: $repeatUntilCount, in: 1...100) {
-                                                Text(" \(repeatUntilCount == 1 ? (repeatOption == .daily ? "day" : repeatOption == .weekly ? "week" : repeatOption == .monthly ? "month" : "year") : (repeatOption == .daily ? "days" : repeatOption == .weekly ? "weeks" : repeatOption == .monthly ? "months" : "years"))")
+                                                Text(" \(repeatUntilCount == 1 ? "time" : "times")")
                                             }
                                         }
                                         .padding(.leading)

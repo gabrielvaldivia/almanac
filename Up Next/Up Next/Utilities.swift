@@ -130,4 +130,30 @@ func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, su
     }
 }
 
-
+func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date? {
+    switch option {
+    case .never:
+        return nil
+    case .daily:
+        return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
+    case .weekly:
+        return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
+    case .monthly:
+        return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
+    case .yearly:
+        return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+    case .custom:
+        switch repeatUnit {
+        case "Days":
+            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
+        case "Weeks":
+            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
+        case "Months":
+            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
+        case "Years":
+            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+        default:
+            return nil
+        }
+    }
+}

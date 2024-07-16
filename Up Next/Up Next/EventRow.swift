@@ -52,9 +52,16 @@ struct EventRow: View {
                         .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                 }
                 if event.repeatOption != .never {
-                    Text("Repeats \(event.repeatOption.rawValue.lowercased())")
-                        .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
+                    if event.repeatOption == .custom, let count = event.customRepeatCount, let unit = event.repeatUnit {
+                        let unitText = count == 1 ? String(unit.lowercased().dropLast()) : unit.lowercased()
+                        Text("Repeats every \(count) \(unitText)")
+                            .roundedFont(.footnote)
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
+                    } else {
+                        Text("Repeats \(event.repeatOption.rawValue.lowercased())")
+                            .roundedFont(.footnote)
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
+                    }
                 }
             }
             .padding(.vertical, 10)
