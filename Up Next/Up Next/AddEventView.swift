@@ -29,7 +29,7 @@ struct AddEventView: View {
     @State private var showCategoryManagementView = false // Add this state variable
     @State private var showDeleteActionSheet = false // Add this state variable
     @State private var showRepeatOptions = false // Set this to false by default
-    @State private var repeatUnit: String = "days" // Add this line
+    @State private var repeatUnit: String = "Days" // Add this line
 
     var body: some View {
         NavigationView {
@@ -118,7 +118,7 @@ struct AddEventView: View {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatCount)
+            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatCount, repeatUnit: repeatUnit)
         case .onDate:
             repeatUntilDate = repeatUntil
         }
@@ -142,7 +142,7 @@ struct AddEventView: View {
         appData.scheduleDailyNotification() // Reschedule notification when an event is added
     }
 
-    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
+    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date? {
         switch option {
         case .never:
             return nil
@@ -155,7 +155,6 @@ struct AddEventView: View {
         case .yearly:
             return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
         case .custom:
-            // Handle custom repeat option
             switch repeatUnit {
             case "Days":
                 return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
@@ -226,13 +225,13 @@ struct AddEventView: View {
             return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
         case .custom:
             switch repeatUnit {
-            case "days":
+            case "Days":
                 return Calendar.current.date(byAdding: .day, value: repeatCount, to: event.date)
-            case "weeks":
+            case "Weeks":
                 return Calendar.current.date(byAdding: .weekOfYear, value: repeatCount, to: event.date)
-            case "months":
+            case "Months":
                 return Calendar.current.date(byAdding: .month, value: repeatCount, to: event.date)
-            case "years":
+            case "Years":
                 return Calendar.current.date(byAdding: .year, value: repeatCount, to: event.date)
             default:
                 return nil
