@@ -24,6 +24,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            // Notifications Section
             Section(header: Text("Notifications")) {
                 Toggle("Daily Notification", isOn: $dailyNotificationEnabled)
                     .onChange(of: dailyNotificationEnabled) { oldValue, newValue in
@@ -34,6 +35,7 @@ struct SettingsView: View {
                 }
             }
             
+            // Categories Section
             Section(header: Text("Categories")) {
                 HStack {
                     Text("Default Category")
@@ -70,6 +72,7 @@ struct SettingsView: View {
                 }
             }
             
+            // Support Section
             Section(header: Text("Support")) {
                 Button(action: {
                     if let url = URL(string: "https://twitter.com/gabrielvaldivia") {
@@ -101,6 +104,7 @@ struct SettingsView: View {
                 }
             }
             
+            // Danger Zone Section
             Section(header: Text("Danger Zone")) {
                 Button(action: {
                     showingDeleteAllAlert = true
@@ -131,6 +135,7 @@ struct SettingsView: View {
         }
     }
     
+    // Function to delete all events
     private func deleteAllEvents() {
         appData.objectWillChange.send()  // Notify the view of changes
         appData.events.removeAll()
@@ -138,6 +143,7 @@ struct SettingsView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
 
+    // Function to fetch subscription product
     private func fetchSubscriptionProduct() async {
         do {
             print("Fetching products...")
@@ -171,6 +177,7 @@ struct SettingsView: View {
         }
     }
 
+    // Function to handle subscription purchase
     private func purchaseSubscription(product: Product) async {
         do {
             let result = try await product.purchase()
@@ -195,6 +202,7 @@ struct SettingsView: View {
         }
     }
 
+    // Function to listen for transactions
     private func listenForTransactions() {
         Task {
             for await verification in Transaction.updates {
@@ -211,6 +219,7 @@ struct SettingsView: View {
         }
     }
 
+    // Function to handle daily notification toggle
     private func handleDailyNotificationToggle(_ isEnabled: Bool) {
         appData.setDailyNotification(enabled: isEnabled)
         UserDefaults.standard.set(isEnabled, forKey: "dailyNotificationEnabled") // Save state to UserDefaults
@@ -221,6 +230,7 @@ struct SettingsView: View {
     }
 }
 
+// Wrapper for PaymentViewController
 struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
 
@@ -268,6 +278,7 @@ struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
     }
 }
 
+// Preview for SettingsView
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()

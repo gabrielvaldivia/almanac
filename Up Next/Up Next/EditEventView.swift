@@ -10,12 +10,15 @@ import SwiftUI
 import WidgetKit
 import UserNotifications
 
+// Enum for delete options
 enum DeleteOption {
     case thisEvent
     case allEvents
 }
 
+// Main view for editing an event
 struct EditEventView: View {
+    // Bindings to parent view's state
     @Binding var events: [Event]
     @Binding var selectedEvent: Event? {
         didSet {
@@ -41,6 +44,8 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor
+
+    // State variables for repeat options
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
@@ -55,11 +60,16 @@ struct EditEventView: View {
     @State private var repeatUnit: String = "Days" // Add this line
     @State private var repeatUntilCount: Int = 1 // Add this line
     @State private var customRepeatCount: Int = 1 // Add this line
+
+    // Function to save the event
     var saveEvent: () -> Void
+
+    // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
 
     var body: some View {
         NavigationView {
+            // Event form view
             EventForm(
                 newEventTitle: $newEventTitle,
                 newEventDate: $newEventDate,
@@ -85,6 +95,7 @@ struct EditEventView: View {
             .navigationTitle("Edit Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Toolbar with cancel and save buttons
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showEditSheet = false
@@ -155,6 +166,7 @@ struct EditEventView: View {
             }
         }
         .onAppear {
+            // Set initial values when the view appears
             if let event = selectedEvent {
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
@@ -166,6 +178,7 @@ struct EditEventView: View {
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
     }
 
+    // Function to delete an event
     func deleteEvent() {
         guard let event = selectedEvent else { return }
         
@@ -182,6 +195,7 @@ struct EditEventView: View {
         showEditSheet = false
     }
 
+    // Function to delete a series of events
     func deleteSeries() {
         guard let event = selectedEvent else { return }
         events.removeAll { $0.seriesID == event.seriesID }
@@ -189,6 +203,7 @@ struct EditEventView: View {
         showEditSheet = false
     }
 
+    // Function to delete a single event
     func deleteSingleEvent() {
         if let event = selectedEvent {
             if let index = appData.events.firstIndex(where: { $0.id == event.id }) {
@@ -200,10 +215,12 @@ struct EditEventView: View {
         }
     }
 
+    // Function to get the color of the selected category
     func getCategoryColor() -> Color {
         return selectedColor.color
     }
 
+    // Function to save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -217,12 +234,14 @@ struct EditEventView: View {
         }
     }
     
+    // Custom date formatter
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM, d, yyyy"
         return formatter
     }
 
+    // Function to update the repeat until option based on the event's repeat until date
     private func updateRepeatUntilOption(for event: Event) {
         if let repeatUntil = event.repeatUntil {
             if repeatUntil == Calendar.current.date(byAdding: .day, value: repeatCount - 1, to: event.date) {
@@ -237,6 +256,7 @@ struct EditEventView: View {
         }
     }
     
+    // Function to calculate the repeat count for an event
     private func calculateRepeatCount(for event: Event) -> Int {
         guard let repeatUntil = event.repeatUntil else { return 1 }
         switch event.repeatOption {
@@ -253,19 +273,20 @@ struct EditEventView: View {
         case .custom:
             switch repeatUnit {
             case "Days":
-                return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! + 1
+                return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! / customRepeatCount + 1
             case "Weeks":
-                return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! + 1
+                return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! / customRepeatCount + 1
             case "Months":
-                return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! + 1
+                return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! / customRepeatCount + 1
             case "Years":
-                return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! + 1
+                return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! / customRepeatCount + 1
             default:
                 return 1
             }
         }
     }
     
+    // Function to apply changes to an event or series of events
     func applyChanges(to option: DeleteOption) {
         guard let selectedEvent = selectedEvent else { return }
 
@@ -404,6 +425,7 @@ struct EditEventView: View {
     }
 }
 
+// Custom view modifier for alert controller
 struct AlertControllerModifier: ViewModifier {
     @Binding var isPresented: Bool
     var title: String
@@ -423,6 +445,7 @@ struct AlertControllerModifier: ViewModifier {
     }
 }
 
+// Representable for alert controller
 struct AlertControllerRepresentable: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     var title: String
@@ -451,6 +474,7 @@ struct AlertControllerRepresentable: UIViewControllerRepresentable {
     }
 }
 
+// Extension to add alert controller modifier to any view
 extension View {
     func alertController(isPresented: Binding<Bool>, title: String, message: String, confirmAction: @escaping () -> Void) -> some View {
         self.modifier(AlertControllerModifier(isPresented: isPresented, title: title, message: message, confirmAction: confirmAction))

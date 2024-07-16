@@ -10,7 +10,9 @@ import SwiftUI
 import UserNotifications
 import WidgetKit // Add this import
 
+// Main view for adding a new event
 struct AddEventView: View {
+    // Bindings to parent view's state
     @Binding var events: [Event]
     @Binding var selectedEvent: Event?
     @Binding var newEventTitle: String
@@ -20,12 +22,20 @@ struct AddEventView: View {
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor // Use CodableColor to store color
+
+    // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
+
+    // Focus state for managing keyboard focus
     @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
+
+    // State variables for repeat options
     @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
     @State private var repeatUntilCount: Int = 1 // New state variable for number of repetitions
+
+    // State variables for UI management
     @State private var showCategoryManagementView = false // Add this state variable
     @State private var showDeleteActionSheet = false // Add this state variable
     @State private var showRepeatOptions = false // Set this to false by default
@@ -34,6 +44,7 @@ struct AddEventView: View {
 
     var body: some View {
         NavigationView {
+            // Event form view
             EventForm(
                 newEventTitle: $newEventTitle,
                 newEventDate: $newEventDate,
@@ -60,6 +71,7 @@ struct AddEventView: View {
             .navigationTitle("Add Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Toolbar with cancel and save buttons
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showAddEventSheet = false
@@ -96,6 +108,7 @@ struct AddEventView: View {
             }
         }
         .sheet(isPresented: $showCategoryManagementView) {
+            // Category management view
             NavigationView {
                 CategoriesView()
                     .environmentObject(appData)
@@ -103,6 +116,7 @@ struct AddEventView: View {
             .presentationDetents([.medium, .large], selection: .constant(.medium))
         }
         .onAppear {
+            // Set initial focus and default values
             isTitleFocused = true
             selectedColor = CodableColor(color: .blue) // Set default color to blue
             if selectedCategory == nil {
@@ -110,10 +124,12 @@ struct AddEventView: View {
             }
         }
         .onDisappear {
+            // Clear focus when view disappears
             isTitleFocused = false
         }
     }
 
+    // Function to save the new event
     func saveNewEvent() {
         let repeatUntilDate: Date?
         switch repeatUntilOption {
@@ -139,13 +155,13 @@ struct AddEventView: View {
 
         let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)
         events.append(contentsOf: newEvents)
-
         saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         appData.objectWillChange.send() // Notify observers of changes
         appData.scheduleDailyNotification() // Reschedule notification when an event is added
     }
 
+    // Function to save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

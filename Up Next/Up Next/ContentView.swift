@@ -11,6 +11,8 @@ import WidgetKit
 import UserNotifications
 
 struct ContentView: View {
+
+    // State variables to manage the view's state
     @State private var events: [Event] = []
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
@@ -25,11 +27,13 @@ struct ContentView: View {
     @State private var selectedCategory: String? = nil
     @State private var monthsToLoad: Int = 12
 
+    // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
 
     @FocusState private var isFocused: Bool
 
+    // Date formatters
     let itemDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
@@ -46,18 +50,22 @@ struct ContentView: View {
     NavigationView {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
+                // Sorting and grouping events
                 let sortedEvents = filteredEvents().sorted(by: { $0.date < $1.date })
                 let groupedEventsByMonth = groupEventsByMonth(events: sortedEvents)
                 let sortedMonths = groupedEventsByMonth.keys.sorted()
 
                 if sortedMonths.isEmpty {
+                     // Empty state view when no events are available
                     emptyStateView()
                 } else {
                     ScrollView {
                         LazyVStack {
+                            // Category filter view
                             Section(header: CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                                         .padding(.vertical, 10)
                             ) {
+                                // Displaying events grouped by month
                                 ForEach(sortedMonths, id: \.self) { month in
                                     VStack(alignment: .leading) {
                                         Text(itemDateFormatter.string(from: month))
@@ -69,6 +77,7 @@ struct ContentView: View {
                                         let groupedEventsByDate = groupEventsByDate(events: eventsInMonth)
                                         let sortedKeys = sortKeys(Array(groupedEventsByDate.keys))
 
+                                        // Displaying events grouped by date
                                         ForEach(sortedKeys, id: \.self) { key in
                                             eventRowView(key: key, events: groupedEventsByDate[key]!)
                                         }
@@ -80,6 +89,7 @@ struct ContentView: View {
                             }
                         }
                         
+                        // "View More" button to load more events
                         if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
                             if hasMoreEventsToLoad() {
                                 Button(action: {
@@ -128,6 +138,7 @@ struct ContentView: View {
                 handleOpenURL(url)
             }
 
+            // Add Event Button
             AddEventButton(
                 selectedCategoryFilter: $selectedCategoryFilter,
                 showAddEventSheet: $showAddEventSheet,
@@ -144,6 +155,7 @@ struct ContentView: View {
     }
     .focused($isFocused)
     .sheet(isPresented: $showAddEventSheet) {
+        // Add Event Sheet
         AddEventView(
             events: $events,
             selectedEvent: $selectedEvent,
@@ -159,6 +171,7 @@ struct ContentView: View {
         .focused($isFocused)
     }
     .sheet(isPresented: $showEditSheet) {
+        // Edit Event Sheet
         EditEventView(
             events: $events,
             selectedEvent: $selectedEvent,
@@ -175,6 +188,7 @@ struct ContentView: View {
         .focused($isFocused)
     }
     .sheet(isPresented: $showPastEventsSheet) {
+        // Past Events Sheet
         PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
             .environmentObject(appData)
             .focused($isFocused)
@@ -188,6 +202,7 @@ func groupEventsByMonth(events: [Event]) -> [Date: [Event]] {
     })
 }
 
+// Group events by date
 func groupEventsByDate(events: [Event]) -> [String: [Event]] {
     return Dictionary(grouping: events, by: { event in
         if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
@@ -198,6 +213,7 @@ func groupEventsByDate(events: [Event]) -> [String: [Event]] {
     })
 }
 
+// Sort keys for grouped events
 func sortKeys(_ keys: [String]) -> [String] {
     return keys.sorted { key1, key2 in
         let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
@@ -206,6 +222,7 @@ func sortKeys(_ keys: [String]) -> [String] {
     }
 }
 
+// View for each event row
 func eventRowView(key: String, events: [Event]) -> some View {
     HStack(alignment: .top) {
         Text(key.uppercased())
@@ -239,6 +256,7 @@ func eventRowView(key: String, events: [Event]) -> some View {
     }
 }
 
+// Empty state view when no events are available
 func emptyStateView() -> some View {
     VStack {
         Spacer()
@@ -252,6 +270,7 @@ func emptyStateView() -> some View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
 }
 
+// Handle URL scheme for adding events
 func handleOpenURL(_ url: URL) {
     if url.scheme == "upnext" && url.host == "addEvent" {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -264,7 +283,7 @@ func handleOpenURL(_ url: URL) {
         }
     }
 }
-
+    // Filter events based on selected category and date range
     func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
@@ -286,6 +305,7 @@ func handleOpenURL(_ url: URL) {
         return allEvents.sorted { $0.date < $1.date }
     }
 
+    // Delete an event
     func deleteEvent(at event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
@@ -295,6 +315,7 @@ func handleOpenURL(_ url: URL) {
         }
     }
 
+    // Load events from UserDefaults
     func loadEvents() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -307,6 +328,7 @@ func handleOpenURL(_ url: URL) {
         }
     }
 
+    // Save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -320,6 +342,7 @@ func handleOpenURL(_ url: URL) {
         }
     }
     
+    // Save the currently edited event
     func saveEvent() {
         if let selectedEvent = selectedEvent,
            let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
@@ -335,6 +358,7 @@ func handleOpenURL(_ url: URL) {
         showEditSheet = false
     }
     
+    // Add a new event
     func addNewEvent() {
         let defaultEndDate = showEndDate ? newEventEndDate : nil
         let newEvent = Event(title: newEventTitle, date: newEventDate, endDate: defaultEndDate, color: selectedColor, category: nil)
@@ -352,6 +376,7 @@ func handleOpenURL(_ url: URL) {
         WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
     
+     // Check if there are more events to load
     func hasMoreEventsToLoad() -> Bool {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
