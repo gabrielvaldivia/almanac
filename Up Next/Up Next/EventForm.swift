@@ -24,7 +24,8 @@ struct EventForm: View {
     @State private var showCustomEndDatePicker = false
     @State private var tempEndDate: Date?
     var showDeleteButtons: Bool
-    @Binding var showRepeatOptions: Bool // Change this to a Binding
+    @Binding var showRepeatOptions: Bool
+    @Binding var repeatUnit: String
 
     var body: some View {
         ZStack {
@@ -246,6 +247,46 @@ struct EventForm: View {
 
                                 Divider()
                                     .padding(.leading)
+
+                                // Custom Repeat Option
+                                if repeatOption == .custom {
+                                    HStack {
+                                        Text("Every")
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                            .keyboardType(.numberPad)
+                                            .frame(width: 40)
+                                            .multilineTextAlignment(.center)
+                                            .onChange(of: repeatCount) {
+                                                if repeatCount < 1 {
+                                                    repeatCount = 1
+                                                }
+                                            }
+                                        Menu {
+                                            ForEach(["Days", "Weeks", "Months", "Years"], id: \.self) { unit in
+                                                Button(action: {
+                                                    repeatUnit = unit
+                                                }) {
+                                                    Text(unit)
+                                                        .foregroundColor(unit == repeatUnit ? .gray : .primary)
+                                                }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Text(repeatUnit)
+                                                    .foregroundColor(.gray)
+                                                Image(systemName: "chevron.up.chevron.down")
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 6)
+
+                                    Divider()
+                                    .padding(.leading)
+                                }
 
                                 // END REPEAT
                                 if repeatOption != .never {

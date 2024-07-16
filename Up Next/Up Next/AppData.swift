@@ -42,6 +42,7 @@ enum RepeatOption: String, Codable, CaseIterable {
     case weekly = "Weekly"
     case monthly = "Monthly"
     case yearly = "Yearly"
+    case custom = "Custom"
 }
 
 struct CategoryData: Codable {
