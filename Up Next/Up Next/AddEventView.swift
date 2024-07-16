@@ -25,7 +25,7 @@ struct AddEventView: View {
     @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
-    @State private var repeatCount: Int = 1 // New state variable for number of repetitions
+    @State private var repeatUntilCount: Int = 1 // New state variable for number of repetitions
     @State private var showCategoryManagementView = false // Add this state variable
     @State private var showDeleteActionSheet = false // Add this state variable
     @State private var showRepeatOptions = false // Set this to false by default
@@ -43,7 +43,7 @@ struct AddEventView: View {
                 repeatOption: $repeatOption,
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
-                repeatCount: $repeatCount,
+                repeatUntilCount: $repeatUntilCount, // Pass the binding
                 showCategoryManagementView: $showCategoryManagementView,
                 showDeleteActionSheet: $showDeleteActionSheet,
                 selectedEvent: $selectedEvent,
@@ -118,7 +118,7 @@ struct AddEventView: View {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatCount, repeatUnit: repeatUnit)
+            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatUntilCount, repeatUnit: repeatUnit)
         case .onDate:
             repeatUntilDate = repeatUntil
         }
@@ -184,7 +184,7 @@ struct AddEventView: View {
         case .indefinitely:
             maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
         case .after:
-            maxRepetitions = repeatCount
+            maxRepetitions = repeatUntilCount
         case .onDate:
             maxRepetitions = 100 // Set a reasonable upper limit to prevent crashes
         }
@@ -226,13 +226,13 @@ struct AddEventView: View {
         case .custom:
             switch repeatUnit {
             case "Days":
-                return Calendar.current.date(byAdding: .day, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .day, value: repeatUntilCount, to: event.date)
             case "Weeks":
-                return Calendar.current.date(byAdding: .weekOfYear, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .weekOfYear, value: repeatUntilCount, to: event.date)
             case "Months":
-                return Calendar.current.date(byAdding: .month, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .month, value: repeatUntilCount, to: event.date)
             case "Years":
-                return Calendar.current.date(byAdding: .year, value: repeatCount, to: event.date)
+                return Calendar.current.date(byAdding: .year, value: repeatUntilCount, to: event.date)
             default:
                 return nil
             }

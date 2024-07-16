@@ -47,6 +47,7 @@ struct EditEventView: View {
     @State private var showDeleteSeriesAlert = false
     @State private var showRepeatOptions = true // Add this state variable
     @State private var repeatUnit: String = "Days" // Add this line
+    @State private var repeatUntilCount: Int = 1 // Add this line
     var saveEvent: () -> Void
     @EnvironmentObject var appData: AppData
 
@@ -62,7 +63,7 @@ struct EditEventView: View {
                 repeatOption: $repeatOption,
                 repeatUntil: $repeatUntil,
                 repeatUntilOption: $repeatUntilOption,
-                repeatCount: $repeatCount,
+                repeatUntilCount: $repeatUntilCount, // Pass the binding
                 showCategoryManagementView: $showCategoryManagementView,
                 showDeleteActionSheet: $showDeleteActionSheet,
                 selectedEvent: $selectedEvent,

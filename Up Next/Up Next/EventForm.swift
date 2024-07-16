@@ -11,7 +11,7 @@ struct EventForm: View {
     @Binding var repeatOption: RepeatOption
     @Binding var repeatUntil: Date
     @Binding var repeatUntilOption: RepeatUntilOption
-    @Binding var repeatCount: Int
+    @Binding var repeatUntilCount: Int // New binding property for repeat until count
     @Binding var showCategoryManagementView: Bool
     @Binding var showDeleteActionSheet: Bool
     @Binding var selectedEvent: Event?
@@ -26,6 +26,7 @@ struct EventForm: View {
     var showDeleteButtons: Bool
     @Binding var showRepeatOptions: Bool
     @Binding var repeatUnit: String
+    @State private var customRepeatCount: Int = 1
 
     var body: some View {
         ZStack {
@@ -254,13 +255,13 @@ struct EventForm: View {
                                         Text("Every")
                                             .foregroundColor(.primary)
                                         Spacer()
-                                        TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                        TextField("", value: $customRepeatCount, formatter: NumberFormatter())
                                             .keyboardType(.numberPad)
                                             .frame(width: 40)
                                             .multilineTextAlignment(.center)
-                                            .onChange(of: repeatCount) {
-                                                if repeatCount < 1 {
-                                                    repeatCount = 1
+                                            .onChange(of: customRepeatCount) {
+                                                if customRepeatCount < 1 {
+                                                    customRepeatCount = 1
                                                 }
                                             }
                                         Menu {
@@ -325,23 +326,24 @@ struct EventForm: View {
                                     .padding(.horizontal)
                                     .padding(.top, 8)
                                     .padding(.bottom, repeatUntilOption == .indefinitely ? 12 : 6)
+                                    
                                     // AFTER
                                     if repeatUntilOption == .after {
                                         Divider()
                                         .padding(.leading)
 
                                         HStack {
-                                            TextField("", value: $repeatCount, formatter: NumberFormatter())
+                                            TextField("", value: $repeatUntilCount, formatter: NumberFormatter())
                                                 .keyboardType(.numberPad)
                                                 .frame(width: 24)
                                                 .multilineTextAlignment(.center)
-                                                .onChange(of: repeatCount) {
-                                                    if repeatCount < 1 {
-                                                        repeatCount = 1
+                                                .onChange(of: repeatUntilCount) {
+                                                    if repeatUntilCount < 1 {
+                                                        repeatUntilCount = 1
                                                     }
                                                 }
-                                            Stepper(value: $repeatCount, in: 1...100) {
-                                                Text(" \(repeatCount == 1 ? (repeatOption == .daily ? "day" : repeatOption == .weekly ? "week" : repeatOption == .monthly ? "month" : "year") : (repeatOption == .daily ? "days" : repeatOption == .weekly ? "weeks" : repeatOption == .monthly ? "months" : "years"))")
+                                            Stepper(value: $repeatUntilCount, in: 1...100) {
+                                                Text(" \(repeatUntilCount == 1 ? (repeatOption == .daily ? "day" : repeatOption == .weekly ? "week" : repeatOption == .monthly ? "month" : "year") : (repeatOption == .daily ? "days" : repeatOption == .weekly ? "weeks" : repeatOption == .monthly ? "months" : "years"))")
                                             }
                                         }
                                         .padding(.leading)
