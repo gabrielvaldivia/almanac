@@ -98,7 +98,6 @@ func daysFromRelativeDate(_ relativeDate: String) -> Int {
     }
 }
 
-
 func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, suiteName: String? = nil) {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
@@ -156,4 +155,79 @@ func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, co
             return nil
         }
     }
+}
+
+func getNextRepeatDate(for event: Event) -> Date? {
+    switch event.repeatOption {
+    case .never:
+        return nil
+    case .daily:
+        return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+    case .weekly:
+        return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
+    case .monthly:
+        return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
+    case .yearly:
+        return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
+    case .custom:
+        switch event.repeatUnit {
+        case "Days":
+            return Calendar.current.date(byAdding: .day, value: event.customRepeatCount ?? 1, to: event.date)
+        case "Weeks":
+            return Calendar.current.date(byAdding: .weekOfYear, value: event.customRepeatCount ?? 1, to: event.date)
+        case "Months":
+            return Calendar.current.date(byAdding: .month, value: event.customRepeatCount ?? 1, to: event.date)
+        case "Years":
+            return Calendar.current.date(byAdding: .year, value: event.customRepeatCount ?? 1, to: event.date)
+        default:
+            return nil
+        }
+    }
+}
+
+enum RepeatUntilOption: String, CaseIterable {
+    case indefinitely = "Never"
+    case after = "After"
+    case onDate = "On"
+}
+
+func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOption, showEndDate: Bool) -> [Event] {
+    var repeatingEvents = [Event]()
+    var currentEvent = event
+    let seriesID = UUID()
+    currentEvent.seriesID = seriesID
+    repeatingEvents.append(currentEvent)
+    
+    var repetitionCount = 1
+    let maxRepetitions: Int
+    
+    switch repeatUntilOption {
+    case .indefinitely:
+        maxRepetitions = 100
+    case .after:
+        maxRepetitions = event.repeatUntilCount ?? 1
+    case .onDate:
+        maxRepetitions = 100
+    }
+    
+    let duration = Calendar.current.dateComponents([.day], from: event.date, to: event.endDate ?? event.date).day ?? 0
+    
+    while let nextDate = getNextRepeatDate(for: currentEvent),
+          nextDate <= (event.repeatUntil ?? Date.distantFuture),
+          repetitionCount < maxRepetitions {
+        currentEvent = Event(
+            title: event.title,
+            date: nextDate,
+            endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
+            color: event.color,
+            category: event.category,
+            repeatOption: event.repeatOption,
+            repeatUntil: event.repeatUntil,
+            seriesID: seriesID
+        )
+        repeatingEvents.append(currentEvent)
+        repetitionCount += 1
+    }
+    
+    return repeatingEvents
 }

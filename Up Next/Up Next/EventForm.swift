@@ -273,8 +273,8 @@ struct EventForm: View {
                                             .keyboardType(.numberPad)
                                             .frame(width: 40)
                                             .multilineTextAlignment(.center)
-                                            .onChange(of: customRepeatCount) { newValue in
-                                                if newValue < 1 {
+                                            .onChange(of: customRepeatCount) {
+                                                if customRepeatCount < 1 {
                                                     customRepeatCount = 1
                                                 }
                                             }

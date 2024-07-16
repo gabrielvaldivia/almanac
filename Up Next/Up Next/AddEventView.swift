@@ -133,86 +133,17 @@ struct AddEventView: View {
             category: selectedCategory,
             repeatOption: repeatOption,
             repeatUntil: repeatUntilDate,
-            customRepeatCount: customRepeatCount, // Add this line
-            repeatUnit: repeatUnit // Add this line
+            customRepeatCount: customRepeatCount,
+            repeatUnit: repeatUnit
         )
 
-        let newEvents = generateRepeatingEvents(for: newEvent)
+        let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)
         events.append(contentsOf: newEvents)
 
         saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
         appData.objectWillChange.send() // Notify observers of changes
         appData.scheduleDailyNotification() // Reschedule notification when an event is added
-    }
-
-    func generateRepeatingEvents(for event: Event) -> [Event] {
-        var repeatingEvents = [Event]()
-        var currentEvent = event
-        let seriesID = UUID()
-        currentEvent.seriesID = seriesID
-        repeatingEvents.append(currentEvent)
-        
-        var repetitionCount = 1
-        let maxRepetitions: Int
-        
-        switch repeatUntilOption {
-        case .indefinitely:
-            maxRepetitions = 100
-        case .after:
-            maxRepetitions = repeatUntilCount
-        case .onDate:
-            maxRepetitions = 100
-        }
-        
-        let duration = Calendar.current.dateComponents([.day], from: event.date, to: event.endDate ?? event.date).day ?? 0
-        
-        while let nextDate = getNextRepeatDate(for: currentEvent),
-              nextDate <= (event.repeatUntil ?? Date.distantFuture),
-              repetitionCount < maxRepetitions {
-            currentEvent = Event(
-                title: event.title,
-                date: nextDate,
-                endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
-                color: event.color,
-                category: event.category,
-                repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil,
-                seriesID: seriesID
-            )
-            repeatingEvents.append(currentEvent)
-            repetitionCount += 1
-        }
-        
-        return repeatingEvents
-    }
-
-    func getNextRepeatDate(for event: Event) -> Date? {
-        switch event.repeatOption {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
-        case .custom:
-            switch repeatUnit {
-            case "Days":
-                return Calendar.current.date(byAdding: .day, value: customRepeatCount, to: event.date)
-            case "Weeks":
-                return Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: event.date)
-            case "Months":
-                return Calendar.current.date(byAdding: .month, value: customRepeatCount, to: event.date)
-            case "Years":
-                return Calendar.current.date(byAdding: .year, value: customRepeatCount, to: event.date)
-            default:
-                return nil
-            }
-        }
     }
 
     func saveEvents() {
@@ -237,12 +168,6 @@ struct AddEventView: View {
 // Helper function to hide the keyboard
 private func hideKeyboard() {
     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-}
-
-enum RepeatUntilOption: String, CaseIterable {
-    case indefinitely = "Never" // Changed from "Indefinitely" to "Never"
-    case after = "After"
-    case onDate = "On"
 }
 
 // Custom date formatter

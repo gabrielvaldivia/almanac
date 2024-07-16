@@ -23,6 +23,7 @@ struct Event: Identifiable, Codable {
     var seriesID: UUID?
     var customRepeatCount: Int?
     var repeatUnit: String?
+    var repeatUntilCount: Int? // Added this line
 
     init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil, customRepeatCount: Int? = nil, repeatUnit: String? = nil) {
         self.title = title
@@ -54,10 +55,11 @@ struct Event: Identifiable, Codable {
         seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
         customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
+        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) // Added this line
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit
+        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount // Added repeatUntilCount
     }
 }
 
