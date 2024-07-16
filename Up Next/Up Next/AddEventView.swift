@@ -150,7 +150,8 @@ struct AddEventView: View {
             repeatOption: repeatOption,
             repeatUntil: repeatUntilDate,
             customRepeatCount: customRepeatCount,
-            repeatUnit: repeatUnit
+            repeatUnit: repeatUnit,
+            repeatUntilCount: repeatUntilCount
         )
 
         let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)

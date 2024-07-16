@@ -29,7 +29,7 @@ struct EditEventView: View {
                 repeatCount = calculateRepeatCount(for: event)
                 updateRepeatUntilOption(for: event)
                 
-                // Add these lines to handle custom repeat values
+                // Ensure custom repeat values are set correctly
                 if event.repeatOption == .custom {
                     customRepeatCount = event.customRepeatCount ?? 1
                     repeatUnit = event.repeatUnit ?? "Days"
@@ -173,6 +173,12 @@ struct EditEventView: View {
                 repeatIndefinitely = event.repeatUntil == nil
                 repeatCount = calculateRepeatCount(for: event)
                 updateRepeatUntilOption(for: event)
+                
+                // Ensure custom repeat values are set correctly
+                if event.repeatOption == .custom {
+                    customRepeatCount = event.customRepeatCount ?? 1
+                    repeatUnit = event.repeatUnit ?? "Days"
+                }
             }
         }
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
@@ -354,6 +360,8 @@ struct EditEventView: View {
                     if let newEventDate = newEventDate, eventCount < 100 {
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
+                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)
@@ -395,6 +403,8 @@ struct EditEventView: View {
                     if let newEventDate = newEventDate, eventCount < 100 {
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
+                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)

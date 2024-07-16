@@ -27,7 +27,22 @@ struct Event: Identifiable, Codable {
     var repeatUntilCount: Int? // Added this line
 
     // Initializer for Event
-    init(title: String, date: Date, endDate: Date? = nil, color: CodableColor, category: String? = nil, notificationsEnabled: Bool = true, repeatOption: RepeatOption = .never, repeatUntil: Date? = nil, seriesID: UUID? = nil, customRepeatCount: Int? = nil, repeatUnit: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        date: Date,
+        endDate: Date? = nil,
+        color: CodableColor,
+        category: String? = nil,
+        notificationsEnabled: Bool = true,
+        repeatOption: RepeatOption = .never,
+        repeatUntil: Date? = nil,
+        seriesID: UUID? = nil,
+        customRepeatCount: Int? = nil,
+        repeatUnit: String? = nil,
+        repeatUntilCount: Int? = nil
+    ) {
+        self.id = id
         self.title = title
         self.date = date
         self.endDate = endDate
@@ -39,6 +54,7 @@ struct Event: Identifiable, Codable {
         self.seriesID = repeatOption == .never ? nil : seriesID
         self.customRepeatCount = customRepeatCount
         self.repeatUnit = repeatUnit
+        self.repeatUntilCount = repeatUntilCount
         print("Event initialized: \(self)")
     }
 
@@ -57,7 +73,7 @@ struct Event: Identifiable, Codable {
         seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
         customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
-        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) // Added this line
+        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1 // Default value
     }
 
     // Coding keys for encoding and decoding

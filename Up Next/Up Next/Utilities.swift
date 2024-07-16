@@ -169,10 +169,12 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
             repeatUntil: event.repeatUntil,
             seriesID: seriesID,
             customRepeatCount: event.customRepeatCount,
-            repeatUnit: event.repeatUnit
+            repeatUnit: event.repeatUnit,
+            repeatUntilCount: event.repeatUntilCount // Ensure this is passed
         )
         repeatingEvents.append(currentEvent)
         repetitionCount += 1
+        print("Generated event: \(currentEvent)")
     }
     
     return repeatingEvents
@@ -180,34 +182,35 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
 
 // Calculates the next repeat date for a given event based on its repeat option
 func getNextRepeatDate(for event: Event) -> Date? {
-    let calendar = Calendar.current
-    let value: Int
-    
-    switch event.repeatOption {
-    case .never:
+    guard let repeatUnit = event.repeatUnit, let customRepeatCount = event.customRepeatCount else {
         return nil
-    case .daily:
-        value = 1
-    case .weekly:
-        value = 1
-    case .monthly:
-        value = 1
-    case .yearly:
-        value = 1
-    case .custom:
-        value = event.customRepeatCount ?? 1
     }
     
+    print("Calculating next repeat date for event: \(event)")
+
     switch event.repeatOption {
-    case .daily, .custom where event.repeatUnit == "Days":
-        return calendar.date(byAdding: .day, value: value, to: event.date)
-    case .weekly, .custom where event.repeatUnit == "Weeks":
-        return calendar.date(byAdding: .weekOfYear, value: value, to: event.date)
-    case .monthly, .custom where event.repeatUnit == "Months":
-        return calendar.date(byAdding: .month, value: value, to: event.date)
-    case .yearly, .custom where event.repeatUnit == "Years":
-        return calendar.date(byAdding: .year, value: value, to: event.date)
-    default:
+    case .daily:
+        return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+    case .weekly:
+        return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
+    case .monthly:
+        return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
+    case .yearly:
+        return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
+    case .custom:
+        switch repeatUnit.lowercased() {
+        case "days":
+            return Calendar.current.date(byAdding: .day, value: customRepeatCount, to: event.date)
+        case "weeks":
+            return Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: event.date)
+        case "months":
+            return Calendar.current.date(byAdding: .month, value: customRepeatCount, to: event.date)
+        case "years":
+            return Calendar.current.date(byAdding: .year, value: customRepeatCount, to: event.date)
+        default:
+            return nil
+        }
+    case .never:
         return nil
     }
 }
