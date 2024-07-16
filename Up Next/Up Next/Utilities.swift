@@ -167,7 +167,9 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
             category: event.category,
             repeatOption: event.repeatOption,
             repeatUntil: event.repeatUntil,
-            seriesID: seriesID
+            seriesID: seriesID,
+            customRepeatCount: event.customRepeatCount,
+            repeatUnit: event.repeatUnit
         )
         repeatingEvents.append(currentEvent)
         repetitionCount += 1
