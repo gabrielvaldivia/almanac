@@ -96,54 +96,6 @@ struct EventForm: View {
                                 }
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
-                                        HStack {
-                                            Spacer()
-                                            Button(action: {
-                                                showEndDate = false
-                                                newEventEndDate = newEventDate
-                                                tempEndDate = nil
-                                                showCustomEndDatePicker = false
-                                            }) {
-                                                Text("Remove End Date")
-                                                    .font(.headline)
-                                                    .foregroundColor(.red)
-                                            }
-                                            .padding()
-                                        }
-                                        .padding(.horizontal)
-                                        CustomDatePicker(
-                                            selectedDate: $tempEndDate,
-                                            showCustomDatePicker: $showCustomEndDatePicker,
-                                            minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
-                                            onDateSelected: {
-                                                if let selectedDate = tempEndDate {
-                                                    showEndDate = true
-                                                    newEventEndDate = selectedDate
-                                                }
-                                                showCustomEndDatePicker = false
-                                            }
-                                        )
-                                        .presentationDetents([.medium])
-                                    }
-                                    .frame(maxHeight: .infinity, alignment: .top)
-                                }
-                                Spacer()
-                            } else {
-                                Spacer()
-                                Button(action: {
-                                    tempEndDate = nil
-                                    showCustomEndDatePicker = true
-                                }) {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .foregroundColor(.primary)
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(8)
-                                }
-                                .padding(.trailing, 6)
-                                .sheet(isPresented: $showCustomEndDatePicker) {
-                                    VStack {
                                         CustomDatePicker(
                                             selectedDate: $tempEndDate,
                                             showCustomDatePicker: $showCustomEndDatePicker,
@@ -167,6 +119,56 @@ struct EventForm: View {
                                                     .foregroundColor(.red)
                                             }
                                             .padding()
+                                        .presentationDetents([.medium])
+                                    }
+                                    .frame(maxHeight: .infinity, alignment: .top)
+                                }
+                                Spacer()
+                            } else {
+                                Spacer()
+                                Button(action: {
+                                    tempEndDate = nil
+                                    showCustomEndDatePicker = true
+                                }) {
+                                    Image(systemName: "point.topleft.down.to.point.bottomright.filled.curvepath")
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(8)
+                                }
+
+                                .padding(.trailing, 6)
+                                .sheet(isPresented: $showCustomEndDatePicker) {
+                                    VStack {
+                                        Text("Add End Date")
+                                            .font(.title3)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.primary)
+                                            .padding(.top, 20)
+                                        CustomDatePicker(
+                                            selectedDate: $tempEndDate,
+                                            showCustomDatePicker: $showCustomEndDatePicker,
+                                            minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
+                                            onDateSelected: {
+                                                if let selectedDate = tempEndDate {
+                                                    showEndDate = true
+                                                    newEventEndDate = selectedDate
+                                                }
+                                                showCustomEndDatePicker = false
+                                            }
+                                        )
+                                        // Button(action: {
+                                        //         showEndDate = false
+                                        //         newEventEndDate = newEventDate
+                                        //         tempEndDate = nil
+                                        //         showCustomEndDatePicker = false
+                                        //     }) {
+                                        //         Text("Cancel")
+                                        //             .font(.headline)
+                                        //             .foregroundColor(.red)
+                                        //     }
+                                        //     .padding()
                                         .presentationDetents([.medium])
                                     }
                                     .frame(maxHeight: .infinity, alignment: .top)
