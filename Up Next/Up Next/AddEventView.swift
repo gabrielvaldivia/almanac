@@ -34,13 +34,13 @@ struct AddEventView: View {
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
     @State private var repeatUntilCount: Int = 1 // New state variable for number of repetitions
+    @State private var customRepeatCount: Int = 1 // Initialize customRepeatCount to 1
+    @State private var repeatUnit: String = "Days" // Initialize repeatUnit to "Days"
 
     // State variables for UI management
     @State private var showCategoryManagementView = false // Add this state variable
     @State private var showDeleteActionSheet = false // Add this state variable
     @State private var showRepeatOptions = false // Set this to false by default
-    @State private var repeatUnit: String = "Days" // Add this line
-    @State private var customRepeatCount: Int = 1 // Add this line
 
     var body: some View {
         NavigationView {

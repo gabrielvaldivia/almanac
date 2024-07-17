@@ -157,7 +157,6 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
     let duration = Calendar.current.dateComponents([.day], from: event.date, to: event.endDate ?? event.date).day ?? 0
     
     while let nextDate = getNextRepeatDate(for: currentEvent),
-          nextDate <= (event.repeatUntil ?? Date.distantFuture),
           repetitionCount < maxRepetitions {
         currentEvent = Event(
             title: event.title,

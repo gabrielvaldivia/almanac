@@ -33,6 +33,7 @@ struct EditEventView: View {
                 if event.repeatOption == .custom {
                     customRepeatCount = event.customRepeatCount ?? 1
                     repeatUnit = event.repeatUnit ?? "Days"
+                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
                 }
             }
         }
@@ -178,6 +179,7 @@ struct EditEventView: View {
                 if event.repeatOption == .custom {
                     customRepeatCount = event.customRepeatCount ?? 1
                     repeatUnit = event.repeatUnit ?? "Days"
+                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
                 }
             }
         }
