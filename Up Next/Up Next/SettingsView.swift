@@ -251,7 +251,7 @@ struct SettingsView: View {
             iconToSet = "DarkAppIcon"
         case "Monochrome":
             iconToSet = "MonochromeAppIcon"
-        case "Modern (by Charlie Deets)":
+        case "Modern by Charlie Deets":
             iconToSet = "ModernAppIcon"
         default:
             iconToSet = nil
