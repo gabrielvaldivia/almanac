@@ -10,6 +10,7 @@ import SwiftUI
 import WidgetKit
 import PassKit
 import StoreKit // Add this import
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
@@ -319,7 +320,7 @@ struct AppIconSelectionView: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 60, height: 60)
                             .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 3)
+                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 3)
                         
                         IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
                         
@@ -336,6 +337,21 @@ struct AppIconSelectionView: View {
         }
         .navigationBarTitle("App Icons", displayMode: .inline)
         .background(Color(UIColor.secondarySystemBackground))
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Text("Want to add your own? ")
+                        .foregroundColor(.secondary)
+                    Button("Submit a proposal") {
+                        openEmail()
+                    }
+                    .foregroundColor(.blue)
+                }
+                .font(.footnote)
+                .padding(.bottom, 8)
+            }
+        )
     }
     
     private func iconImage(for iconName: String) -> UIImage {
@@ -405,6 +421,16 @@ struct AppIconSelectionView: View {
             }
         }
     }
+
+    private func openEmail() {
+        if let url = URL(string: "mailto:gabe@valdivia.works") {
+            UIApplication.shared.open(url, options: [:]) { success in
+                if !success {
+                    print("Failed to open email client")
+                }
+            }
+        }
+    }
 }
 
 struct IconLabel: View {
@@ -444,7 +470,7 @@ struct RadioButton: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .stroke(Color.blue, lineWidth: 2)
+                    .stroke(isSelected ? Color.blue : Color.secondary, lineWidth: 1)
                     .frame(width: 20, height: 20)
                 
                 if isSelected {
