@@ -40,7 +40,7 @@ struct EventForm: View {
                         TextField("Title", text: $newEventTitle)
                             .focused($isTitleFocused)
                             .padding(.horizontal)
-                            .padding(.vertical, 8)
+                            .frame(height: 40) 
                     }
                     .background(Color(UIColor.secondarySystemGroupedBackground))
                     .cornerRadius(8)
@@ -69,7 +69,7 @@ struct EventForm: View {
                                             set: { newEventDate = $0 ?? Date() }
                                         ),
                                         showCustomDatePicker: $showCustomStartDatePicker,
-                                        minimumDate: Date(),
+                                        minimumDate: nil,
                                         onDateSelected: {
                                             showCustomStartDatePicker = false
                                         }
@@ -532,7 +532,7 @@ struct EventForm: View {
 struct CustomDatePicker: View {
     @Binding var selectedDate: Date?
     @Binding var showCustomDatePicker: Bool
-    var minimumDate: Date
+    var minimumDate: Date?
     var onDateSelected: () -> Void
     var onRemoveEndDate: (() -> Void)?
 
@@ -541,10 +541,10 @@ struct CustomDatePicker: View {
             DatePicker(
                 "Date",
                 selection: Binding(
-                    get: { selectedDate ?? minimumDate },
+                    get: { selectedDate ?? Date() },
                     set: { selectedDate = $0 }
                 ),
-                in: minimumDate...,
+                in: dateRange(),
                 displayedComponents: .date
             )
             .datePickerStyle(GraphicalDatePickerStyle())
@@ -563,6 +563,14 @@ struct CustomDatePicker: View {
             }
         }
         .padding(.horizontal)
+    }
+    
+    private func dateRange() -> ClosedRange<Date> {
+        if let minimumDate = minimumDate {
+            return minimumDate...Date.distantFuture
+        } else {
+            return Date.distantPast...Date.distantFuture
+        }
     }
 }
 

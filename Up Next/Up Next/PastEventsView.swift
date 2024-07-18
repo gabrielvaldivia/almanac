@@ -37,6 +37,7 @@ struct PastEventsView: View {
                                     .roundedFont(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.top, 20)
+                                    .padding(.horizontal, 10)
                                     .frame(maxWidth: .infinity, alignment: .leading)) {
                             ForEach(events, id: \.id) { event in
                                 Button(action: {
