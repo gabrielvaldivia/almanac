@@ -16,11 +16,14 @@ struct SettingsView: View {
     @State private var showingDeleteAllAlert = false
     @Environment(\.openURL) var openURL
     @State private var showingPaymentSheet = false
-    @State private var subscriptionProduct: Product? // Add state for subscription product
-    @State private var isPurchasing = false // Add state for purchase process
-    @State private var isSubscribed = false // Add state for subscription status
-    @State private var errorMessage: String? // Add state for error message
+    @State private var subscriptionProduct: Product?
+    @State private var isPurchasing = false 
+    @State private var isSubscribed = false 
+    @State private var errorMessage: String? 
     @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
+    @State private var selectedAppIcon = "Default"
+    let appIcons = ["Default", "Dark", "Monochrome", "Modern (by Charlie Deets)"] 
+    @State private var iconChangeSuccess: Bool? 
 
     var body: some View {
         Form {
@@ -69,6 +72,19 @@ struct SettingsView: View {
                 }
                 NavigationLink(destination: CategoriesView().environmentObject(appData)) {
                     Text("Manage Categories")
+                }
+            }
+
+             // Appearance Section
+            Section(header: Text("Appearance")) {
+                Picker("App Icon", selection: $selectedAppIcon) {
+                    ForEach(appIcons, id: \.self) { icon in
+                        Text(icon).tag(icon)
+                    }
+                }
+                .onChange(of: selectedAppIcon) { _, newValue in
+                    print("Selected app icon: \(newValue)")
+                    changeAppIcon(to: newValue)
                 }
             }
             
@@ -223,6 +239,43 @@ struct SettingsView: View {
     private func handleDailyNotificationToggle(_ isEnabled: Bool) {
         appData.setDailyNotification(enabled: isEnabled)
         UserDefaults.standard.set(isEnabled, forKey: "dailyNotificationEnabled") // Save state to UserDefaults
+    }
+
+    // Update this function
+    private func changeAppIcon(to iconName: String) {
+        let iconToSet: String?
+        switch iconName {
+        case "Default":
+            iconToSet = nil
+        case "Dark":
+            iconToSet = "DarkAppIcon"
+        case "Monochrome":
+            iconToSet = "MonochromeAppIcon"
+        case "Modern (by Charlie Deets)":
+            iconToSet = "ModernAppIcon"
+        default:
+            iconToSet = nil
+        }
+        
+        print("Attempting to change app icon to: \(iconName)")
+        
+        guard UIApplication.shared.supportsAlternateIcons else {
+            print("This device doesn't support alternate icons")
+            return
+        }
+        
+        UIApplication.shared.setAlternateIconName(iconToSet) { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error changing app icon: \(error.localizedDescription)")
+                    self.iconChangeSuccess = false
+                } else {
+                    print("App icon successfully changed to: \(iconName)")
+                    self.selectedAppIcon = iconName
+                    self.iconChangeSuccess = true
+                }
+            }
+        }
     }
 
     init() {
