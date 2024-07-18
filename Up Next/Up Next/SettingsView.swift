@@ -22,7 +22,7 @@ struct SettingsView: View {
     @State private var errorMessage: String? 
     @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
     @State private var selectedAppIcon = "Default"
-    let appIcons = ["Default", "Dark", "Monochrome", "Modern (by Charlie Deets)"] 
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012 by Charlie Deets", "2013 by Charlie Deets"] 
     @State private var iconChangeSuccess: Bool? 
 
     var body: some View {
@@ -251,8 +251,16 @@ struct SettingsView: View {
             iconToSet = "DarkAppIcon"
         case "Monochrome":
             iconToSet = "MonochromeAppIcon"
-        case "Modern by Charlie Deets":
-            iconToSet = "ModernAppIcon"
+        case "Star":
+            iconToSet = "StarAppIcon"
+        case "Heart":
+            iconToSet = "HeartAppIcon"
+        case "X":
+            iconToSet = "XAppIcon"
+        case "2012 by Charlie Deets":
+            iconToSet = "2012AppIcon"
+        case "2013 by Charlie Deets":
+            iconToSet = "2013AppIcon"
         default:
             iconToSet = nil
         }
