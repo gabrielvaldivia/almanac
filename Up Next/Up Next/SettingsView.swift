@@ -77,14 +77,8 @@ struct SettingsView: View {
 
              // Appearance Section
             Section(header: Text("Appearance")) {
-                Picker("App Icon", selection: $selectedAppIcon) {
-                    ForEach(appIcons, id: \.self) { icon in
-                        Text(icon).tag(icon)
-                    }
-                }
-                .onChange(of: selectedAppIcon) { _, newValue in
-                    print("Selected app icon: \(newValue)")
-                    changeAppIcon(to: newValue)
+                NavigationLink(destination: AppIconSelectionView(selectedAppIcon: $selectedAppIcon)) {
+                    Text("Change App Icon")
                 }
             }
             
@@ -241,51 +235,6 @@ struct SettingsView: View {
         UserDefaults.standard.set(isEnabled, forKey: "dailyNotificationEnabled") // Save state to UserDefaults
     }
 
-    // Update this function
-    private func changeAppIcon(to iconName: String) {
-        let iconToSet: String?
-        switch iconName {
-        case "Default":
-            iconToSet = nil
-        case "Dark":
-            iconToSet = "DarkAppIcon"
-        case "Monochrome":
-            iconToSet = "MonochromeAppIcon"
-        case "Star":
-            iconToSet = "StarAppIcon"
-        case "Heart":
-            iconToSet = "HeartAppIcon"
-        case "X":
-            iconToSet = "XAppIcon"
-        case "2012 by Charlie Deets":
-            iconToSet = "2012AppIcon"
-        case "2013 by Charlie Deets":
-            iconToSet = "2013AppIcon"
-        default:
-            iconToSet = nil
-        }
-        
-        print("Attempting to change app icon to: \(iconName)")
-        
-        guard UIApplication.shared.supportsAlternateIcons else {
-            print("This device doesn't support alternate icons")
-            return
-        }
-        
-        UIApplication.shared.setAlternateIconName(iconToSet) { error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("Error changing app icon: \(error.localizedDescription)")
-                    self.iconChangeSuccess = false
-                } else {
-                    print("App icon successfully changed to: \(iconName)")
-                    self.selectedAppIcon = iconName
-                    self.iconChangeSuccess = true
-                }
-            }
-        }
-    }
-
     init() {
         listenForTransactions()
     }
@@ -344,5 +293,166 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()
             .environmentObject(AppData())
+    }
+}
+
+struct AppIconSelectionView: View {
+    @Binding var selectedAppIcon: String
+    @State private var iconChangeSuccess: Bool?
+    @Environment(\.openURL) var openURL
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012", "2013"]
+    
+    // Dictionary to store author names and links
+    let iconAuthors: [String: (name: String, link: String)] = [
+        "2012": ("Charlie Deets", "https://charliedeets.com"),
+        "2013": ("Charlie Deets", "https://charliedeets.com")
+        // Add more icons with authors here in the future
+    ]
+    
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
+                ForEach(appIcons, id: \.self) { icon in
+                    VStack {
+                        Image(uiImage: iconImage(for: icon))
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 60, height: 60)
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 3)
+                        
+                        IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
+                        
+                        RadioButton(isSelected: selectedAppIcon == icon) {
+                            selectedAppIcon = icon
+                            changeAppIcon(to: icon)
+                        }
+                    }
+                    .frame(height: 140)
+                    .padding(.bottom, 16)
+                }
+            }
+            .padding()
+        }
+        .navigationBarTitle("App Icons", displayMode: .inline)
+        .background(Color(UIColor.secondarySystemBackground))
+    }
+    
+    private func iconImage(for iconName: String) -> UIImage {
+        let iconToLoad: String?
+        switch iconName {
+        case "Default":
+            iconToLoad = nil
+        case "Dark":
+            iconToLoad = "DarkAppIcon"
+        case "Monochrome":
+            iconToLoad = "MonochromeAppIcon"
+        case "Star":
+            iconToLoad = "StarAppIcon"
+        case "Heart":
+            iconToLoad = "HeartAppIcon"
+        case "X":
+            iconToLoad = "XAppIcon"
+        case "2012":
+            iconToLoad = "2012AppIcon"
+        case "2013":
+            iconToLoad = "2013AppIcon"
+        default:
+            iconToLoad = nil
+        }
+        
+        if let iconName = iconToLoad, let alternateIcon = UIImage(named: iconName) {
+            return alternateIcon
+        } else {
+            // Return the default app icon
+            return UIImage(named: "AppIcon") ?? UIImage(systemName: "app.fill")!
+        }
+    }
+    
+    private func changeAppIcon(to iconName: String) {
+        let iconToSet: String?
+        switch iconName {
+        case "Default":
+            iconToSet = nil
+        case "Dark":
+            iconToSet = "DarkAppIcon"
+        case "Monochrome":
+            iconToSet = "MonochromeAppIcon"
+        case "Star":
+            iconToSet = "StarAppIcon"
+        case "Heart":
+            iconToSet = "HeartAppIcon"
+        case "X":
+            iconToSet = "XAppIcon"
+        case "2012":
+            iconToSet = "2012AppIcon"
+        case "2013":
+            iconToSet = "2013AppIcon"
+        default:
+            iconToSet = nil
+        }
+        
+        UIApplication.shared.setAlternateIconName(iconToSet) { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error changing app icon: \(error.localizedDescription)")
+                    self.iconChangeSuccess = false
+                } else {
+                    print("App icon successfully changed to: \(iconName)")
+                    self.selectedAppIcon = iconName
+                    self.iconChangeSuccess = true
+                }
+            }
+        }
+    }
+}
+
+struct IconLabel: View {
+    let icon: String
+    let author: (name: String, link: String)?
+    let openURL: OpenURLAction
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(icon)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+            
+            if let author = author {
+                (Text("by ")
+                    .font(.caption)
+                    .foregroundColor(.secondary) +
+                Text(author.name)
+                    .font(.caption)
+                    .foregroundColor(.blue))
+                    .onTapGesture {
+                        if let url = URL(string: author.link) {
+                            openURL(url)
+                        }
+                    }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct RadioButton: View {
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .frame(width: 20, height: 20)
+                
+                if isSelected {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 12, height: 12)
+                }
+            }
+        }
     }
 }
