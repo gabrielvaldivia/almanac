@@ -30,6 +30,8 @@
 		40790D8D2C23286C005DDC65 /* Up_NextUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */; };
 		40790D8F2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */; };
 		409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409726472C2DE2CB0050988E /* CategoryPillsView.swift */; };
+		40A18EBF2C49CCDB0023DE14 /* Almanac Calendar Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 40A70B2A2C40DB380080132E /* Almanac Calendar Pro.storekit */; };
+		40A18EC02C49CCE00023DE14 /* Almanac Calendar Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 40A70B2A2C40DB380080132E /* Almanac Calendar Pro.storekit */; };
 		40D9263B2C42413100DCDBFB /* SubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */; };
 		40D9263C2C42414700DCDBFB /* SubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */; };
 		40D9263E2C42423000DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
@@ -383,6 +385,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				40A18EC02C49CCE00023DE14 /* Almanac Calendar Pro.storekit in Resources */,
 				405920E92C23B863008A9CF2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -393,6 +396,7 @@
 			files = (
 				40790D792C23286C005DDC65 /* Preview Assets.xcassets in Resources */,
 				40790D762C23286C005DDC65 /* Assets.xcassets in Resources */,
+				40A18EBF2C49CCDB0023DE14 /* Almanac Calendar Pro.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
