@@ -98,7 +98,7 @@
 		405920E42C23B862008A9CF2 /* UpNextWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpNextWidget.swift; sourceTree = "<group>"; };
 		405920E62C23B862008A9CF2 /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		405920E82C23B863008A9CF2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		405920EA2C23B863008A9CF2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		405920EA2C23B863008A9CF2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Up Next/Info.plist"; sourceTree = "<group>"; };
 		405920F12C23B87A008A9CF2 /* Up Next.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Up Next.entitlements"; sourceTree = "<group>"; };
 		405920F22C23B887008A9CF2 /* UpNextWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UpNextWidgetExtension.entitlements; sourceTree = SOURCE_ROOT; };
 		405F66782C33A5C4003C9DC4 /* AddEventButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButton.swift; sourceTree = "<group>"; };
@@ -177,7 +177,6 @@
 				4038EA9D2C33832400E0CE8E /* EventLoader.swift */,
 				405920E62C23B862008A9CF2 /* AppIntent.swift */,
 				405920E82C23B863008A9CF2 /* Assets.xcassets */,
-				405920EA2C23B863008A9CF2 /* Info.plist */,
 			);
 			path = UpNextWidget;
 			sourceTree = "<group>";
@@ -223,6 +222,7 @@
 				40FEEC462C2911DD008AA61D /* CategoriesView.swift */,
 				40549BC12C290E9300DA0EB6 /* PastEventsView.swift */,
 				40790D752C23286C005DDC65 /* Assets.xcassets */,
+				405920EA2C23B863008A9CF2 /* Info.plist */,
 				40790D772C23286C005DDC65 /* Preview Content */,
 				40FEEC4A2C2919E0008AA61D /* Utilities.swift */,
 				40FEEC4C2C291BA0008AA61D /* EventRow.swift */,
@@ -507,7 +507,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = UpNextWidget/Info.plist;
+				INFOPLIST_FILE = "Up Next/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = UpNextWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -536,7 +536,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RWC965TCNN;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = UpNextWidget/Info.plist;
+				INFOPLIST_FILE = "Up Next/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = UpNextWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
