@@ -127,7 +127,8 @@ struct CategoriesView: View {
                     }
                 } else {
                     Button("Import from Google Calendar") {
-                        if let rootViewController = UIApplication.shared.windows.first?.rootViewController {
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let rootViewController = windowScene.windows.first?.rootViewController {
                             importFromGoogleCalendar(presentingViewController: rootViewController)
                         }
                     }
