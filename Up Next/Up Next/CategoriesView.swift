@@ -52,6 +52,7 @@ struct CategoriesView: View {
     @State private var isGoogleSignedIn = false
     @State private var presentGoogleSignIn = false
     @State private var showingSignOutAlert = false  // Add this line
+    @State private var isGoogleCalendarSyncEnabled = false  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -128,18 +129,17 @@ struct CategoriesView: View {
 
             // Google Calendar section
             Section(header: Text("Google Calendar")) {
-                if isGoogleSignedIn {
-                    Button("Sign Out") {
-                        showingSignOutAlert = true  // Show the alert when the button is tapped
-                    }
-                } else {
-                    Button("Import from Google Calendar") {
-                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                           let rootViewController = windowScene.windows.first?.rootViewController {
-                            importFromGoogleCalendar(presentingViewController: rootViewController)
+                Toggle("Sync with Google Calendar", isOn: $isGoogleCalendarSyncEnabled)
+                    .onChange(of: isGoogleCalendarSyncEnabled) { oldValue, newValue in
+                        if newValue {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let rootViewController = windowScene.windows.first?.rootViewController {
+                                importFromGoogleCalendar(presentingViewController: rootViewController)
+                            }
+                        } else {
+                            showingSignOutAlert = true  // Show the alert when toggled off
                         }
                     }
-                }
             }
         }
         .formStyle(GroupedFormStyle()) 
@@ -178,7 +178,9 @@ struct CategoriesView: View {
                 primaryButton: .destructive(Text("Sign Out")) {
                     signOut()  // Call the signOut function if the user confirms
                 },
-                secondaryButton: .cancel()
+                secondaryButton: .cancel {
+                    isGoogleCalendarSyncEnabled = true  // Re-enable the toggle if the user cancels
+                }
             )
         }
         .onAppear {
