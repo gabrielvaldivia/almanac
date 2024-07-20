@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
     @State private var monthsToLoad: Int = 12
+    @StateObject private var googleCalendarManager = GoogleCalendarManager()
 
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
@@ -387,6 +388,22 @@ func handleOpenURL(_ url: URL) {
                 return event.category == filter && eventDate > endDate
             } else {
                 return eventDate > endDate
+            }
+        }
+    }
+
+    private func signInToGoogleCalendar() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            print("Unable to get root view controller")
+            return
+        }
+        
+        googleCalendarManager.signIn(presentingViewController: rootViewController) { error in
+            if let error = error {
+                print("Error signing in to Google Calendar: \(error.localizedDescription)")
+            } else {
+                print("Successfully signed in to Google Calendar")
             }
         }
     }

@@ -14,10 +14,8 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>almanac</string>
+				<string>com.googleusercontent.apps.108676165289-ofoumldqk4np020qsac1mqp339n6dok0</string>
 			</array>
-			<key>CFBundleURLName</key>
-			<string>Almanac</string>
 		</dict>
 	</array>
 	<key>CFBundleIcons</key>
@@ -42,5 +40,7 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>GIDClientID</key>
+	<string>108676165289-ofoumldqk4np020qsac1mqp339n6dok0.apps.googleusercontent.com</string>
 </dict>
 </plist>

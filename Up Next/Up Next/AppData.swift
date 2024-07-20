@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import WidgetKit
 import UserNotifications
+import GoogleSignIn
 
 // Model for an event
 struct Event: Identifiable, Codable {
@@ -25,6 +26,7 @@ struct Event: Identifiable, Codable {
     var customRepeatCount: Int?
     var repeatUnit: String?
     var repeatUntilCount: Int? // Added this line
+    var isGoogleCalendarEvent: Bool = false
 
     // Initializer for Event
     init(
@@ -40,7 +42,8 @@ struct Event: Identifiable, Codable {
         seriesID: UUID? = nil,
         customRepeatCount: Int? = nil,
         repeatUnit: String? = nil,
-        repeatUntilCount: Int? = nil
+        repeatUntilCount: Int? = nil,
+        isGoogleCalendarEvent: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -55,6 +58,7 @@ struct Event: Identifiable, Codable {
         self.customRepeatCount = customRepeatCount
         self.repeatUnit = repeatUnit
         self.repeatUntilCount = repeatUntilCount
+        self.isGoogleCalendarEvent = isGoogleCalendarEvent
         print("Event initialized: \(self)")
     }
 
@@ -74,11 +78,12 @@ struct Event: Identifiable, Codable {
         customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
         repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1 // Default value
+        isGoogleCalendarEvent = try container.decodeIfPresent(Bool.self, forKey: .isGoogleCalendarEvent) ?? false
     }
 
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
-        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount // Added repeatUntilCount
+        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount, isGoogleCalendarEvent // Added repeatUntilCount
     }
 }
 
@@ -198,6 +203,7 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
+    @Published var googleCalendarManager = GoogleCalendarManager()
 
     private var isDataLoaded = false
 
@@ -221,6 +227,14 @@ class AppData: NSObject, ObservableObject {
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
+
+        // Add observer for sign-in state changes
+        NotificationCenter.default.addObserver(self, selector: #selector(handleSignInStateChanged), name: .googleSignInStateChanged, object: nil)
+
+        // Add this line to fetch Google Calendar events on initialization
+        if googleCalendarManager.isSignedIn {
+            fetchGoogleCalendarEvents()
+        }
     }
 
     // Function to save categories to UserDefaults
@@ -287,9 +301,64 @@ class AppData: NSObject, ObservableObject {
                 print("Loaded \(events.count) events from user defaults.")
             } catch {
                 print("Failed to decode events: \(error)")
+                // If decoding fails, attempt to recover old events
+                if let oldEvents = decodeOldEvents(from: data) {
+                    events = oldEvents
+                    print("Recovered \(events.count) events from old format.")
+                    saveEvents() // Save events in the new format
+                }
             }
         } else {
             print("No events found in shared UserDefaults.")
+        }
+    }
+
+    // Helper function to decode events from the old format
+    private func decodeOldEvents(from data: Data) -> [Event]? {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        // Define a struct that matches the old Event structure
+        struct OldEvent: Codable {
+            var id = UUID()
+            var title: String
+            var date: Date
+            var endDate: Date?
+            var color: CodableColor
+            var category: String?
+            var notificationsEnabled: Bool = true
+            var repeatOption: RepeatOption = .never
+            var repeatUntil: Date?
+            var seriesID: UUID?
+            var customRepeatCount: Int?
+            var repeatUnit: String?
+            var repeatUntilCount: Int? // Added this line
+        }
+        
+        do {
+            let oldEvents = try decoder.decode([OldEvent].self, from: data)
+            // Convert OldEvent to Event, setting isGoogleCalendarEvent to false
+            return oldEvents.map { oldEvent in
+                Event(
+                    id: oldEvent.id,
+                    title: oldEvent.title,
+                    date: oldEvent.date,
+                    endDate: oldEvent.endDate,
+                    color: oldEvent.color,
+                    category: oldEvent.category,
+                    notificationsEnabled: oldEvent.notificationsEnabled,
+                    repeatOption: oldEvent.repeatOption,
+                    repeatUntil: oldEvent.repeatUntil,
+                    seriesID: oldEvent.seriesID,
+                    customRepeatCount: oldEvent.customRepeatCount,
+                    repeatUnit: oldEvent.repeatUnit,
+                    repeatUntilCount: oldEvent.repeatUntilCount,
+                    isGoogleCalendarEvent: false
+                )
+            }
+        } catch {
+            print("Failed to decode old events: \(error)")
+            return nil
         }
     }
 
@@ -398,6 +467,32 @@ class AppData: NSObject, ObservableObject {
             saveEvents()
         }
     }
+
+    // Add this new method
+    func fetchGoogleCalendarEvents() {
+        Task {
+            do {
+                let googleEvents = try await googleCalendarManager.fetchEvents()
+                DispatchQueue.main.async {
+                    self.events = self.events.filter { !$0.isGoogleCalendarEvent }
+                    self.events.append(contentsOf: googleEvents)
+                    self.saveEvents()
+                }
+            } catch {
+                print("Error fetching Google Calendar events: \(error)")
+            }
+        }
+    }
+
+    @objc func handleSignInStateChanged() {
+        if googleCalendarManager.isSignedIn {
+            fetchGoogleCalendarEvents()
+        } else {
+            // Remove Google Calendar events when signed out
+            events = events.filter { !$0.isGoogleCalendarEvent }
+            saveEvents()
+        }
+    }
 }
 
 // Extend AppData to conform to UNUserNotificationCenterDelegate
@@ -467,4 +562,8 @@ func migrateUserDefaults() {
         defaults.removeObject(forKey: "defaultCategory")
         print("Migrated default category to shared UserDefaults.")
     }
+}
+
+extension Notification.Name {
+    static let googleSignInStateChanged = Notification.Name("googleSignInStateChanged")
 }

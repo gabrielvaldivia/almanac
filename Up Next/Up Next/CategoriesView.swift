@@ -10,6 +10,7 @@ import SwiftUI
 import UIKit
 import WidgetKit
 import StoreKit
+import GoogleSignIn
 
 extension Color {
     func toHex() -> String? {
@@ -34,6 +35,7 @@ struct CategoriesView: View {
     @State private var showingEditCategorySheet = false  // Add this line
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
     @State private var showingSubscriptionSheet = false  // Add this line
+    @State private var isGoogleSignedIn = false
 
     var body: some View {
         Form {  // Change List to Form
@@ -101,6 +103,19 @@ struct CategoriesView: View {
                     }
                 }
             }
+
+            // Google Calendar section
+            Section(header: Text("Google Calendar")) {
+                if isGoogleSignedIn {
+                    Button("Sign Out") {
+                        signOut()
+                    }
+                } else {
+                    Button("Import from Google Calendar") {
+                        importFromGoogleCalendar()
+                    }
+                }
+            }
         }
         .formStyle(GroupedFormStyle()) 
         .navigationBarTitle("Manage Categories", displayMode: .inline)
@@ -136,6 +151,7 @@ struct CategoriesView: View {
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
                 appData.defaultCategory = firstCategory
             }
+            checkGoogleSignInStatus()
         }
         .onChange(of: editMode?.wrappedValue) {
             if let newValue = editMode?.wrappedValue, newValue == .active {
@@ -216,6 +232,48 @@ struct CategoriesView: View {
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
     }
+    
+    private func checkGoogleSignInStatus() {
+        isGoogleSignedIn = GIDSignIn.sharedInstance.currentUser != nil
+    }
+
+    private func signOut() {
+        GIDSignIn.sharedInstance.signOut()
+        isGoogleSignedIn = false
+        
+        // Clear any stored Google Sign-In data
+        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
+            sharedDefaults.removeObject(forKey: "GoogleSignInEmail")
+            sharedDefaults.set(false, forKey: "IsGoogleSignedIn")
+        }
+        
+        // Remove all Google Calendar events
+        appData.events = appData.events.filter { !$0.isGoogleCalendarEvent }
+        appData.saveEvents()
+        
+        // Clear any cached Google Calendar data
+        appData.googleCalendarManager.clearEvents()
+        
+        // Reload widget to reflect changes
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+    }
+    
+    private func importFromGoogleCalendar() {
+        Task {
+            do {
+                // This will handle both sign-in and fetching events
+                try await appData.googleCalendarManager.signInAndFetchEvents()
+                
+                DispatchQueue.main.async {
+                    self.isGoogleSignedIn = true
+                    // Optionally, you can show a success message here
+                }
+            } catch {
+                print("Error importing from Google Calendar: \(error)")
+                // Handle the error appropriately, maybe show an alert to the user
+            }
+        }
+    }
 }
 
 struct EditCategorySheet: View {
@@ -237,6 +295,7 @@ struct EditCategorySheet: View {
                         get: { categoryToEdit.color },
                         set: { self.categoryToEdit?.color = $0 }
                     ))
+                    
                 }
                 .formStyle(GroupedFormStyle())  // Add this line
                 .navigationBarTitle("Edit Category", displayMode: .inline)  // Add this line

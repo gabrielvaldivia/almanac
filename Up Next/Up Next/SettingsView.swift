@@ -11,6 +11,7 @@ import WidgetKit
 import PassKit
 import StoreKit // Add this import
 import UIKit
+import GoogleSignIn
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
