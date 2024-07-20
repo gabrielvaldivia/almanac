@@ -127,7 +127,9 @@ struct CategoriesView: View {
                     }
                 } else {
                     Button("Import from Google Calendar") {
-                        presentGoogleSignIn = true
+                        if let rootViewController = UIApplication.shared.windows.first?.rootViewController {
+                            importFromGoogleCalendar(presentingViewController: rootViewController)
+                        }
                     }
                 }
             }
@@ -161,11 +163,6 @@ struct CategoriesView: View {
                 .environmentObject(appData)
         }
         */
-        .sheet(isPresented: $presentGoogleSignIn) {
-            PresentingViewController { viewController in
-                importFromGoogleCalendar(presentingViewController: viewController)
-            }
-        }
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
