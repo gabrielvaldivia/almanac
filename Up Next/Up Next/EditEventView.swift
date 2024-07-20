@@ -431,6 +431,17 @@ struct EditEventView: View {
             print("The event '\(newEventTitle)' will NOT be included in the daily notification for \(newEventDate).")
         }
 
+        // Check if the category is a Google Calendar category
+        if let category = selectedCategory, category.hasSuffix(" (G)") {
+            Task {
+                do {
+                    try await appData.googleCalendarManager.updateAllDayEvent(eventID: selectedEvent.id.uuidString, title: newEventTitle, date: newEventDate, category: category)
+                } catch {
+                    print("Failed to update Google Calendar event: \(error)")
+                }
+            }
+        }
+
         appData.objectWillChange.send() // Notify observers of changes
         saveEvents()
         showEditSheet = false

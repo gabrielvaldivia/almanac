@@ -114,6 +114,11 @@ struct ContentView: View {
                     .listStyle(PlainListStyle())
                     .listRowSeparator(.hidden)
                     .background(Color.clear)
+                    .refreshable {
+                        // Pull-to-refresh action
+                        appData.fetchGoogleCalendarEvents()
+                        loadEvents()
+                    }
                 } 
             }
             .navigationTitle("Up Next")
@@ -134,6 +139,7 @@ struct ContentView: View {
                 print("ContentView appeared")
                 loadEvents()
                 appData.loadCategories()
+                appData.fetchGoogleCalendarEvents() // Fetch new events from Google Calendar
             }
             .onOpenURL { url in
                 handleOpenURL(url)
@@ -313,6 +319,17 @@ func handleOpenURL(_ url: URL) {
             saveEvents()
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+
+            // Check if the category is a Google Calendar category
+            if let category = event.category, category.hasSuffix(" (G)") {
+                Task {
+                    do {
+                        try await appData.googleCalendarManager.deleteAllDayEvent(eventID: event.id.uuidString)
+                    } catch {
+                        print("Failed to delete Google Calendar event: \(error)")
+                    }
+                }
+            }
         }
     }
 
@@ -401,7 +418,7 @@ func handleOpenURL(_ url: URL) {
         
         googleCalendarManager.signIn(presentingViewController: rootViewController) { error in
             if let error = error {
-                print("Error signing in to Google Calendar: \(error.localizedDescription)")
+                print("Failed to sign in to Google Calendar: \(error)")
             } else {
                 print("Successfully signed in to Google Calendar")
             }

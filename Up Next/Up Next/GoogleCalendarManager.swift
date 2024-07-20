@@ -112,11 +112,14 @@ class GoogleCalendarManager: ObservableObject {
                             return nil
                         }
                         
+                        let calendarName = item.organizer?.displayName ?? "Google Calendar"
+                        let adjustedEndDate = startDate == endDate ? nil : endDate
+                        
                         return Event(title: title,
                                      date: startDate,
-                                     endDate: endDate,
+                                     endDate: adjustedEndDate,
                                      color: CodableColor(color: .blue),
-                                     category: "Google Calendar",
+                                     category: calendarName,
                                      isGoogleCalendarEvent: true)
                     } ?? []
                     
@@ -161,5 +164,49 @@ class GoogleCalendarManager: ObservableObject {
         DispatchQueue.main.async {
             self.events.removeAll()
         }
+    }
+    
+    func createAllDayEvent(title: String, date: Date, category: String) async throws {
+        guard GIDSignIn.sharedInstance.currentUser != nil else {
+            throw NSError(domain: "GoogleCalendarManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not signed in"])
+        }
+
+        let event = GTLRCalendar_Event()
+        event.summary = title
+        event.start = GTLRCalendar_EventDateTime()
+        event.start?.date = GTLRDateTime(date: date)
+        event.end = GTLRCalendar_EventDateTime()
+        if let endDate = Calendar.current.date(byAdding: .day, value: 1, to: date) {
+            event.end?.date = GTLRDateTime(date: endDate)
+        } else {
+            throw NSError(domain: "GoogleCalendarManager", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to calculate end date"])
+        }
+
+    }
+
+    func updateAllDayEvent(eventID: String, title: String, date: Date, category: String) async throws {
+        guard GIDSignIn.sharedInstance.currentUser != nil else {
+            throw NSError(domain: "GoogleCalendarManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not signed in"])
+        }
+
+        let event = GTLRCalendar_Event()
+        event.summary = title
+        event.start = GTLRCalendar_EventDateTime()
+        event.start?.date = GTLRDateTime(date: date)
+        event.end = GTLRCalendar_EventDateTime()
+        if let endDate = Calendar.current.date(byAdding: .day, value: 1, to: date) {
+            event.end?.date = GTLRDateTime(date: endDate)
+        } else {
+            throw NSError(domain: "GoogleCalendarManager", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to calculate end date"])
+        }
+
+    }
+
+    func deleteAllDayEvent(eventID: String) async throws {
+        guard GIDSignIn.sharedInstance.currentUser != nil else {
+            throw NSError(domain: "GoogleCalendarManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not signed in"])
+        }
+
+        let _ = GTLRCalendarQuery_EventsDelete.query(withCalendarId: "primary", eventId: eventID)
     }
 }

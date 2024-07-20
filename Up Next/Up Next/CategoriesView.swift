@@ -74,7 +74,13 @@ struct CategoriesView: View {
                                 }
                             ))
                         } else {
-                            Text(self.appData.categories[index].name)
+                            HStack {
+                                Text(self.appData.categories[index].name)
+                                // if self.appData.categories[index].name.hasSuffix(" (G)") {
+                                //     Text("(G)")
+                                //         .foregroundColor(.secondary)
+                                // }
+                            }
                         }
                         Spacer()
                         ColorPicker("", selection: Binding(
@@ -276,9 +282,18 @@ struct CategoriesView: View {
             sharedDefaults.set(false, forKey: "IsGoogleSignedIn")
         }
         
+        // Identify categories associated with Google Calendar events
+        let googleCalendarCategories = Set(appData.events.filter { $0.isGoogleCalendarEvent }.map { $0.category ?? "" })
+        
         // Remove all Google Calendar events
         appData.events = appData.events.filter { !$0.isGoogleCalendarEvent }
         appData.saveEvents()
+        
+        // Remove categories associated with Google Calendar events
+        appData.categories.removeAll { category in
+            googleCalendarCategories.contains(category.name)
+        }
+        appData.saveCategories()
         
         // Clear any cached Google Calendar data
         appData.googleCalendarManager.clearEvents()
@@ -298,6 +313,29 @@ struct CategoriesView: View {
                 await MainActor.run {
                     self.isGoogleSignedIn = true
                     print("Successfully signed in and fetched events")  // Debugging statement
+                    
+                    // Extract calendar names from fetched events
+                    let calendarNames = Set(appData.googleCalendarManager.events.map { $0.category ?? "Google Calendar" })
+                    
+                    // Create categories for each calendar
+                    for calendarName in calendarNames {
+                        if !appData.categories.contains(where: { $0.name == calendarName }) {
+                            appData.categories.append((name: calendarName + " (G)", color: Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))))
+                        }
+                    }
+                    appData.saveCategories()
+                    
+                    // Assign events to the correct categories
+                    for (index, event) in appData.googleCalendarManager.events.enumerated() {
+                        if let categoryName = event.category {
+                            if let category = appData.categories.first(where: { $0.name == categoryName + " (G)" }) {
+                                appData.googleCalendarManager.events[index].color = CodableColor(color: category.color)
+                            }
+                        }
+                    }
+                    appData.events.append(contentsOf: appData.googleCalendarManager.events)
+                    appData.saveEvents()
+                    
                     // Optionally, you can show a success message here
                 }
             } catch {

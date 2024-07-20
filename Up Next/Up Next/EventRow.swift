@@ -32,7 +32,7 @@ struct EventRow: View {
                         .foregroundColor(colorScheme == .dark ? .white : event.color.color)
                     Spacer()
                 }
-                if let endDate = event.endDate {
+                if let endDate = event.endDate, event.date != endDate {
                     let today = Date()
                     let duration = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
                     if today > event.date && today < endDate {
