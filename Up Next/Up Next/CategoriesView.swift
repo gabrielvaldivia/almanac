@@ -22,6 +22,20 @@ extension Color {
     }
 }
 
+struct PresentingViewController: UIViewControllerRepresentable {
+    var onPresent: (UIViewController) -> Void
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = UIViewController()
+        DispatchQueue.main.async {
+            self.onPresent(viewController)
+        }
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+}
+
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingAddCategorySheet = false
@@ -36,6 +50,7 @@ struct CategoriesView: View {
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
     @State private var showingSubscriptionSheet = false  // Add this line
     @State private var isGoogleSignedIn = false
+    @State private var presentGoogleSignIn = false
 
     var body: some View {
         Form {  // Change List to Form
@@ -112,7 +127,7 @@ struct CategoriesView: View {
                     }
                 } else {
                     Button("Import from Google Calendar") {
-                        importFromGoogleCalendar()
+                        presentGoogleSignIn = true
                     }
                 }
             }
@@ -146,6 +161,11 @@ struct CategoriesView: View {
                 .environmentObject(appData)
         }
         */
+        .sheet(isPresented: $presentGoogleSignIn) {
+            PresentingViewController { viewController in
+                importFromGoogleCalendar(presentingViewController: viewController)
+            }
+        }
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
@@ -258,18 +278,19 @@ struct CategoriesView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
     }
     
-    private func importFromGoogleCalendar() {
+    private func importFromGoogleCalendar(presentingViewController: UIViewController) {
+        print("Import from Google Calendar tapped")  // Debugging statement
         Task {
             do {
                 // This will handle both sign-in and fetching events
-                try await appData.googleCalendarManager.signInAndFetchEvents()
-                
+                try await appData.googleCalendarManager.signInAndFetchEvents(presentingViewController: presentingViewController)
                 DispatchQueue.main.async {
                     self.isGoogleSignedIn = true
+                    print("Successfully signed in and fetched events")  // Debugging statement
                     // Optionally, you can show a success message here
                 }
             } catch {
-                print("Error importing from Google Calendar: \(error)")
+                print("Error importing from Google Calendar: \(error)")  // Debugging statement
                 // Handle the error appropriately, maybe show an alert to the user
             }
         }
