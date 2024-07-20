@@ -51,6 +51,7 @@ struct CategoriesView: View {
     @State private var showingSubscriptionSheet = false  // Add this line
     @State private var isGoogleSignedIn = false
     @State private var presentGoogleSignIn = false
+    @State private var showingSignOutAlert = false  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -123,7 +124,7 @@ struct CategoriesView: View {
             Section(header: Text("Google Calendar")) {
                 if isGoogleSignedIn {
                     Button("Sign Out") {
-                        signOut()
+                        showingSignOutAlert = true  // Show the alert when the button is tapped
                     }
                 } else {
                     Button("Import from Google Calendar") {
@@ -164,6 +165,16 @@ struct CategoriesView: View {
                 .environmentObject(appData)
         }
         */
+        .alert(isPresented: $showingSignOutAlert) {
+            Alert(
+                title: Text("Are you sure you want to sign out?"),
+                message: Text("This will remove all your events from Google Calendar."),
+                primaryButton: .destructive(Text("Sign Out")) {
+                    signOut()  // Call the signOut function if the user confirms
+                },
+                secondaryButton: .cancel()
+            )
+        }
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
