@@ -8,18 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4011A1512C3CE97D00F275DE /* EventForm.swift */; };
-		402F757F2C4B383900036431 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 402F757E2C4B383900036431 /* GoogleSignIn */; };
-		402F75812C4B383900036431 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75802C4B383900036431 /* GoogleSignInSwift */; };
-		402F75832C4B38B100036431 /* GoogleCalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 402F75822C4B38B100036431 /* GoogleCalendarManager.swift */; };
-		402F75862C4B394700036431 /* GoogleAPIClientForRESTCore in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75852C4B394700036431 /* GoogleAPIClientForRESTCore */; };
-		402F75882C4B396000036431 /* GoogleAPIClientForREST_ACMEDNS in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75872C4B396000036431 /* GoogleAPIClientForREST_ACMEDNS */; };
-		402F758A2C4B396000036431 /* GoogleAPIClientForREST_AIPlatformNotebooks in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75892C4B396000036431 /* GoogleAPIClientForREST_AIPlatformNotebooks */; };
-		402F758C2C4B396000036431 /* GoogleAPIClientForREST_APIGateway in Frameworks */ = {isa = PBXBuildFile; productRef = 402F758B2C4B396000036431 /* GoogleAPIClientForREST_APIGateway */; };
-		402F758E2C4B396000036431 /* GoogleAPIClientForREST_APIManagement in Frameworks */ = {isa = PBXBuildFile; productRef = 402F758D2C4B396000036431 /* GoogleAPIClientForREST_APIManagement */; };
-		402F75902C4B417E00036431 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 402F758F2C4B417E00036431 /* GoogleSignIn */; };
-		402F75912C4B418F00036431 /* GoogleCalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 402F75822C4B38B100036431 /* GoogleCalendarManager.swift */; };
-		402F75932C4B41B100036431 /* GoogleAPIClientForRESTCore in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75922C4B41B100036431 /* GoogleAPIClientForRESTCore */; };
-		402F75952C4B41D000036431 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = 402F75942C4B41D000036431 /* GoogleAPIClientForREST_Calendar */; };
 		4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403EA2F22C2F69EE003207ED /* FontModifier.swift */; };
@@ -44,13 +32,13 @@
 		409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409726472C2DE2CB0050988E /* CategoryPillsView.swift */; };
 		40A18EC22C49CD6C0023DE14 /* Up Next Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 40A18EC12C49CD6C0023DE14 /* Up Next Pro.storekit */; };
 		40A18EC32C49CD6C0023DE14 /* Up Next Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 40A18EC12C49CD6C0023DE14 /* Up Next Pro.storekit */; };
-		40C0A84A2C4B43F800B38A14 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = 40C0A8492C4B43F800B38A14 /* GoogleAPIClientForREST_Calendar */; };
 		40D9263B2C42413100DCDBFB /* SubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */; };
 		40D9263C2C42414700DCDBFB /* SubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */; };
 		40D9263E2C42423000DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40E9844E2C2A0F38007FE92D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
+		40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
 		40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC462C2911DD008AA61D /* CategoriesView.swift */; };
 		40FEEC492C291558008AA61D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
@@ -99,7 +87,6 @@
 
 /* Begin PBXFileReference section */
 		4011A1512C3CE97D00F275DE /* EventForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventForm.swift; sourceTree = "<group>"; };
-		402F75822C4B38B100036431 /* GoogleCalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCalendarManager.swift; sourceTree = "<group>"; };
 		4038EA9D2C33832400E0CE8E /* EventLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLoader.swift; sourceTree = "<group>"; };
 		403EA2F22C2F69EE003207ED /* FontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontModifier.swift; sourceTree = "<group>"; };
 		40549BC12C290E9300DA0EB6 /* PastEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastEventsView.swift; sourceTree = "<group>"; };
@@ -146,9 +133,6 @@
 			files = (
 				405920DE2C23B862008A9CF2 /* SwiftUI.framework in Frameworks */,
 				405920DD2C23B862008A9CF2 /* WidgetKit.framework in Frameworks */,
-				402F75952C4B41D000036431 /* GoogleAPIClientForREST_Calendar in Frameworks */,
-				402F75932C4B41B100036431 /* GoogleAPIClientForRESTCore in Frameworks */,
-				402F75902C4B417E00036431 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,14 +140,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				402F757F2C4B383900036431 /* GoogleSignIn in Frameworks */,
-				402F758E2C4B396000036431 /* GoogleAPIClientForREST_APIManagement in Frameworks */,
-				402F758C2C4B396000036431 /* GoogleAPIClientForREST_APIGateway in Frameworks */,
-				40C0A84A2C4B43F800B38A14 /* GoogleAPIClientForREST_Calendar in Frameworks */,
-				402F75862C4B394700036431 /* GoogleAPIClientForRESTCore in Frameworks */,
-				402F758A2C4B396000036431 /* GoogleAPIClientForREST_AIPlatformNotebooks in Frameworks */,
-				402F75812C4B383900036431 /* GoogleSignInSwift in Frameworks */,
-				402F75882C4B396000036431 /* GoogleAPIClientForREST_ACMEDNS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -255,7 +231,6 @@
 				4011A1512C3CE97D00F275DE /* EventForm.swift */,
 				40D9263A2C42413100DCDBFB /* SubscriptionSheet.swift */,
 				40D9263D2C42423000DCDBFB /* AddCategoryView.swift */,
-				402F75822C4B38B100036431 /* GoogleCalendarManager.swift */,
 			);
 			path = "Up Next";
 			sourceTree = "<group>";
@@ -302,9 +277,6 @@
 			);
 			name = UpNextWidgetExtension;
 			packageProductDependencies = (
-				402F758F2C4B417E00036431 /* GoogleSignIn */,
-				402F75922C4B41B100036431 /* GoogleAPIClientForRESTCore */,
-				402F75942C4B41D000036431 /* GoogleAPIClientForREST_Calendar */,
 			);
 			productName = UpNextWidgetExtension;
 			productReference = 405920DC2C23B862008A9CF2 /* UpNextWidgetExtension.appex */;
@@ -326,14 +298,6 @@
 			);
 			name = "Up Next";
 			packageProductDependencies = (
-				402F757E2C4B383900036431 /* GoogleSignIn */,
-				402F75802C4B383900036431 /* GoogleSignInSwift */,
-				402F75852C4B394700036431 /* GoogleAPIClientForRESTCore */,
-				402F75872C4B396000036431 /* GoogleAPIClientForREST_ACMEDNS */,
-				402F75892C4B396000036431 /* GoogleAPIClientForREST_AIPlatformNotebooks */,
-				402F758B2C4B396000036431 /* GoogleAPIClientForREST_APIGateway */,
-				402F758D2C4B396000036431 /* GoogleAPIClientForREST_APIManagement */,
-				40C0A8492C4B43F800B38A14 /* GoogleAPIClientForREST_Calendar */,
 			);
 			productName = "Up Next";
 			productReference = 40790D6E2C23286B005DDC65 /* Up Next.app */;
@@ -469,8 +433,8 @@
 			files = (
 				40D9263C2C42414700DCDBFB /* SubscriptionSheet.swift in Sources */,
 				40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */,
+				40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */,
 				405920E32C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift in Sources */,
-				402F75912C4B418F00036431 /* GoogleCalendarManager.swift in Sources */,
 				405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */,
 				405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */,
 				4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */,
@@ -488,7 +452,6 @@
 				4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */,
 				4061918B2C38FAA100BC3D4A /* SettingsView.swift in Sources */,
 				40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */,
-				402F75832C4B38B100036431 /* GoogleCalendarManager.swift in Sources */,
 				40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */,
 				40790D742C23286B005DDC65 /* ContentView.swift in Sources */,
 				403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */,
@@ -566,7 +529,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[arch=*]" = WIDGET_EXTENSION;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -596,7 +558,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				"SWIFT_ACTIVE_COMPILATION_CONDITIONS[arch=*]" = WIDGET_EXTENSION;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -739,6 +700,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Up-Next-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -776,6 +738,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Up-Next-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -942,64 +905,6 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		402F757E2C4B383900036431 /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F757D2C4B383900036431 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		402F75802C4B383900036431 /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F757D2C4B383900036431 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
-		};
-		402F75852C4B394700036431 /* GoogleAPIClientForRESTCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForRESTCore;
-		};
-		402F75872C4B396000036431 /* GoogleAPIClientForREST_ACMEDNS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_ACMEDNS;
-		};
-		402F75892C4B396000036431 /* GoogleAPIClientForREST_AIPlatformNotebooks */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_AIPlatformNotebooks;
-		};
-		402F758B2C4B396000036431 /* GoogleAPIClientForREST_APIGateway */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_APIGateway;
-		};
-		402F758D2C4B396000036431 /* GoogleAPIClientForREST_APIManagement */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_APIManagement;
-		};
-		402F758F2C4B417E00036431 /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F757D2C4B383900036431 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		402F75922C4B41B100036431 /* GoogleAPIClientForRESTCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForRESTCore;
-		};
-		402F75942C4B41D000036431 /* GoogleAPIClientForREST_Calendar */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_Calendar;
-		};
-		40C0A8492C4B43F800B38A14 /* GoogleAPIClientForREST_Calendar */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
-			productName = GoogleAPIClientForREST_Calendar;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 40790D662C23286B005DDC65 /* Project object */;
 }

@@ -9,9 +9,8 @@ import Foundation
 import SwiftUI
 import WidgetKit
 import PassKit
-import StoreKit // Add this import
+import StoreKit
 import UIKit
-import GoogleSignIn
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData

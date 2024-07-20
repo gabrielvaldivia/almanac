@@ -10,7 +10,6 @@ import SwiftUI
 import UIKit
 import WidgetKit
 import StoreKit
-import GoogleSignIn
 
 extension Color {
     func toHex() -> String? {
@@ -49,10 +48,6 @@ struct CategoriesView: View {
     @State private var showingEditCategorySheet = false  // Add this line
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
     @State private var showingSubscriptionSheet = false  // Add this line
-    @State private var isGoogleSignedIn = false
-    @State private var presentGoogleSignIn = false
-    @State private var showingSignOutAlert = false  // Add this line
-    @State private var isGoogleCalendarSyncEnabled = false  // Add this line
 
     var body: some View {
         Form {  // Change List to Form
@@ -77,10 +72,6 @@ struct CategoriesView: View {
                         } else {
                             HStack {
                                 Text(self.appData.categories[index].name)
-                                // if self.appData.categories[index].name.hasSuffix(" (G)") {
-                                //     Text("(G)")
-                                //         .foregroundColor(.secondary)
-                                // }
                             }
                         }
                         Spacer()
@@ -126,21 +117,6 @@ struct CategoriesView: View {
                     }
                 }
             }
-
-            // Google Calendar section
-            Section(header: Text("Google Calendar")) {
-                Toggle("Sync with Google Calendar", isOn: $isGoogleCalendarSyncEnabled)
-                    .onChange(of: isGoogleCalendarSyncEnabled) { oldValue, newValue in
-                        if newValue {
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                               let rootViewController = windowScene.windows.first?.rootViewController {
-                                importFromGoogleCalendar(presentingViewController: rootViewController)
-                            }
-                        } else {
-                            showingSignOutAlert = true  // Show the alert when toggled off
-                        }
-                    }
-            }
         }
         .formStyle(GroupedFormStyle()) 
         .navigationBarTitle("Manage Categories", displayMode: .inline)
@@ -164,31 +140,11 @@ struct CategoriesView: View {
                 .environmentObject(appData)
         }
         
-        // Subscription Sheet
-        /*
-        .sheet(isPresented: $showingSubscriptionSheet) {
-            SubscriptionSheet(isPresented: $showingSubscriptionSheet)
-                .environmentObject(appData)
-        }
-        */
-        .alert(isPresented: $showingSignOutAlert) {
-            Alert(
-                title: Text("Are you sure you want to sign out?"),
-                message: Text("This will remove all your events from Google Calendar."),
-                primaryButton: .destructive(Text("Sign Out")) {
-                    signOut()  // Call the signOut function if the user confirms
-                },
-                secondaryButton: .cancel {
-                    isGoogleCalendarSyncEnabled = true  // Re-enable the toggle if the user cancels
-                }
-            )
-        }
         .onAppear {
             appData.loadCategories()
             if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
                 appData.defaultCategory = firstCategory
             }
-            checkGoogleSignInStatus()
         }
         .onChange(of: editMode?.wrappedValue) {
             if let newValue = editMode?.wrappedValue, newValue == .active {
@@ -268,83 +224,6 @@ struct CategoriesView: View {
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-    }
-    
-    private func checkGoogleSignInStatus() {
-        isGoogleSignedIn = GIDSignIn.sharedInstance.currentUser != nil
-    }
-
-    private func signOut() {
-        GIDSignIn.sharedInstance.signOut()
-        isGoogleSignedIn = false
-        
-        // Clear any stored Google Sign-In data
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
-            sharedDefaults.removeObject(forKey: "GoogleSignInEmail")
-            sharedDefaults.set(false, forKey: "IsGoogleSignedIn")
-        }
-        
-        // Identify categories associated with Google Calendar events
-        let googleCalendarCategories = Set(appData.events.filter { $0.isGoogleCalendarEvent }.map { $0.category ?? "" })
-        
-        // Remove all Google Calendar events
-        appData.events = appData.events.filter { !$0.isGoogleCalendarEvent }
-        appData.saveEvents()
-        
-        // Remove categories associated with Google Calendar events
-        appData.categories.removeAll { category in
-            googleCalendarCategories.contains(category.name)
-        }
-        appData.saveCategories()
-        
-        // Clear any cached Google Calendar data
-        appData.googleCalendarManager.clearEvents()
-        
-        // Reload widget to reflect changes
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-    }
-    
-    private func importFromGoogleCalendar(presentingViewController: UIViewController) {
-        print("Import from Google Calendar tapped")  // Debugging statement
-        Task {
-            do {
-                // Perform the sign-in and fetching events on a background thread
-                try await appData.googleCalendarManager.signInAndFetchEvents(presentingViewController: presentingViewController)
-                
-                // Update the UI on the main thread
-                await MainActor.run {
-                    self.isGoogleSignedIn = true
-                    print("Successfully signed in and fetched events")  // Debugging statement
-                    
-                    // Extract calendar names from fetched events
-                    let calendarNames = Set(appData.googleCalendarManager.events.map { $0.category ?? "Google Calendar" })
-                    
-                    // Create categories for each calendar
-                    for calendarName in calendarNames {
-                        if !appData.categories.contains(where: { $0.name == calendarName }) {
-                            appData.categories.append((name: calendarName + " (G)", color: Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))))
-                        }
-                    }
-                    appData.saveCategories()
-                    
-                    // Assign events to the correct categories
-                    for (index, event) in appData.googleCalendarManager.events.enumerated() {
-                        if let categoryName = event.category {
-                            if let category = appData.categories.first(where: { $0.name == categoryName + " (G)" }) {
-                                appData.googleCalendarManager.events[index].color = CodableColor(color: category.color)
-                            }
-                        }
-                    }
-                    appData.events.append(contentsOf: appData.googleCalendarManager.events)
-                    appData.saveEvents()
-                    
-                    // Optionally, you can show a success message here
-                }
-            } catch {
-                print("Error importing from Google Calendar: \(error)")  // Debugging statement
-                // Handle the error appropriately, maybe show an alert to the user
-            }
-        }
     }
 }
 

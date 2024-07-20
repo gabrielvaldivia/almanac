@@ -26,7 +26,6 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
     @State private var monthsToLoad: Int = 12
-    @StateObject private var googleCalendarManager = GoogleCalendarManager()
 
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
@@ -116,7 +115,6 @@ struct ContentView: View {
                     .background(Color.clear)
                     .refreshable {
                         // Pull-to-refresh action
-                        appData.fetchGoogleCalendarEvents()
                         loadEvents()
                     }
                 } 
@@ -139,7 +137,6 @@ struct ContentView: View {
                 print("ContentView appeared")
                 loadEvents()
                 appData.loadCategories()
-                appData.fetchGoogleCalendarEvents() // Fetch new events from Google Calendar
             }
             .onOpenURL { url in
                 handleOpenURL(url)
@@ -319,17 +316,6 @@ func handleOpenURL(_ url: URL) {
             saveEvents()
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-
-            // Check if the category is a Google Calendar category
-            if let category = event.category, category.hasSuffix(" (G)") {
-                Task {
-                    do {
-                        try await appData.googleCalendarManager.deleteAllDayEvent(eventID: event.id.uuidString)
-                    } catch {
-                        print("Failed to delete Google Calendar event: \(error)")
-                    }
-                }
-            }
         }
     }
 
@@ -405,22 +391,6 @@ func handleOpenURL(_ url: URL) {
                 return event.category == filter && eventDate > endDate
             } else {
                 return eventDate > endDate
-            }
-        }
-    }
-
-    private func signInToGoogleCalendar() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootViewController = windowScene.windows.first?.rootViewController else {
-            print("Unable to get root view controller")
-            return
-        }
-        
-        googleCalendarManager.signIn(presentingViewController: rootViewController) { error in
-            if let error = error {
-                print("Failed to sign in to Google Calendar: \(error)")
-            } else {
-                print("Successfully signed in to Google Calendar")
             }
         }
     }

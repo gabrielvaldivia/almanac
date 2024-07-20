@@ -160,17 +160,6 @@ struct AddEventView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         appData.objectWillChange.send()
         appData.scheduleDailyNotification()
-
-        // Check if the category is a Google Calendar category
-        if let category = selectedCategory, category.hasSuffix(" (G)") {
-            Task {
-                do {
-                    try await appData.googleCalendarManager.createAllDayEvent(title: newEventTitle, date: newEventDate, category: category)
-                } catch {
-                    print("Failed to create Google Calendar event: \(error)")
-                }
-            }
-        }
     }
 
     // Function to save events to UserDefaults
