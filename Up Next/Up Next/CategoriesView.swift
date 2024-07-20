@@ -280,9 +280,11 @@ struct CategoriesView: View {
         print("Import from Google Calendar tapped")  // Debugging statement
         Task {
             do {
-                // This will handle both sign-in and fetching events
+                // Perform the sign-in and fetching events on a background thread
                 try await appData.googleCalendarManager.signInAndFetchEvents(presentingViewController: presentingViewController)
-                DispatchQueue.main.async {
+                
+                // Update the UI on the main thread
+                await MainActor.run {
                     self.isGoogleSignedIn = true
                     print("Successfully signed in and fetched events")  // Debugging statement
                     // Optionally, you can show a success message here
