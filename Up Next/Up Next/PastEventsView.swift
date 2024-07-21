@@ -24,28 +24,30 @@ struct PastEventsView: View {
     var saveEvents: () -> Void
     @EnvironmentObject var appData: AppData
     @State private var isEditSheetPresented = false
-    @State private var notificationsEnabled: Bool = true
 
     var body: some View {
         NavigationView {
             ScrollView {
                 LazyVStack {
-                    ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+                    let groupedEvents = groupedPastEvents()
+                    let sortedGroupedEvents = groupedEvents.sorted(by: { $1.key > $0.key })
+                    
+                    ForEach(sortedGroupedEvents, id: \.key) { monthYear, events in
                         Section(header: Text(monthYear)
                                     .roundedFont(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.top, 20)
+                                    .padding(.horizontal, 10)
                                     .frame(maxWidth: .infinity, alignment: .leading)) {
                             ForEach(events, id: \.id) { event in
                                 Button(action: {
                                     selectedEvent = event
                                     newEventTitle = event.title
                                     newEventDate = event.date
-                                    newEventEndDate = event.endDate ?? event.date
+                                    newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
                                     showEndDate = event.endDate != nil
                                     selectedCategory = event.category
                                     selectedColor = event.color
-                                    notificationsEnabled = event.notificationsEnabled
                                     isEditSheetPresented = true
                                 }) {
                                     VStack {
@@ -56,8 +58,8 @@ struct PastEventsView: View {
                                                  newEventEndDate: $newEventEndDate,
                                                  showEndDate: $showEndDate,
                                                  selectedCategory: $selectedCategory,
-                                                 showEditSheet: $showEditSheet,
-                                                 categories: categories)
+                                                 showEditSheet: $isEditSheetPresented,
+                                                 categories: appData.categories)
                                     }
                                     .listRowSeparator(.hidden)
                                 }
@@ -87,7 +89,6 @@ struct PastEventsView: View {
                               showEditSheet: $showEditSheet,
                               selectedCategory: $selectedCategory,
                               selectedColor: $selectedColor,
-                              notificationsEnabled: $notificationsEnabled,
                               saveEvent: saveEvent)
             }
         }
@@ -152,7 +153,6 @@ struct PastEventsView: View {
             events[index].endDate = showEndDate ? newEventEndDate : nil
             events[index].category = selectedCategory
             events[index].color = selectedColor
-            events[index].notificationsEnabled = notificationsEnabled
             saveEvents()
         }
         isEditSheetPresented = false

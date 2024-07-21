@@ -1,23 +1,40 @@
+//
+//  Events.swift
+//  Up Next
+//
+//  Created by Gabriel Valdivia on 6/23/24.
+//
+
 import Foundation
 import SwiftUI
 import WidgetKit
 import UserNotifications
 
+// Enum for delete options
+enum DeleteOption {
+    case thisEvent
+    case allEvents
+}
+
+// Main view for editing an event
 struct EditEventView: View {
+    // Bindings to parent view's state
     @Binding var events: [Event]
     @Binding var selectedEvent: Event? {
         didSet {
             if let event = selectedEvent {
-                newEventTitle = event.title
-                newEventDate = event.date
-                newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? Date()
-                showEndDate = event.endDate != nil
-                selectedCategory = event.category
-                selectedColor = event.color
-                notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                repeatUntilOption = event.repeatUntil == nil ? .indefinitely : .onDate
+                repeatIndefinitely = event.repeatUntil == nil
+                repeatCount = calculateRepeatCount(for: event)
+                updateRepeatUntilOption(for: event)
+                
+                // Ensure custom repeat values are set correctly
+                if event.repeatOption == .custom {
+                    customRepeatCount = event.customRepeatCount ?? 1
+                    repeatUnit = event.repeatUnit ?? "Days"
+                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
+                }
             }
         }
     }
@@ -28,241 +45,59 @@ struct EditEventView: View {
     @Binding var showEditSheet: Bool
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor
-    @Binding var notificationsEnabled: Bool
+
+    // State variables for repeat options
     @State private var repeatOption: RepeatOption = .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
     @State private var repeatCount: Int = 1
+    @State private var repeatIndefinitely: Bool = false
     @State private var showDeleteActionSheet = false
     @State private var deleteOption: DeleteOption = .thisEvent
-    @State private var newCategoryColor: Color = .blue
-    @State private var newCategoryName: String = ""
-    @State private var showAddCategorySheet: Bool = false
-    @FocusState private var isTitleFocused: Bool
+    @State private var showCategoryManagementView = false
+    @State private var showUpdateActionSheet = false
+    @State private var showDeleteSeriesAlert = false
+    @State private var showRepeatOptions = true // Add this state variable
+    @State private var repeatUnit: String = "Days" // Add this line
+    @State private var repeatUntilCount: Int = 1 // Add this line
+    @State private var customRepeatCount: Int = 1 // Add this line
+
+    // Function to save the event
     var saveEvent: () -> Void
+
+    // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack {
-                    // Name Section
-                    VStack {
-                        HStack {
-                            Text("Name")
-                                .font(.headline)
-                                .padding(.top)
-                                .foregroundColor(.gray)
-                            Spacer()
-                        }
-                        
-                        HStack {
-                            TextField("Title", text: $newEventTitle)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal)
-                                .background(isTitleFocused ? Color(UIColor.systemBackground) : Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(isTitleFocused ? getCategoryColor() : Color.clear, lineWidth: 1)
-                                )
-                                .focused($isTitleFocused)
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Date Section
-                    VStack {
-                        HStack {
-                            Text("Date")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.top)
-                            Spacer()
-                        }
-                        
-                        HStack {
-                            DatePicker("", selection: $newEventDate, displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle())
-                                .labelsHidden()
-                            
-                            if showEndDate {
-                                DatePicker("", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                    .datePickerStyle(DefaultDatePickerStyle())
-                                    .labelsHidden()
-                            }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showEndDate.toggle()
-                                if !showEndDate {
-                                    newEventEndDate = Date()
-                                } else {
-                                    newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
-                                }
-                            }) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(showEndDate ? getCategoryColor() : Color.gray.opacity(0.2))
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(showEndDate ? .white : .gray)
-                                }
-                            }
-                            
-                            Menu {
-                                Picker("Repeat", selection: $repeatOption) {
-                                    ForEach(RepeatOption.allCases, id: \.self) { option in
-                                        Text(option.rawValue).tag(option)
-                                    }
-                                }
-                            } label: {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(repeatOption == .never ? Color.gray.opacity(0.2) : getCategoryColor())
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: "repeat")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(repeatOption == .never ? .gray : .white)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 0)
-                        
-                        if repeatOption != .never {
-                            VStack(alignment: .leading) {
-                                Button(action: { repeatUntilOption = .indefinitely }) {
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                            .font(.system(size: 24))
-                                            .fontWeight(.light)
-                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
-                                        Text("Repeat \(repeatOption.rawValue.lowercased()) indefinitely")
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: 36)
-                                    .padding(.top, 10)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                HStack {
-                                    Button(action: { repeatUntilOption = .onDate }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
-                                            Text("Repeat \(repeatOption.rawValue.lowercased()) until")
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .frame(height: 36)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    Spacer()
-                                    if repeatUntilOption == .onDate {
-                                        DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                            .datePickerStyle(DefaultDatePickerStyle())
-                                            .labelsHidden()
-                                    }
-                                }
-                                
-                                HStack {
-                                    Button(action: { repeatUntilOption = .after }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
-                                            Text("End after")
-                                        }
-                                        .frame(alignment: .leading)
-                                        .frame(height: 36)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    
-                                    if repeatUntilOption == .after {
-                                        HStack {
-                                            TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                .keyboardType(.numberPad)
-                                                .frame(width: 24)
-                                                .multilineTextAlignment(.center)
-                                            Stepper(value: $repeatCount, in: 1...100) {
-                                                Text(" times")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Category Section
-                    VStack {
-                        HStack {
-                            Text("Category")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.top)
-                                .padding(.horizontal)
-                            Spacer()
-                        }
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(appData.categories, id: \.name) { category in
-                                    Text(category.name)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(selectedCategory == category.name ? getCategoryColor() : Color.gray.opacity(0.15))
-                                        .cornerRadius(20)
-                                        .foregroundColor(selectedCategory == category.name ? .white : .primary)
-                                        .onTapGesture {
-                                            selectedCategory = category.name
-                                        }
-                                }
-                                // New category pill
-                                Button(action: {
-                                    selectedCategory = nil
-                                    showAddCategorySheet = true
-                                    newCategoryName = ""
-                                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))
-                                }) {
-                                    HStack {
-                                        Image(systemName: "plus")
-                                        Text("New Category")
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.15))
-                                    .cornerRadius(20)
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                    }
-                    
-                    // Notification Section
-                    HStack {
-                        Toggle(isOn: $notificationsEnabled) {
-                            Text("Notify me")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.gray)
-                        }
-                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                    }
-                    .padding()
-                    
-                    Spacer()
-                }
-            }
+            // Event form view
+            EventForm(
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                selectedCategory: $selectedCategory,
+                selectedColor: $selectedColor,
+                repeatOption: $repeatOption,
+                repeatUntil: $repeatUntil,
+                repeatUntilOption: $repeatUntilOption,
+                repeatUntilCount: $repeatUntilCount, // Pass the binding
+                showCategoryManagementView: $showCategoryManagementView,
+                showDeleteActionSheet: $showDeleteActionSheet,
+                selectedEvent: $selectedEvent,
+                deleteEvent: deleteEvent,
+                deleteSeries: { showDeleteSeriesAlert = true },
+                showDeleteButtons: true, // Ensure delete buttons are shown in EditEventView
+                showRepeatOptions: $showRepeatOptions, // Pass the binding
+                repeatUnit: $repeatUnit, // Add this line
+                customRepeatCount: $customRepeatCount // Add this line
+            )
+            .environmentObject(appData)
             .navigationTitle("Edit Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { 
+                // Toolbar with cancel and save buttons
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showEditSheet = false
                     }) {
@@ -278,12 +113,16 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        saveEvent()
+                        if selectedEvent?.repeatOption == .never {
+                            applyChanges(to: .thisEvent)
+                        } else {
+                            showUpdateActionSheet = true
+                        }
                     }) {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(getCategoryColor())
+                                    .fill(selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Save")
                                     .font(.system(size: 14, weight: .bold))
@@ -294,82 +133,102 @@ struct EditEventView: View {
                     }
                     .disabled(newEventTitle.isEmpty)
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Delete Event") {
-                        if selectedEvent?.repeatOption != .never {
-                            showDeleteActionSheet = true
-                        } else {
-                            deleteEvent()
-                        }
-                    }
-                    .foregroundColor(.red)
-                }
             }
-            .actionSheet(isPresented: $showDeleteActionSheet) {
-                ActionSheet(
+            .alert(isPresented: $showDeleteActionSheet) {
+                Alert(
                     title: Text("Delete Event"),
                     message: Text("Are you sure you want to delete this event?"),
-                    buttons: [
-                        .destructive(Text("Delete this event")) {
-                            deleteOption = .thisEvent
-                            deleteEvent()
-                        },
-                        .destructive(Text("Delete this and all upcoming events")) {
-                            deleteOption = .thisAndUpcoming
-                            deleteEvent()
-                        },
-                        .destructive(Text("Delete all events in this series")) {
-                            deleteOption = .allEvents
-                            deleteEvent()
-                        },
-                        .cancel()
-                    ]
+                    primaryButton: .destructive(Text("Delete this event")) {
+                        deleteOption = .thisEvent
+                        deleteEvent()
+                    },
+                    secondaryButton: .cancel()
                 )
+            }
+            .actionSheet(isPresented: $showUpdateActionSheet) {
+                if selectedEvent?.repeatOption != .never {
+                    return ActionSheet(
+                        title: Text("Update Event"),
+                        message: Text("Do you want to apply the changes to this event only or all events in the series?"),
+                        buttons: [
+                            .default(Text("This Event Only")) {
+                                applyChanges(to: .thisEvent)
+                            },
+                            .default(Text("All Events in Series")) {
+                                applyChanges(to: .allEvents)
+                            },
+                            .cancel()
+                        ]
+                    )
+                } else {
+                    applyChanges(to: .thisEvent)
+                    return ActionSheet(title: Text(""), message: Text(""), buttons: [])
+                }
             }
         }
         .onAppear {
+            // Set initial values when the view appears
             if let event = selectedEvent {
-                notificationsEnabled = event.notificationsEnabled
                 repeatOption = event.repeatOption
                 repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                repeatUntilOption = event.repeatUntil == nil ? .indefinitely : .onDate
+                repeatIndefinitely = event.repeatUntil == nil
+                repeatCount = calculateRepeatCount(for: event)
+                updateRepeatUntilOption(for: event)
+                
+                // Ensure custom repeat values are set correctly
+                if event.repeatOption == .custom {
+                    customRepeatCount = event.customRepeatCount ?? 1
+                    repeatUnit = event.repeatUnit ?? "Days"
+                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
+                }
             }
-            isTitleFocused = true // Focus the TextField when the sheet appears
         }
+        .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
     }
 
+    // Function to delete an event
     func deleteEvent() {
         guard let event = selectedEvent else { return }
         
-        if event.repeatOption == .never {
+        switch deleteOption {
+        case .thisEvent:
             if let index = events.firstIndex(where: { $0.id == event.id }) {
                 events.remove(at: index)
             }
-        } else {
-            switch deleteOption {
-            case .thisEvent:
-                if let index = events.firstIndex(where: { $0.id == event.id }) {
-                    events.remove(at: index)
-                }
-            case .thisAndUpcoming:
-                events.removeAll { $0.id == event.id || ($0.repeatOption == event.repeatOption && $0.date >= event.date) }
-            case .allEvents:
-                events.removeAll { $0.title == event.title }
-            }
+        case .allEvents:
+            events.removeAll { $0.title == event.title && $0.category == event.category }
         }
         
         saveEvents()
         showEditSheet = false
     }
 
-    func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color
-        }
-        return Color.blue
+    // Function to delete a series of events
+    func deleteSeries() {
+        guard let event = selectedEvent else { return }
+        events.removeAll { $0.seriesID == event.seriesID }
+        saveEvents()
+        showEditSheet = false
     }
 
+    // Function to delete a single event
+    func deleteSingleEvent() {
+        if let event = selectedEvent {
+            if let index = appData.events.firstIndex(where: { $0.id == event.id }) {
+                appData.events.remove(at: index)
+                appData.saveEvents()
+                WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+                WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+            }
+        }
+    }
+
+    // Function to get the color of the selected category
+    func getCategoryColor() -> Color {
+        return selectedColor.color
+    }
+
+    // Function to save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -383,96 +242,253 @@ struct EditEventView: View {
         }
     }
     
-    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
-        switch option {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
-        }
-    }
-    
-    func generateRepeatingEvents(for event: Event) -> [Event] {
-        var repeatingEvents = [Event]()
-        var currentEvent = event
-        repeatingEvents.append(currentEvent)
-        
-        var repetitionCount = 1
-        let maxRepetitions: Int
-        
-        switch repeatUntilOption {
-        case .indefinitely:
-            maxRepetitions = 100
-        case .after:
-            maxRepetitions = repeatCount
-        case .onDate:
-            maxRepetitions = 100
-        }
-        
-        while let nextDate = getNextRepeatDate(for: currentEvent), 
-              nextDate <= (event.repeatUntil ?? Date.distantFuture), 
-              repetitionCount < maxRepetitions {
-            currentEvent = Event(
-                title: event.title,
-                date: nextDate,
-                endDate: event.endDate,
-                color: event.color,
-                category: event.category,
-                notificationsEnabled: event.notificationsEnabled,
-                repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil
-            )
-            repeatingEvents.append(currentEvent)
-            repetitionCount += 1
-        }
-        
-        return repeatingEvents
-    }
-    
-    func getNextRepeatDate(for event: Event) -> Date? {
-        switch event.repeatOption {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
-        }
-    }
-    
+    // Custom date formatter
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM, d, yyyy"
         return formatter
     }
+
+    // Function to update the repeat until option based on the event's repeat until date
+    private func updateRepeatUntilOption(for event: Event) {
+        if let repeatUntil = event.repeatUntil {
+            if repeatUntil == Calendar.current.date(byAdding: .day, value: repeatCount - 1, to: event.date) {
+                repeatUntilOption = .after
+            } else if Calendar.current.isDate(repeatUntil, inSameDayAs: event.date) {
+                repeatUntilOption = .indefinitely
+            } else if repeatUntil > event.date {
+                repeatUntilOption = .onDate
+            }
+        } else {
+            repeatUntilOption = .indefinitely
+        }
+    }
+    
+    // Function to calculate the repeat count for an event
+    private func calculateRepeatCount(for event: Event) -> Int {
+        guard let repeatUntil = event.repeatUntil else { return 1 }
+        switch event.repeatOption {
+        case .daily:
+            return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! + 1
+        case .weekly:
+            return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! + 1
+        case .monthly:
+            return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! + 1
+        case .yearly:
+            return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! + 1
+        case .never:
+            return 1
+        case .custom:
+            switch repeatUnit {
+            case "Days":
+                return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! / customRepeatCount + 1
+            case "Weeks":
+                return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! / customRepeatCount + 1
+            case "Months":
+                return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! / customRepeatCount + 1
+            case "Years":
+                return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! / customRepeatCount + 1
+            default:
+                return 1
+            }
+        }
+    }
+    
+    // Function to apply changes to an event or series of events
+    func applyChanges(to option: DeleteOption) {
+        guard let selectedEvent = selectedEvent else { return }
+
+        // Calculate the new duration based on the updated end date
+        let newDuration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
+
+        switch option {
+        case .thisEvent:
+            if let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
+                events[index].title = newEventTitle
+                events[index].date = newEventDate
+                events[index].endDate = showEndDate ? newEventEndDate : nil
+                events[index].category = selectedCategory
+                events[index].color = selectedColor
+                events[index].repeatOption = repeatOption
+                events[index].customRepeatCount = customRepeatCount
+                events[index].repeatUnit = repeatUnit
+            }
+        case .allEvents:
+            let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
+            let repeatOption = self.repeatOption
+
+            // Update the selected event
+            guard let selectedIndex = events.firstIndex(where: { $0.id == selectedEvent.id }) else { return }
+            events[selectedIndex].title = newEventTitle
+            events[selectedIndex].date = newEventDate
+            events[selectedIndex].endDate = showEndDate ? newEventEndDate : nil
+            events[selectedIndex].category = selectedCategory
+            events[selectedIndex].color = selectedColor
+            events[selectedIndex].repeatOption = repeatOption
+            events[selectedIndex].customRepeatCount = customRepeatCount
+            events[selectedIndex].repeatUnit = repeatUnit
+
+            // Update future events
+            var eventCount = 1
+            for (_, event) in repeatingEvents.enumerated() {
+                if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex > selectedIndex {
+                    let previousEventDate = events[eventIndex - 1].date
+                    let newEventDate: Date?
+                    switch repeatOption {
+                    case .daily:
+                        newEventDate = Calendar.current.date(byAdding: .day, value: 1, to: previousEventDate)
+                    case .weekly:
+                        newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: previousEventDate)
+                    case .monthly:
+                        newEventDate = Calendar.current.date(byAdding: .month, value: 1, to: previousEventDate)
+                    case .yearly:
+                        newEventDate = Calendar.current.date(byAdding: .year, value: 1, to: previousEventDate)
+                    case .never:
+                        newEventDate = nil
+                    case .custom:
+                        switch repeatUnit {
+                        case "Days":
+                            newEventDate = Calendar.current.date(byAdding: .day, value: customRepeatCount, to: previousEventDate)
+                        case "Weeks":
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: previousEventDate)
+                        case "Months":
+                            newEventDate = Calendar.current.date(byAdding: .month, value: customRepeatCount, to: previousEventDate)
+                        case "Years":
+                            newEventDate = Calendar.current.date(byAdding: .year, value: customRepeatCount, to: previousEventDate)
+                        default:
+                            newEventDate = nil
+                        }
+                    }
+                    if let newEventDate = newEventDate, eventCount < 100 {
+                        events[eventIndex].date = newEventDate
+                        events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
+                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
+                        eventCount += 1
+                    } else {
+                        events.remove(at: eventIndex)
+                    }
+                }
+            }
+
+            // Update past events
+            eventCount = 1
+            for (_, event) in repeatingEvents.enumerated().reversed() {
+                if let eventIndex = events.firstIndex(where: { $0.id == event.id }), eventIndex < selectedIndex {
+                    let nextEventDate = events[eventIndex + 1].date
+                    let newEventDate: Date?
+                    switch repeatOption {
+                    case .daily:
+                        newEventDate = Calendar.current.date(byAdding: .day, value: -1, to: nextEventDate)
+                    case .weekly:
+                        newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: nextEventDate)
+                    case .monthly:
+                        newEventDate = Calendar.current.date(byAdding: .month, value: -1, to: nextEventDate)
+                    case .yearly:
+                        newEventDate = Calendar.current.date(byAdding: .year, value: -1, to: nextEventDate)
+                    case .never:
+                        newEventDate = nil
+                    case .custom:
+                        switch repeatUnit {
+                        case "Days":
+                            newEventDate = Calendar.current.date(byAdding: .day, value: -customRepeatCount, to: nextEventDate)
+                        case "Weeks":
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -customRepeatCount, to: nextEventDate)
+                        case "Months":
+                            newEventDate = Calendar.current.date(byAdding: .month, value: -customRepeatCount, to: nextEventDate)
+                        case "Years":
+                            newEventDate = Calendar.current.date(byAdding: .year, value: -customRepeatCount, to: nextEventDate)
+                        default:
+                            newEventDate = nil
+                        }
+                    }
+                    if let newEventDate = newEventDate, eventCount < 100 {
+                        events[eventIndex].date = newEventDate
+                        events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
+                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
+                        eventCount += 1
+                    } else {
+                        events.remove(at: eventIndex)
+                    }
+                }
+            }
+        }
+        
+        // Check if the event will be included in the daily notification for the date of the event
+        let calendar = Calendar.current
+        let eventDayStart = calendar.startOfDay(for: newEventDate)
+        let eventDayEnd = calendar.date(byAdding: .day, value: 1, to: eventDayStart)!
+        
+        let eventsOnEventDay = events.filter { event in
+            let eventStart = calendar.startOfDay(for: event.date)
+            return eventStart >= eventDayStart && eventStart < eventDayEnd
+        }
+        
+        if eventsOnEventDay.contains(where: { $0.id == selectedEvent.id }) {
+            print("The event '\(newEventTitle)' will be included in the daily notification for \(newEventDate).")
+        } else {
+            print("The event '\(newEventTitle)' will NOT be included in the daily notification for \(newEventDate).")
+        }
+
+        appData.objectWillChange.send() // Notify observers of changes
+        saveEvents()
+        showEditSheet = false
+    }
 }
 
-// Preview Provider
-struct EditEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        EditEventView(
-            events: .constant([]),
-            selectedEvent: .constant(nil),
-            newEventTitle: .constant(""),
-            newEventDate: .constant(Date()),
-            newEventEndDate: .constant(Date()),
-            showEndDate: .constant(false),
-            showEditSheet: .constant(false),
-            selectedCategory: .constant(nil),
-            selectedColor: .constant(CodableColor(color: .black)),
-            notificationsEnabled: .constant(true),
-            saveEvent: {}
-        )
-        .environmentObject(AppData())
+// Custom view modifier for alert controller
+struct AlertControllerModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    var title: String
+    var message: String
+    var confirmAction: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                AlertControllerRepresentable(
+                    isPresented: $isPresented,
+                    title: title,
+                    message: message,
+                    confirmAction: confirmAction
+                )
+            )
+    }
+}
+
+// Representable for alert controller
+struct AlertControllerRepresentable: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    var title: String
+    var message: String
+    var confirmAction: () -> Void
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        return UIViewController() // A dummy view controller required to present the alert
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        guard isPresented, uiViewController.presentedViewController == nil else { return }
+
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            isPresented = false
+        })
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
+            confirmAction()
+            isPresented = false
+        })
+
+        DispatchQueue.main.async {
+            uiViewController.present(alert, animated: true, completion: nil)
+        }
+    }
+}
+
+// Extension to add alert controller modifier to any view
+extension View {
+    func alertController(isPresented: Binding<Bool>, title: String, message: String, confirmAction: @escaping () -> Void) -> some View {
+        self.modifier(AlertControllerModifier(isPresented: isPresented, title: title, message: message, confirmAction: confirmAction))
     }
 }

@@ -1,36 +1,43 @@
+//
+//  AddCategoryView.swift
+//  Up Next
+//
+//  Created by Gabriel Valdivia on 7/13/24.
+//
+
 import SwiftUI
 
 struct AddCategoryView: View {
-    @Binding var newCategoryName: String
-    @Binding var newCategoryColor: Color
+    @EnvironmentObject var appData: AppData
     @Binding var showingAddCategorySheet: Bool
-    var appData: AppData
-    @Environment(\.presentationMode) var presentationMode
-    @FocusState private var isCategoryNameFieldFocused: Bool // Use FocusState here
+    @State private var newCategoryName: String = ""
+    @State private var newCategoryColor: Color = .blue
+    @FocusState private var isCategoryNameFieldFocused: Bool
+    var onSave: ((name: String, color: Color)) -> Void
 
     var body: some View {
-        NavigationView {
-            Form {
-                TextField("Category Name", text: $newCategoryName)
-                    .focused($isCategoryNameFieldFocused) // Use focused modifier
-                ColorPicker("Choose Color", selection: $newCategoryColor)
-            }
-            .formStyle(GroupedFormStyle())
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    showingAddCategorySheet = false
-                    presentationMode.wrappedValue.dismiss() // Dismiss the sheet
-                },
-                trailing: Button("Save") {
-                    let newCategory = (name: newCategoryName, color: newCategoryColor)
-                    appData.categories.append(newCategory)
-                    showingAddCategorySheet = false
-                    presentationMode.wrappedValue.dismiss() // Dismiss the sheet
-                }
-            )
+        Form {
+            TextField("Category Name", text: $newCategoryName)
+                .focused($isCategoryNameFieldFocused)
+            ColorPicker("Color", selection: $newCategoryColor)
         }
+        .navigationBarTitle("Add Category", displayMode: .inline)
+        .navigationBarItems(
+            leading: Button("Cancel") {
+                showingAddCategorySheet = false
+            },
+            trailing: Button("Save") {
+                let newCategory = (name: newCategoryName, color: newCategoryColor)
+                appData.categories.append(newCategory)
+                appData.saveCategories()  // Save categories to user defaults
+                onSave(newCategory)
+                showingAddCategorySheet = false
+            }
+        )
         .onAppear {
-            isCategoryNameFieldFocused = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isCategoryNameFieldFocused = true
+            }
         }
     }
 }

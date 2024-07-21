@@ -29,53 +29,48 @@ struct EventRow: View {
                     Text(event.title)
                         .roundedFont(.headline)
                         .fontWeight(.medium)
-                        .foregroundColor(colorScheme == .dark ? .white : colorForCategory(event.category))
+                        .foregroundColor(colorScheme == .dark ? .white : event.color.color)
                     Spacer()
-                    if event.notificationsEnabled {
-                        Image(systemName: "bell.fill")
-                            .foregroundColor(colorForCategory(event.category).opacity(0.9))
-                            .font(.caption)
-                            .padding(.trailing)
-                    }
                 }
-                if let endDate = event.endDate {
+                if let endDate = event.endDate, event.date != endDate {
                     let today = Date()
                     let duration = Calendar.current.dateComponents([.day], from: event.date, to: endDate).day! + 1
                     if today > event.date && today < endDate {
                         let daysLeft = Calendar.current.dateComponents([.day], from: today, to: endDate).day! + 1
                         let daysLeftText = daysLeft == 1 ? "1 day left" : "\(daysLeft) days left"
-                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
+                        Text("\(event.date, formatter: monthDayFormatter) → \(endDate, formatter: monthDayFormatter) (\(daysLeftText))")
                             .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                     } else {
-                        Text("\(event.date, formatter: monthDayFormatter) — \(endDate, formatter: monthDayFormatter) (\(duration) days)")
+                        Text("\(event.date, formatter: monthDayFormatter) → \(endDate, formatter: monthDayFormatter) (\(duration) days)")
                             .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                     }
                 } else {
                     Text(event.date, formatter: monthDayFormatter)
                         .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
                 }
                 if event.repeatOption != .never {
-                    Text("Repeats \(event.repeatOption.rawValue.lowercased())")
-                        .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : colorForCategory(event.category).opacity(0.7))
+                    if event.repeatOption == .custom, let count = event.customRepeatCount, let unit = event.repeatUnit {
+                        let unitText = count == 1 ? String(unit.lowercased().dropLast()) : unit.lowercased()
+                        Text("Repeats every \(count) \(unitText)")
+                            .roundedFont(.footnote)
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
+                    } else {
+                        Text("Repeats \(event.repeatOption.rawValue.lowercased())")
+                            .roundedFont(.footnote)
+                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : event.color.color.opacity(0.7))
+                    }
                 }
             }
             .padding(.vertical, 10)
             .padding(.leading, 10)
             .background(
-                colorForCategory(event.category).opacity(colorScheme == .light ? 0.1 : 0.3)
+                event.color.color.opacity(colorScheme == .light ? 0.1 : 0.3)
             )
             .cornerRadius(10)
         }
-    }
-
-    // Function to determine color based on category
-    func colorForCategory(_ category: String?) -> Color {
-        guard let category = category else { return .gray } 
-        return categories.first(where: { $0.name == category })?.color ?? .gray
     }
 
     // New DateFormatter for month and day

@@ -8,10 +8,11 @@
 import Foundation
 import SwiftUI
 import UserNotifications
-import WidgetKit
-import Combine
+import WidgetKit // Add this import
 
+// Main view for adding a new event
 struct AddEventView: View {
+    // Bindings to parent view's state
     @Binding var events: [Event]
     @Binding var selectedEvent: Event?
     @Binding var newEventTitle: String
@@ -20,246 +21,58 @@ struct AddEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: CodableColor
-    @Binding var notificationsEnabled: Bool
+    @Binding var selectedColor: CodableColor // Use CodableColor to store color
+
+    // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
-    @State private var repeatOption: RepeatOption = .never
+
+    // Focus state for managing keyboard focus
+    @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
+
+    // State variables for repeat options
+    @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
     @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
-    @State private var repeatCount: Int = 1
-    @State private var showRepeatOptions: Bool = false
-    @StateObject private var keyboardResponder = KeyboardResponder()
-    @FocusState private var isNameFieldFocused: Bool // Change to FocusState
-    @State private var showAddCategorySheet: Bool = false
-    @State private var newCategoryName: String = ""
-    @State private var newCategoryColor: Color = .blue
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
+    @State private var repeatUntilCount: Int = 1 // New state variable for number of repetitions
+    @State private var customRepeatCount: Int = 1 // Initialize customRepeatCount to 1
+    @State private var repeatUnit: String = "Days" // Initialize repeatUnit to "Days"
+
+    // State variables for UI management
+    @State private var showCategoryManagementView = false // Add this state variable
+    @State private var showDeleteActionSheet = false // Add this state variable
+    @State private var showRepeatOptions = false // Set this to false by default
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack {
-                    // Name Section
-                    VStack {
-                        
-                        HStack {
-                            TextField("Title", text: $newEventTitle, onEditingChanged: { isEditing in
-                                isNameFieldFocused = isEditing
-                            })
-                            .padding(.vertical, 10)
-                            .padding(.horizontal)
-                            .background(isNameFieldFocused ? Color(UIColor.systemBackground) : Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isNameFieldFocused ? getCategoryColor() : Color.clear, lineWidth: 1)
-                            )
-                            .shadow(color: isNameFieldFocused ? getCategoryColor().opacity(0.2) : Color.clear, radius: 4)
-                            .focused($isNameFieldFocused) // Use FocusState binding
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10) 
-                    
-                    // Date Section
-                    VStack {
-                        HStack {
-                            Text("Date")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.top)
-                            Spacer()
-                        }
-                        
-                        HStack {
-                            DatePicker("", selection: $newEventDate, displayedComponents: .date)
-                                .datePickerStyle(DefaultDatePickerStyle())
-                                .labelsHidden()
-                            
-                            if showEndDate {
-                                DatePicker("", selection: $newEventEndDate, in: newEventDate.addingTimeInterval(86400)..., displayedComponents: .date)
-                                    .datePickerStyle(DefaultDatePickerStyle())
-                                    .labelsHidden()
-                            }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showEndDate.toggle()
-                                if !showEndDate {
-                                    newEventEndDate = Date()
-                                } else {
-                                    newEventEndDate = Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? Date()
-                                }
-                            }) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(showEndDate ? getCategoryColor() : Color.gray.opacity(0.2))
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: showEndDate ? "calendar.badge.minus" : "calendar.badge.plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(showEndDate ? .white : .gray)
-                                }
-                            }
-                            
-                            Menu {
-                                Picker("Repeat", selection: $repeatOption) {
-                                    ForEach(RepeatOption.allCases, id: \.self) { option in
-                                        Text(option.rawValue).tag(option)
-                                    }
-                                }
-                            } label: {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(repeatOption == .never ? Color.gray.opacity(0.2) : getCategoryColor())
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: "repeat")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(repeatOption == .never ? .gray : .white)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 0)
-                        
-                        if repeatOption != .never {
-                            VStack(alignment: .leading) {
-                                Button(action: { repeatUntilOption = .indefinitely }) {
-                                    HStack {
-                                        Image(systemName: repeatUntilOption == .indefinitely ? "largecircle.fill.circle" : "circle")
-                                            .font(.system(size: 24))
-                                            .fontWeight(.light)
-                                            .foregroundColor(repeatUntilOption == .indefinitely ? getCategoryColor() : .gray)
-                                        Text("Repeat \(repeatOption.rawValue.lowercased()) indefinitely")
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: 36)
-                                    .padding(.top, 10)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                HStack {
-                                    Button(action: { repeatUntilOption = .onDate }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .onDate ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .onDate ? getCategoryColor() : .gray)
-                                            Text("Repeat \(repeatOption.rawValue.lowercased()) until")
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .frame(height: 36)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    Spacer()
-                                    if repeatUntilOption == .onDate {
-                                        DatePicker("", selection: $repeatUntil, displayedComponents: .date)
-                                            .datePickerStyle(DefaultDatePickerStyle())
-                                            .labelsHidden()
-                                    }
-                                }
-                                
-                                HStack {
-                                    Button(action: { repeatUntilOption = .after }) {
-                                        HStack {
-                                            Image(systemName: repeatUntilOption == .after ? "largecircle.fill.circle" : "circle")
-                                                .font(.system(size: 24))
-                                                .fontWeight(.light)
-                                                .foregroundColor(repeatUntilOption == .after ? getCategoryColor() : .gray)
-                                            Text("End after")
-                                        }
-                                        .frame(alignment: .leading)
-                                        .frame(height: 36)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    
-                                    if repeatUntilOption == .after {
-                                        HStack {
-                                            TextField("", value: $repeatCount, formatter: NumberFormatter())
-                                                .keyboardType(.numberPad)
-                                                .frame(width: 24)
-                                                .multilineTextAlignment(.center)
-                                            Stepper(value: $repeatCount, in: 1...100) {
-                                                Text(" times")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 10) // Increased padding
-                    
-                    // Category Section
-                    VStack {
-                        HStack {
-                            Text("Category")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.top)
-                                .padding(.horizontal)
-                            Spacer()
-                        }
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(appData.categories, id: \.name) { category in
-                                    Text(category.name)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(selectedCategory == category.name ? getCategoryColor() : Color.gray.opacity(0.15))
-                                        .cornerRadius(20)
-                                        .foregroundColor(selectedCategory == category.name ? .white : .primary)
-                                        .onTapGesture {
-                                            selectedCategory = category.name
-                                        }
-                                }
-                                // New category pill
-                                Button(action: {
-                                    selectedCategory = nil
-                                    showAddCategorySheet = true
-                                    newCategoryName = ""
-                                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))
-                                }) {
-                                    HStack {
-                                        Image(systemName: "plus")
-                                        Text("New Category")
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.clear)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [6])) // Corrected order of arguments
-                                            .foregroundColor(.gray)
-                                    )
-                                    .foregroundColor(.gray)
-                                    .frame(height: 38)
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                    }
-                    .padding(.bottom, 10) // Increased padding
-                    
-                    // Notification Section
-                    HStack {
-                        Toggle(isOn: $notificationsEnabled) {
-                            Text("Notify me")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.gray)
-                        }
-                        .toggleStyle(SwitchToggleStyle(tint: getCategoryColor()))
-                    }
-                    .padding()
-                    
-                    Spacer()
-                }
-            }
+            // Event form view
+            EventForm(
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                selectedCategory: $selectedCategory,
+                selectedColor: $selectedColor,
+                repeatOption: $repeatOption,
+                repeatUntil: $repeatUntil,
+                repeatUntilOption: $repeatUntilOption,
+                repeatUntilCount: $repeatUntilCount, // Pass the binding
+                showCategoryManagementView: $showCategoryManagementView,
+                showDeleteActionSheet: $showDeleteActionSheet,
+                selectedEvent: $selectedEvent,
+                isTitleFocused: _isTitleFocused, // Pass FocusState directly
+                deleteEvent: {}, // Remove deleteEvent functionality
+                deleteSeries: {}, // Remove deleteSeries functionality
+                showDeleteButtons: false, // Do not show delete buttons
+                showRepeatOptions: $showRepeatOptions, // Pass the binding
+                repeatUnit: $repeatUnit,
+                customRepeatCount: $customRepeatCount // Add this line
+            )
+            .environmentObject(appData)
             .navigationTitle("Add Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { 
+                // Toolbar with cancel and save buttons
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showAddEventSheet = false
                     }) {
@@ -281,7 +94,7 @@ struct AddEventView: View {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(getCategoryColor())
+                                    .fill(selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Add")
                                     .font(.system(size: 14, weight: .bold))
@@ -293,40 +106,37 @@ struct AddEventView: View {
                     .disabled(newEventTitle.isEmpty)
                 }
             }
-            .onAppear {
-                if selectedCategory == nil {
-                    selectedCategory = appData.defaultCategory.isEmpty ? "Work" : appData.defaultCategory
-                }
-                isNameFieldFocused = true // Focus the TextField when the sheet appears
+        }
+        .sheet(isPresented: $showCategoryManagementView) {
+            // Category management view
+            NavigationView {
+                CategoriesView()
+                    .environmentObject(appData)
             }
-            .sheet(isPresented: $showAddCategorySheet, onDismiss: {
-                if !newCategoryName.isEmpty {
-                    selectedCategory = newCategoryName
-                }
-            }) {
-                AddCategoryView(
-                    newCategoryName: $newCategoryName,
-                    newCategoryColor: $newCategoryColor,
-                    showingAddCategorySheet: $showAddCategorySheet,
-                    appData: appData
-                )
+            .presentationDetents([.medium, .large], selection: .constant(.medium))
+        }
+        .onAppear {
+            // Set initial focus and default values
+            isTitleFocused = true
+            selectedColor = CodableColor(color: .blue) // Set default color to blue
+            if selectedCategory == nil {
+                selectedCategory = nil // Set default category to nil
             }
+        }
+        .onDisappear {
+            // Clear focus when view disappears
+            isTitleFocused = false
         }
     }
 
-    func deleteEvent(at event: Event) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
-        }
-    }
-
+    // Function to save the new event
     func saveNewEvent() {
         let repeatUntilDate: Date?
         switch repeatUntilOption {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatCount)
+            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatUntilCount, repeatUnit: repeatUnit)
         case .onDate:
             repeatUntilDate = repeatUntil
         }
@@ -337,108 +147,29 @@ struct AddEventView: View {
             endDate: showEndDate ? newEventEndDate : nil,
             color: selectedColor,
             category: selectedCategory,
-            notificationsEnabled: notificationsEnabled,
             repeatOption: repeatOption,
-            repeatUntil: repeatUntilDate
+            repeatUntil: repeatUntilDate,
+            customRepeatCount: customRepeatCount,
+            repeatUnit: repeatUnit,
+            repeatUntilCount: repeatUntilCount
         )
 
-        // Remove existing events in the series if editing an existing event
-        if let selectedEvent = selectedEvent {
-            events.removeAll { $0.id == selectedEvent.id }
-        }
-
-        // Create new events based on the repeat options
-        let newEvents = generateRepeatingEvents(for: newEvent)
+        let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)
         events.append(contentsOf: newEvents)
-
         saveEvents()
-        if newEvent.notificationsEnabled {
-            appData.scheduleNotification(for: newEvent)
-        }
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        appData.objectWillChange.send()
+        appData.scheduleDailyNotification()
     }
 
-    func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int) -> Date? {
-        switch option {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
-        }
-    }
-
-    func generateRepeatingEvents(for event: Event) -> [Event] {
-        var repeatingEvents = [Event]()
-        var currentEvent = event
-        repeatingEvents.append(currentEvent)
-        
-        var repetitionCount = 1
-        let maxRepetitions: Int
-        
-        switch repeatUntilOption {
-        case .indefinitely:
-            maxRepetitions = 100
-        case .after:
-            maxRepetitions = repeatCount
-        case .onDate:
-            maxRepetitions = 100
-        }
-        
-        print("Generating repeating events for \(event.title)")
-        print("Repeat option: \(event.repeatOption)")
-        print("Repeat until: \(String(describing: event.repeatUntil))")
-        print("Max repetitions: \(maxRepetitions)")
-        
-        while let nextDate = getNextRepeatDate(for: currentEvent), 
-              nextDate <= (event.repeatUntil ?? Date.distantFuture), 
-              repetitionCount < maxRepetitions {
-            currentEvent = Event(
-                title: event.title,
-                date: nextDate,
-                endDate: event.endDate,
-                color: event.color,
-                category: event.category,
-                notificationsEnabled: event.notificationsEnabled,
-                repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil
-            )
-            repeatingEvents.append(currentEvent)
-            repetitionCount += 1
-            
-            print("Added event on \(nextDate)")
-        }
-        
-        print("Generated \(repeatingEvents.count) events")
-        return repeatingEvents
-    }
-
-    func getNextRepeatDate(for event: Event) -> Date? {
-        switch event.repeatOption {
-        case .never:
-            return nil
-        case .daily:
-            return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
-        case .weekly:
-            return Calendar.current.date(byAdding: .weekOfYear, value: 1, to: event.date)
-        case .monthly:
-            return Calendar.current.date(byAdding: .month, value: 1, to: event.date)
-        case .yearly:
-            return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
-        }
-    }
-
+    // Function to save events to UserDefaults
     func saveEvents() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
             sharedDefaults.set(encoded, forKey: "events")
+            // print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")
         }
@@ -446,18 +177,14 @@ struct AddEventView: View {
     
     // Helper function to get the color of the selected category
     func getCategoryColor() -> Color {
-        if let selectedCategory = selectedCategory,
-           let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-            return category.color
-        }
-        return Color.blue
+        return selectedColor.color
     }
+    
 }
 
-enum RepeatUntilOption: String, CaseIterable {
-    case indefinitely = "Indefinitely"
-    case after = "After"
-    case onDate = "On"
+// Helper function to hide the keyboard
+private func hideKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
 // Custom date formatter
@@ -466,31 +193,3 @@ private var dateFormatter: DateFormatter {
     formatter.dateFormat = "MMM, d, yyyy"
     return formatter
 }
-
-final class KeyboardResponder: ObservableObject {
-    @Published var currentHeight: CGFloat = 0
-    private var cancellable: AnyCancellable?
-
-    init() {
-        cancellable = NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)
-            .merge(with: NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
-            .compactMap { notification in
-                notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-            }
-            .map { rect in
-                rect.height
-            }
-            .assign(to: \.currentHeight, on: self)
-    }
-
-    deinit {
-        cancellable?.cancel()
-    }
-}
-
-
-
-
-
-
-

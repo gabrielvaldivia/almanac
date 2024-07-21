@@ -8,17 +8,39 @@
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.1</string>
+	<string>1.0.2</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>upnext</string>
+				<string>com.googleusercontent.apps.108676165289-ofoumldqk4np020qsac1mqp339n6dok0</string>
 			</array>
-			<key>CFBundleURLName</key>
-			<string>Up Next</string>
 		</dict>
 	</array>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon</string>
+			</array>
+		</dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>DarkAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>DarkAppIcon</string>
+				</array>
+				<key>UIPrerenderedIcon</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>GIDClientID</key>
+	<string>108676165289-ofoumldqk4np020qsac1mqp339n6dok0.apps.googleusercontent.com</string>
 </dict>
 </plist>
