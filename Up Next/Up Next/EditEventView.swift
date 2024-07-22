@@ -57,7 +57,7 @@ struct EditEventView: View {
     @State private var showCategoryManagementView = false
     @State private var showUpdateActionSheet = false
     @State private var showDeleteSeriesAlert = false
-    @State private var showRepeatOptions = true // Add this state variable
+    @State private var showRepeatOptions = false // Change this line
     @State private var repeatUnit: String = "Days" // Add this line
     @State private var repeatUntilCount: Int = 1 // Add this line
     @State private var customRepeatCount: Int = 1 // Add this line
@@ -182,6 +182,9 @@ struct EditEventView: View {
                     repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
                 }
                 selectedColor = event.color
+                
+                // Update showRepeatOptions based on the event's repeat option
+                showRepeatOptions = event.repeatOption != .never
             }
         }
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
