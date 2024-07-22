@@ -27,10 +27,8 @@ struct EventForm: View {
     @Binding var showRepeatOptions: Bool
     @Binding var repeatUnit: String
     @Binding var customRepeatCount: Int
-
-    let predefinedColors: [Color] = [
-        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .teal, .brown
-    ]
+    @State private var showColorPickerSheet = false
+    @State private var predefinedColors: [Color] = []
 
     var body: some View {
         ZStack {
@@ -216,9 +214,9 @@ struct EventForm: View {
                                     showRepeatOptions = false
                                 }) {
                                     Image(systemName: "repeat")
-                                        .foregroundColor(.white)
+                                        .foregroundColor(CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
                                         .padding(8)
-                                        .background(getCategoryColor())
+                                        .background(selectedColor.color)
                                         .cornerRadius(8)
                                 }
                                 .padding(.trailing, 6)
@@ -439,10 +437,15 @@ struct EventForm: View {
                         }
                         .sheet(isPresented: $showingAddCategorySheet) {
                             NavigationView {
-                                AddCategoryView(showingAddCategorySheet: $showingAddCategorySheet) { newCategory in
-                                    selectedCategory = newCategory.name
-                                    selectedColor = CodableColor(color: newCategory.color)
-                                }
+                                AddCategoryView(
+                                    showingAddCategorySheet: $showingAddCategorySheet,
+                                    onSave: { newCategory in
+                                        selectedCategory = newCategory.name
+                                        selectedColor = CodableColor(color: newCategory.color)
+                                        appData.categories.append((name: newCategory.name, color: newCategory.color))
+                                        appData.saveCategories()
+                                    }
+                                )
                                 .environmentObject(appData)
                             }
                             .presentationDetents([.medium, .large], selection: .constant(.medium))
@@ -454,26 +457,21 @@ struct EventForm: View {
                         HStack {
                             Text("Color")
                             Spacer()
-                            Menu {
-                                ForEach(predefinedColors, id: \.self) { color in
-                                    Button(action: {
-                                        selectedColor = CodableColor(color: color)
-                                    }) {
-                                        HStack {
-                                            Text(color.description.capitalized)
-                                            Spacer()
-                                            Circle()
-                                                .fill(color)
-                                                .frame(width: 20, height: 20)
-                                        }
-                                    }
-                                }
-                            } label: {
+                            Button(action: {
+                                showColorPickerSheet = true
+                            }) {
                                 Circle()
                                     .fill(selectedColor.color)
                                     .frame(width: 24, height: 24)
                                     .padding(.trailing, 6)
                             }
+                        }
+                        .sheet(isPresented: $showColorPickerSheet) {
+                            CustomColorPickerSheet(
+                                selectedColor: $selectedColor, 
+                                showColorPickerSheet: $showColorPickerSheet 
+                            )
+                            .presentationDetents([.fraction(0.4)]) 
                         }
                         .padding(.bottom, 6)
                         .padding(.leading)
@@ -532,6 +530,7 @@ struct EventForm: View {
                 } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
                     selectedColor = CodableColor(color: category.color)
                 }
+                predefinedColors = CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: $showColorPickerSheet).predefinedColors
             }
             .onDisappear {
                 isTitleFocused = false

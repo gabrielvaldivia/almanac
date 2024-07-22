@@ -452,6 +452,18 @@ class AppData: NSObject, ObservableObject {
             saveEvents()
         }
     }
+
+    // Function to update event colors when a category color is changed
+    func updateEventColors(forCategory category: String, from oldColor: Color, to newColor: Color) {
+        for index in events.indices {
+            if events[index].category == category {
+                events[index].color = CodableColor(color: newColor)
+            }
+        }
+        saveEvents()
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+    }
 }
 
 // Extend AppData to conform to UNUserNotificationCenterDelegate

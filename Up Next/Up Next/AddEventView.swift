@@ -98,7 +98,7 @@ struct AddEventView: View {
                                     .frame(width: 60, height: 32)
                                 Text("Add")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
                             }
                         }
                         .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)

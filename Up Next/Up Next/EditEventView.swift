@@ -126,7 +126,7 @@ struct EditEventView: View {
                                     .frame(width: 60, height: 32)
                                 Text("Save")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
                             }
                         }
                         .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
@@ -181,6 +181,7 @@ struct EditEventView: View {
                     repeatUnit = event.repeatUnit ?? "Days"
                     repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
                 }
+                selectedColor = event.color
             }
         }
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
