@@ -87,3 +87,17 @@ extension CodableColor: Equatable {
         return lhs.color == rhs.color
     }
 }
+
+extension Color {
+    var contrastColor: Color {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var opacity: CGFloat = 0
+        
+        UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &opacity)
+        
+        let brightness = ((red * 299) + (green * 587) + (blue * 114)) / 1000
+        return brightness > 0.5 ? .black : .white
+    }
+}
