@@ -23,7 +23,6 @@ struct SettingsView: View {
     @State private var errorMessage: String? 
     @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
     @State private var selectedAppIcon = "Default"
-    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012 by Charlie Deets", "2013 by Charlie Deets"] 
     @State private var iconChangeSuccess: Bool? 
 
     var body: some View {
@@ -301,43 +300,49 @@ struct AppIconSelectionView: View {
     @Binding var selectedAppIcon: String
     @State private var iconChangeSuccess: Bool?
     @Environment(\.openURL) var openURL
-    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012", "2013"]
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012", "2013", "Bubble", "Time Piece", "Time Bot", "Arrow", "Abstract (Light)", "Abstract (Dark)"]
     
     // Dictionary to store author names and links
     let iconAuthors: [String: (name: String, link: String)] = [
         "2012": ("Charlie Deets", "https://charliedeets.com"),
-        "2013": ("Charlie Deets", "https://charliedeets.com")
-        // Add more icons with authors here in the future
+        "2013": ("Charlie Deets", "https://charliedeets.com"),
+        "Abstract (Light)": ("Cliff Warren", "http://www.cliffwarren.com"),
+        "Abstract (Dark)": ("Cliff Warren", "http://www.cliffwarren.com"),
+        "Bubble": ("Pablo Stanley", "https://x.com/pablostanley"),
+        "Time Piece": ("Pablo Stanley", "https://x.com/pablostanley"),
+        "Time Bot": ("Pablo Stanley", "https://x.com/pablostanley"),
+        "Arrow": ("Pablo Stanley", "https://x.com/pablostanley")
     ]
     
     var body: some View {
         ScrollView {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
                 ForEach(appIcons, id: \.self) { icon in
-                    VStack {
-                        Image(uiImage: iconImage(for: icon))
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 60, height: 60)
-                            .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 3)
-                        
-                        IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
-                        
-                        RadioButton(isSelected: selectedAppIcon == icon) {
-                            selectedAppIcon = icon
-                            changeAppIcon(to: icon)
+                    Button(action: {
+                        selectedAppIcon = icon
+                        changeAppIcon(to: icon)
+                    }) {
+                        VStack {
+                            Image(uiImage: iconImage(for: icon))
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 60, height: 60)
+                                .cornerRadius(12)
+                                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 3)
+                            
+                            IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
+                            
+                            RadioButton(isSelected: selectedAppIcon == icon) {
+                                selectedAppIcon = icon
+                                changeAppIcon(to: icon)
+                            }
                         }
+                        .frame(height: 140)
+                        .padding(.bottom, 16)
                     }
-                    .frame(height: 140)
-                    .padding(.bottom, 16)
                 }
             }
             .padding()
-        }
-        .navigationBarTitle("App Icons", displayMode: .inline)
-        .background(Color(UIColor.secondarySystemBackground))
-        .overlay(
             VStack {
                 Spacer()
                 HStack {
@@ -351,38 +356,9 @@ struct AppIconSelectionView: View {
                 .font(.footnote)
                 .padding(.bottom, 8)
             }
-        )
-    }
-    
-    private func iconImage(for iconName: String) -> UIImage {
-        let iconToLoad: String?
-        switch iconName {
-        case "Default":
-            iconToLoad = nil
-        case "Dark":
-            iconToLoad = "DarkAppIcon"
-        case "Monochrome":
-            iconToLoad = "MonochromeAppIcon"
-        case "Star":
-            iconToLoad = "StarAppIcon"
-        case "Heart":
-            iconToLoad = "HeartAppIcon"
-        case "X":
-            iconToLoad = "XAppIcon"
-        case "2012":
-            iconToLoad = "2012AppIcon"
-        case "2013":
-            iconToLoad = "2013AppIcon"
-        default:
-            iconToLoad = nil
         }
-        
-        if let iconName = iconToLoad, let alternateIcon = UIImage(named: iconName) {
-            return alternateIcon
-        } else {
-            // Return the default app icon
-            return UIImage(named: "AppIcon") ?? UIImage(systemName: "app.fill")!
-        }
+        .navigationBarTitle("App Icons", displayMode: .inline)
+        .background(Color(UIColor.secondarySystemBackground))
     }
     
     private func changeAppIcon(to iconName: String) {
@@ -404,6 +380,18 @@ struct AppIconSelectionView: View {
             iconToSet = "2012AppIcon"
         case "2013":
             iconToSet = "2013AppIcon"
+        case "Abstract (Light)":
+            iconToSet = "AbstractLightAppIcon"
+        case "Abstract (Dark)":
+            iconToSet = "AbstractDarkAppIcon"
+        case "Bubble":
+            iconToSet = "BubbleAppIcon"
+        case "Time Piece":
+            iconToSet = "TimePieceAppIcon"
+        case "Time Bot":
+            iconToSet = "TimeBotAppIcon"
+        case "Arrow":
+            iconToSet = "ArrowAppIcon"
         default:
             iconToSet = nil
         }
@@ -421,6 +409,49 @@ struct AppIconSelectionView: View {
             }
         }
     }
+
+        private func iconImage(for iconName: String) -> UIImage {
+            let iconToLoad: String?
+            switch iconName {
+            case "Default":
+                iconToLoad = nil
+            case "Dark":
+                iconToLoad = "DarkAppIcon"
+            case "Monochrome":
+                iconToLoad = "MonochromeAppIcon"
+            case "Star":
+                iconToLoad = "StarAppIcon"
+            case "Heart":
+                iconToLoad = "HeartAppIcon"
+            case "X":
+                iconToLoad = "XAppIcon"
+            case "2012":
+                iconToLoad = "2012AppIcon"
+            case "2013":
+                iconToLoad = "2013AppIcon"
+            case "Abstract (Light)":
+                iconToLoad = "AbstractLightAppIcon"
+            case "Abstract (Dark)":
+                iconToLoad = "AbstractDarkAppIcon"
+            case "Bubble":
+                iconToLoad = "BubbleAppIcon"
+            case "Time Piece":
+                iconToLoad = "TimePieceAppIcon"
+            case "Time Bot":
+                iconToLoad = "TimeBotAppIcon"
+            case "Arrow":
+                iconToLoad = "ArrowAppIcon"
+            default:
+                iconToLoad = nil
+            }
+            
+            if let iconName = iconToLoad, let alternateIcon = UIImage(named: iconName) {
+                return alternateIcon
+            } else {
+                // Return the default app icon
+                return UIImage(named: "AppIcon") ?? UIImage(systemName: "app.fill")!
+            }
+        }
 
     private func openEmail() {
         if let url = URL(string: "mailto:gabe@valdivia.works") {
@@ -443,6 +474,7 @@ struct IconLabel: View {
             Text(icon)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
+                .foregroundColor(.primary) 
             
             if let author = author {
                 (Text("by ")
@@ -450,7 +482,7 @@ struct IconLabel: View {
                     .foregroundColor(.secondary) +
                 Text(author.name)
                     .font(.caption)
-                    .foregroundColor(.blue))
+                    .foregroundColor(.secondary))
                     .onTapGesture {
                         if let url = URL(string: author.link) {
                             openURL(url)
