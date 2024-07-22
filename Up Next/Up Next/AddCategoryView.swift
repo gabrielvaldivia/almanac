@@ -57,7 +57,7 @@ struct AddCategoryView: View {
                             .frame(width: 60, height: 32)
                         Text("Save")
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(selectedColor.color.contrastColor)
                     }
                 }
                 .opacity(newCategoryName.isEmpty ? 0.3 : 1.0)
