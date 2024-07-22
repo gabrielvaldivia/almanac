@@ -50,7 +50,7 @@ struct CategoriesView: View {
     @State private var showingSubscriptionSheet = false  // Add this line
 
     let predefinedColors: [Color] = [
-        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .teal, .brown
     ]
 
     var body: some View {
@@ -242,7 +242,7 @@ struct EditCategorySheet: View {
     @FocusState private var isCategoryNameFieldFocused: Bool
 
     let predefinedColors: [Color] = [
-        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .teal, .brown
     ]
 
     var body: some View {

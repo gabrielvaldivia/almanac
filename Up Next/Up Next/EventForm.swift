@@ -29,7 +29,7 @@ struct EventForm: View {
     @Binding var customRepeatCount: Int
 
     let predefinedColors: [Color] = [
-        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .teal, .brown
     ]
 
     var body: some View {
@@ -460,10 +460,11 @@ struct EventForm: View {
                                         selectedColor = CodableColor(color: color)
                                     }) {
                                         HStack {
+                                            Text(color.description.capitalized)
+                                            Spacer()
                                             Circle()
                                                 .fill(color)
                                                 .frame(width: 20, height: 20)
-                                            Text(color.description.capitalized)
                                         }
                                     }
                                 }
@@ -471,6 +472,7 @@ struct EventForm: View {
                                 Circle()
                                     .fill(selectedColor.color)
                                     .frame(width: 24, height: 24)
+                                    .padding(.trailing, 6)
                             }
                         }
                         .padding(.bottom, 6)

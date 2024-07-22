@@ -16,7 +16,7 @@ struct AddCategoryView: View {
     var onSave: ((name: String, color: Color)) -> Void
 
     let predefinedColors: [Color] = [
-        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .teal, .brown
     ]
 
     var body: some View {
