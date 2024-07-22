@@ -49,6 +49,10 @@ struct CategoriesView: View {
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?  // Add this line
     @State private var showingSubscriptionSheet = false  // Add this line
 
+    let predefinedColors: [Color] = [
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+    ]
+
     var body: some View {
         Form {  // Change List to Form
             // Categories section 
@@ -75,22 +79,26 @@ struct CategoriesView: View {
                             }
                         }
                         Spacer()
-                        ColorPicker("", selection: Binding(
-                            get: { 
-                                if self.appData.categories.indices.contains(index) {
-                                    return self.appData.categories[index].color
-                                }
-                                return .clear
-                            },
-                            set: { 
-                                if self.appData.categories.indices.contains(index) {
-                                    self.appData.categories[index].color = $0
+                        Menu {
+                            ForEach(predefinedColors, id: \.self) { color in
+                                Button(action: {
+                                    if self.appData.categories.indices.contains(index) {
+                                        self.appData.categories[index].color = color
+                                    }
+                                }) {
+                                    HStack {
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 20, height: 20)
+                                        Text(color.description.capitalized)
+                                    }
                                 }
                             }
-                        ))
-                        .labelsHidden()
-                        .frame(width: 30, height: 30)
-                        .padding(.trailing, 10)
+                        } label: {
+                            Circle()
+                                .fill(self.appData.categories.indices.contains(index) ? self.appData.categories[index].color : .clear)
+                                .frame(width: 24, height: 24)
+                        }
                     }
                     .contentShape(Rectangle())  // Make the entire HStack tappable
                     .onTapGesture {
@@ -233,6 +241,10 @@ struct EditCategorySheet: View {
     @EnvironmentObject var appData: AppData
     @FocusState private var isCategoryNameFieldFocused: Bool
 
+    let predefinedColors: [Color] = [
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+    ]
+
     var body: some View {
         NavigationView {
             if let categoryToEdit = categoryToEdit {
@@ -241,15 +253,32 @@ struct EditCategorySheet: View {
                         get: { categoryToEdit.name },
                         set: { self.categoryToEdit?.name = $0 }
                     ))
-                    .focused($isCategoryNameFieldFocused)  // Ensure the TextField is focused
-                    ColorPicker("Choose Color", selection: Binding(
-                        get: { categoryToEdit.color },
-                        set: { self.categoryToEdit?.color = $0 }
-                    ))
-                    
+                    .focused($isCategoryNameFieldFocused)
+                    HStack {
+                        Text("Color")
+                        Spacer()
+                        Menu {
+                            ForEach(predefinedColors, id: \.self) { color in
+                                Button(action: {
+                                    self.categoryToEdit?.color = color
+                                }) {
+                                    HStack {
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 20, height: 20)
+                                        Text(color.description.capitalized)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Circle()
+                                .fill(categoryToEdit.color)
+                                .frame(width: 24, height: 24)
+                        }
+                    }
                 }
-                .formStyle(GroupedFormStyle())  // Add this line
-                .navigationBarTitle("Edit Category", displayMode: .inline)  // Add this line
+                .formStyle(GroupedFormStyle())
+                .navigationBarTitle("Edit Category", displayMode: .inline)
                 .navigationBarItems(
                     leading: Button("Cancel") {
                         showingEditCategorySheet = false
@@ -258,7 +287,7 @@ struct EditCategorySheet: View {
                         let index = categoryToEdit.index
                         appData.categories[index].name = categoryToEdit.name
                         appData.categories[index].color = categoryToEdit.color
-                        appData.saveCategories()  // Save categories to user defaults
+                        appData.saveCategories()
                         showingEditCategorySheet = false
                     }
                 )
@@ -266,9 +295,8 @@ struct EditCategorySheet: View {
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isCategoryNameFieldFocused = true  // Delay focusing the TextField
+                isCategoryNameFieldFocused = true
             }
         }
-        .presentationDetents([.medium])  // Ensure the sheet size is set to medium
     }
 }

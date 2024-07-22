@@ -15,11 +15,36 @@ struct AddCategoryView: View {
     @FocusState private var isCategoryNameFieldFocused: Bool
     var onSave: ((name: String, color: Color)) -> Void
 
+    let predefinedColors: [Color] = [
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+    ]
+
     var body: some View {
         Form {
             TextField("Category Name", text: $newCategoryName)
                 .focused($isCategoryNameFieldFocused)
-            ColorPicker("Color", selection: $newCategoryColor)
+            HStack {
+                Text("Color")
+                Spacer()
+                Menu {
+                    ForEach(predefinedColors, id: \.self) { color in
+                        Button(action: {
+                            newCategoryColor = color
+                        }) {
+                            HStack {
+                                Circle()
+                                    .fill(color)
+                                    .frame(width: 20, height: 20)
+                                Text(color.description.capitalized)
+                            }
+                        }
+                    }
+                } label: {
+                    Circle()
+                        .fill(newCategoryColor)
+                        .frame(width: 24, height: 24)
+                }
+            }
         }
         .navigationBarTitle("Add Category", displayMode: .inline)
         .navigationBarItems(
@@ -27,10 +52,7 @@ struct AddCategoryView: View {
                 showingAddCategorySheet = false
             },
             trailing: Button("Save") {
-                let newCategory = (name: newCategoryName, color: newCategoryColor)
-                appData.categories.append(newCategory)
-                appData.saveCategories()  // Save categories to user defaults
-                onSave(newCategory)
+                onSave((name: newCategoryName, color: newCategoryColor))
                 showingAddCategorySheet = false
             }
         )

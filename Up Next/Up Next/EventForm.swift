@@ -28,6 +28,10 @@ struct EventForm: View {
     @Binding var repeatUnit: String
     @Binding var customRepeatCount: Int
 
+    let predefinedColors: [Color] = [
+        .primary, .gray, .red, .green, .blue, .orange, .pink, .purple, .indigo, .mint, .teal, .cyan, .brown
+    ]
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
@@ -450,12 +454,24 @@ struct EventForm: View {
                         HStack {
                             Text("Color")
                             Spacer()
-                            ColorPicker("", selection: Binding(
-                                get: { selectedColor.color },
-                                set: { selectedColor = CodableColor(color: $0) }
-                            ))
-                            .labelsHidden()
-                            .frame(width: 30, height: 30)
+                            Menu {
+                                ForEach(predefinedColors, id: \.self) { color in
+                                    Button(action: {
+                                        selectedColor = CodableColor(color: color)
+                                    }) {
+                                        HStack {
+                                            Circle()
+                                                .fill(color)
+                                                .frame(width: 20, height: 20)
+                                            Text(color.description.capitalized)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Circle()
+                                    .fill(selectedColor.color)
+                                    .frame(width: 24, height: 24)
+                            }
                         }
                         .padding(.bottom, 6)
                         .padding(.leading)
