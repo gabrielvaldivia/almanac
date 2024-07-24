@@ -28,6 +28,23 @@ struct EventRow: View {
         return formatter
     }()
 
+    private func getDurationText(start: Date, end: Date?) -> String {
+        guard let end = end else { return "" }
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.day], from: start, to: end)
+        guard let days = components.day, days > 0 else { return "" }
+        
+        let now = Date()
+        if now >= start && now <= end {
+            let remainingComponents = calendar.dateComponents([.day], from: now, to: end)
+            if let remainingDays = remainingComponents.day, remainingDays > 0 {
+                return "(\(remainingDays) day\(remainingDays == 1 ? "" : "s") left)"
+            }
+        }
+        
+        return "(\(days) day\(days == 1 ? "" : "s"))"
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: appData.eventStyle == "naked" ? 8 : 20) {
             // Event Style Indicator
@@ -50,7 +67,7 @@ struct EventRow: View {
                 
                 // Event Date(s)
                 if let endDate = event.endDate {
-                    Text("\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate))")
+                    Text("\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate)) \(getDurationText(start: event.date, end: endDate))")
                         .roundedFont(.footnote)
                         .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
                 } else {

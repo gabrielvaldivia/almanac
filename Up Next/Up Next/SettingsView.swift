@@ -78,7 +78,7 @@ struct SettingsView: View {
              // Appearance Section
             Section(header: Text("Appearance")) {
                 NavigationLink(destination: AppIconSelectionView(selectedAppIcon: $selectedAppIcon)) {
-                    Text("Change App Icon")
+                    Text("App Icons")
                 }
                 HStack {
                     Text("Event Style")
