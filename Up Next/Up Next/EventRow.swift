@@ -45,6 +45,47 @@ struct EventRow: View {
         return "(\(days) day\(days == 1 ? "" : "s"))"
     }
 
+    private func getRepeatText() -> String {
+        switch event.repeatOption {
+        case .never:
+            return ""
+        case .daily:
+            return "Daily"
+        case .weekly:
+            return "Weekly"
+        case .monthly:
+            return "Monthly"
+        case .yearly:
+            return "Yearly"
+        case .custom:
+            if let count = event.customRepeatCount, let unit = event.repeatUnit {
+                let unitString = count == 1 ? singularForm(of: unit) : pluralForm(of: unit)
+                return "\(count) \(unitString)"
+            }
+            return ""
+        }
+    }
+
+    private func singularForm(of unit: String) -> String {
+        switch unit.lowercased() {
+        case "day", "days": return "Day"
+        case "week", "weeks": return "Week"
+        case "month", "months": return "Month"
+        case "year", "years": return "Year"
+        default: return unit.capitalized
+        }
+    }
+
+    private func pluralForm(of unit: String) -> String {
+        switch unit.lowercased() {
+        case "day", "days": return "Days"
+        case "week", "weeks": return "Weeks"
+        case "month", "months": return "Months"
+        case "year", "years": return "Years"
+        default: return unit.capitalized + "s"
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: appData.eventStyle == "naked" ? 8 : 20) {
             // Event Style Indicator
@@ -61,34 +102,28 @@ struct EventRow: View {
                         .roundedFont(.headline)
                         .fontWeight(.medium)
                         .foregroundColor(colorScheme == .dark ? .white : (appData.eventStyle == "naked" ? .primary : event.color.color))
-                        .padding (.bottom, 2)
+                        .padding (.bottom, 1)
                     Spacer()
                 }
                 
-                // Event Date(s)
-                if let endDate = event.endDate {
-                    Text("\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate)) \(getDurationText(start: event.date, end: endDate))")
-                        .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
-                } else {
-                    Text(dateFormatter.string(from: event.date))
-                        .roundedFont(.footnote)
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
-                }
-                
-                // Repeat Information
-                if event.repeatOption != .never {
-                    if event.repeatOption == .custom, let count = event.customRepeatCount, let unit = event.repeatUnit {
-                        let unitText = count == 1 ? String(unit.lowercased().dropLast()) : unit.lowercased()
-                        Text("Repeats every \(count) \(unitText)")
-                            .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
+                // Event Date(s) and Repeat Information
+                HStack(spacing: 4) {
+                    if let endDate = event.endDate {
+                        Text("\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate)) \(getDurationText(start: event.date, end: endDate))")
                     } else {
-                        Text("Repeats \(event.repeatOption.rawValue.lowercased())")
-                            .roundedFont(.footnote)
-                            .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
+                        Text(dateFormatter.string(from: event.date))
+                    }
+                    
+                    if event.repeatOption != .never {
+                        Text("·")
+                        HStack(spacing: 2) {
+                            Image(systemName: "repeat")
+                            Text(getRepeatText())
+                        }
                     }
                 }
+                .roundedFont(.footnote)
+                .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
             }
             .padding(.vertical, appData.eventStyle == "naked" ? 4 : 12)
             .padding(.horizontal, appData.eventStyle == "naked" ? 0 : 16)
@@ -126,5 +161,17 @@ struct EventRow: View {
             .cornerRadius(appData.eventStyle == "naked" ? 0 : 12)
         }
         .clipShape(RoundedRectangle(cornerRadius: appData.eventStyle == "naked" ? 0 : 12))
+    }
+}
+
+extension RepeatOption {
+    var shorthand: String {
+        switch self {
+        case .daily: return "d"
+        case .weekly: return "w"
+        case .monthly: return "m"
+        case .yearly: return "y"
+        case .never, .custom: return ""
+        }
     }
 }

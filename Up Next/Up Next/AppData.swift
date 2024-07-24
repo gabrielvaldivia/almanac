@@ -542,3 +542,10 @@ func migrateUserDefaults() {
         print("Migrated default category to shared UserDefaults.")
     }
 }
+
+enum RepeatUnit: String, Codable {
+    case day = "day"
+    case week = "week"
+    case month = "month"
+    case year = "year"
+}
