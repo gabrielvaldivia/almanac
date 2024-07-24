@@ -198,6 +198,13 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
+    @Published var eventStyle: String = "flat" {
+        didSet {
+            if isDataLoaded {
+                UserDefaults.standard.set(eventStyle, forKey: "eventStyle")
+            }
+        }
+    }
 
     private var isDataLoaded = false
 
@@ -221,6 +228,7 @@ class AppData: NSObject, ObservableObject {
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
+        self.eventStyle = UserDefaults.standard.string(forKey: "eventStyle") ?? "bubbly"
     }
 
     // Function to save categories to UserDefaults

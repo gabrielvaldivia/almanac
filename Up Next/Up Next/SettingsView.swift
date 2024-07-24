@@ -80,6 +80,37 @@ struct SettingsView: View {
                 NavigationLink(destination: AppIconSelectionView(selectedAppIcon: $selectedAppIcon)) {
                     Text("Change App Icon")
                 }
+                HStack {
+                    Text("Event Style")
+                    Spacer()
+                    Menu {
+                        Button(action: {
+                            appData.eventStyle = "flat"
+                        }) {
+                            Text("Flat")
+                        }
+                        Button(action: {
+                            appData.eventStyle = "bubbly"
+                        }) {
+                            Text("Bubbly")
+                        }
+                        Button(action: {
+                            appData.eventStyle = "naked"
+                        }) {
+                            Text("Naked")
+                        }
+                    } label: {
+                        HStack {
+                            Text(appData.eventStyle.capitalized)
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.vertical, 6)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(8)
+                    }
+                }
             }
             
             // Support Section
@@ -300,7 +331,7 @@ struct AppIconSelectionView: View {
     @Binding var selectedAppIcon: String
     @State private var iconChangeSuccess: Bool?
     @Environment(\.openURL) var openURL
-    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "2012", "2013", "Bubble", "Time Piece", "Time Bot", "Arrow", "Abstract (Light)", "Abstract (Dark)"]
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "Dot Grid","Glyph", "Arrow (B&W)", "2012", "2013", "Bubble", "Time Piece", "Time Bot", "Arrow", "Abstract (Light)", "Abstract (Dark)", "Pixel"]
     
     // Dictionary to store author names and links
     let iconAuthors: [String: (name: String, link: String)] = [
@@ -311,7 +342,8 @@ struct AppIconSelectionView: View {
         "Bubble": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Piece": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Bot": ("Pablo Stanley", "https://x.com/pablostanley"),
-        "Arrow": ("Pablo Stanley", "https://x.com/pablostanley")
+        "Arrow": ("Pablo Stanley", "https://x.com/pablostanley"),
+        "Pixel": ("Daniel Chung", "https://www.danielchung.tech/")
     ]
     
     var body: some View {
@@ -376,6 +408,12 @@ struct AppIconSelectionView: View {
             iconToSet = "HeartAppIcon"
         case "X":
             iconToSet = "XAppIcon"
+        case "Dot Grid":
+            iconToSet = "DotGridAppIcon"
+        case "Glyph":
+            iconToSet = "GlyphAppIcon"
+        case "Arrow (B&W)":
+            iconToSet = "ArrowBWAppIcon"
         case "2012":
             iconToSet = "2012AppIcon"
         case "2013":
@@ -392,6 +430,8 @@ struct AppIconSelectionView: View {
             iconToSet = "TimeBotAppIcon"
         case "Arrow":
             iconToSet = "ArrowAppIcon"
+        case "Pixel":
+            iconToSet = "PixelAppIcon"
         default:
             iconToSet = nil
         }
@@ -425,6 +465,12 @@ struct AppIconSelectionView: View {
                 iconToLoad = "HeartAppIcon"
             case "X":
                 iconToLoad = "XAppIcon"
+            case "Glyph":
+                iconToLoad = "GlyphAppIcon"
+            case "Arrow (B&W)":
+                iconToLoad = "ArrowBWAppIcon"
+            case "Dot Grid":
+                iconToLoad = "DotGridAppIcon"
             case "2012":
                 iconToLoad = "2012AppIcon"
             case "2013":
@@ -441,6 +487,8 @@ struct AppIconSelectionView: View {
                 iconToLoad = "TimeBotAppIcon"
             case "Arrow":
                 iconToLoad = "ArrowAppIcon"
+            case "Pixel":
+                iconToLoad = "PixelAppIcon"
             default:
                 iconToLoad = nil
             }

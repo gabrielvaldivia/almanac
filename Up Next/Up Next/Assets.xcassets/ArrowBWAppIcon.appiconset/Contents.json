@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "BubbleAppIcon.png",
+      "filename" : "ArrowAppIcon.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

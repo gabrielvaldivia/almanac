@@ -28,70 +28,92 @@ struct PastEventsView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                LazyVStack {
-                    let groupedEvents = groupedPastEvents()
-                    let sortedGroupedEvents = groupedEvents.sorted(by: { $1.key > $0.key })
-                    
-                    ForEach(sortedGroupedEvents, id: \.key) { monthYear, events in
-                        Section(header: Text(monthYear)
-                                    .roundedFont(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .padding(.top, 20)
-                                    .padding(.horizontal, 10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)) {
-                            ForEach(events, id: \.id) { event in
-                                Button(action: {
-                                    selectedEvent = event
-                                    newEventTitle = event.title
-                                    newEventDate = event.date
-                                    newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
-                                    showEndDate = event.endDate != nil
-                                    selectedCategory = event.category
-                                    selectedColor = event.color
-                                    isEditSheetPresented = true
-                                }) {
-                                    VStack {
-                                        EventRow(event: event, formatter: itemDateFormatter,
-                                                 selectedEvent: $selectedEvent,
-                                                 newEventTitle: $newEventTitle,
-                                                 newEventDate: $newEventDate,
-                                                 newEventEndDate: $newEventEndDate,
-                                                 showEndDate: $showEndDate,
-                                                 selectedCategory: $selectedCategory,
-                                                 showEditSheet: $isEditSheetPresented,
-                                                 categories: appData.categories)
-                                    }
-                                    .listRowSeparator(.hidden)
-                                }
-                                .listRowSeparator(.hidden)
-                            }
-                            .onDelete(perform: deletePastEvent)
-                        }
-                    }
-                }
-                .listStyle(PlainListStyle())
-                .listRowSeparator(.hidden)
-                .padding()
+                pastEventsList
             }
             .navigationTitle("Past Events")
             .roundedFont(.title)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Done") {
-                self.showPastEventsSheet = false
-            })
+            .navigationBarItems(trailing: doneButton)
             .sheet(isPresented: $isEditSheetPresented) {
-                EditEventView(events: $events,
-                              selectedEvent: $selectedEvent,
-                              newEventTitle: $newEventTitle,
-                              newEventDate: $newEventDate,
-                              newEventEndDate: $newEventEndDate,
-                              showEndDate: $showEndDate,
-                              showEditSheet: $showEditSheet,
-                              selectedCategory: $selectedCategory,
-                              selectedColor: $selectedColor,
-                              saveEvent: saveEvent)
+                editEventSheet
             }
         }
+    }
+
+    private var pastEventsList: some View {
+        LazyVStack {
+            ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+                pastEventSection(monthYear: monthYear, events: events)
+            }
+        }
+        .listStyle(PlainListStyle())
+        .listRowSeparator(.hidden)
+        .padding()
+    }
+
+    private func pastEventSection(monthYear: String, events: [Event]) -> some View {
+        Section(header: sectionHeader(title: monthYear)) {
+            ForEach(events, id: \.id) { event in
+                pastEventButton(event: event)
+            }
+            .onDelete(perform: deletePastEvent)
+        }
+    }
+
+    private func sectionHeader(title: String) -> some View {
+        Text(title)
+            .roundedFont(.headline)
+            .fontWeight(.semibold)
+            .padding(.top, 20)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func pastEventButton(event: Event) -> some View {
+        Button(action: {
+            selectEvent(event)
+            isEditSheetPresented = true
+        }) {
+            EventRow(event: event,
+                     selectedEvent: $selectedEvent,
+                     newEventTitle: $newEventTitle,
+                     newEventDate: $newEventDate,
+                     newEventEndDate: $newEventEndDate,
+                     showEndDate: $showEndDate,
+                     selectedCategory: $selectedCategory,
+                     showEditSheet: $isEditSheetPresented,
+                     categories: appData.categories)
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var doneButton: some View {
+        Button("Done") {
+            self.showPastEventsSheet = false
+        }
+    }
+
+    private var editEventSheet: some View {
+        EditEventView(events: $events,
+                      selectedEvent: $selectedEvent,
+                      newEventTitle: $newEventTitle,
+                      newEventDate: $newEventDate,
+                      newEventEndDate: $newEventEndDate,
+                      showEndDate: $showEndDate,
+                      showEditSheet: $showEditSheet,
+                      selectedCategory: $selectedCategory,
+                      selectedColor: $selectedColor,
+                      saveEvent: saveEvent)
+    }
+
+    private func selectEvent(_ event: Event) {
+        selectedEvent = event
+        newEventTitle = event.title
+        newEventDate = event.date
+        newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
+        showEndDate = event.endDate != nil
+        selectedCategory = event.category
+        selectedColor = event.color
     }
 
     func groupedPastEvents() -> [String: [Event]] {

@@ -119,7 +119,7 @@ struct ContentView: View {
                     }
                 } 
             }
-            .navigationTitle("Up Next")
+            .navigationTitle("Upcoming Events")
             .navigationBarItems(
                 leading: Button(action: {
                     self.showPastEventsSheet = true
@@ -236,7 +236,7 @@ func eventRowView(key: String, events: [Event]) -> some View {
             .padding(.vertical, 14)
         VStack(alignment: .leading) {
             ForEach(events, id: \.id) { event in
-                EventRow(event: event, formatter: itemDateFormatter,
+                EventRow(event: event,
                          selectedEvent: $selectedEvent,
                          newEventTitle: $newEventTitle,
                          newEventDate: $newEventDate,

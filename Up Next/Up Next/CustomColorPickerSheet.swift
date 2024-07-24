@@ -13,13 +13,6 @@ struct CustomColorPickerSheet: View {
     @Binding var showColorPickerSheet: Bool
     @Environment(\.colorScheme) var colorScheme
     
-    var predefinedColors: [Color] {
-        [
-            colorScheme == .dark ? .white : .black,
-            .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
-        ]
-    }
-    
     static var staticPredefinedColors: [Color] {
         [
             .primary, .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
@@ -59,5 +52,12 @@ struct CustomColorPickerSheet: View {
             }
             // .navigationBarTitle("Select Color", displayMode: .inline)
         }
+    }
+    
+    var predefinedColors: [Color] {
+        [
+            colorScheme == .dark ? .white : .black,
+            .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
+        ]
     }
 }

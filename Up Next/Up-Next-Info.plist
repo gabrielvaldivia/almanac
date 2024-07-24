@@ -17,5 +17,7 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>108676165289-ofoumldqk4np020qsac1mqp339n6dok0.apps.googleusercontent.com</string>
+	<key>CFBundleDisplayName</key>
+	<string>Almanac</string>
 </dict>
 </plist>
