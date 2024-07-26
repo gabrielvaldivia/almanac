@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
     @State private var selectedAppIcon = "Default"
     @State private var iconChangeSuccess: Bool? 
+    @State private var showingAppIconSheet = false
 
     var body: some View {
         Form {
@@ -77,8 +78,16 @@ struct SettingsView: View {
 
              // Appearance Section
             Section(header: Text("Appearance")) {
-                NavigationLink(destination: AppIconSelectionView(selectedAppIcon: $selectedAppIcon)) {
-                    Text("App Icons")
+                Button(action: {
+                    showingAppIconSheet = true
+                }) {
+                    HStack {
+                        Text("App Icon")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(selectedAppIcon)
+                            .foregroundColor(.gray)
+                    }
                 }
                 HStack {
                     Text("Event Style")
@@ -168,6 +177,10 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .sheet(isPresented: $showingAppIconSheet) {
+            AppIconSelectionView(selectedAppIcon: $selectedAppIcon)
+                .presentationDetents([.height(230)])
+        }
         .onAppear {
             Task {
                 await fetchSubscriptionProduct()
@@ -331,10 +344,13 @@ struct AppIconSelectionView: View {
     @Binding var selectedAppIcon: String
     @State private var iconChangeSuccess: Bool?
     @Environment(\.openURL) var openURL
-    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "Dot Grid","Glyph", "Arrow (B&W)", "2012", "2013", "Bubble", "Time Piece", "Time Bot", "Arrow", "Abstract (Light)", "Abstract (Dark)", "Pixel"]
+    @Environment(\.dismiss) var dismiss
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "Dot Grid","Glyph", "Pixel", "1992", "1993","2012", "2013", "Abstract (Light)", "Abstract (Dark)", "Bubble", "Skeuo", "Time Bot", "Time Piece"]
     
     // Dictionary to store author names and links
     let iconAuthors: [String: (name: String, link: String)] = [
+        "1992": ("Sai Perchard", "https://www.perchard.com/"),
+        "1993": ("Sai Perchard", "https://www.perchard.com/"),
         "2012": ("Charlie Deets", "https://charliedeets.com"),
         "2013": ("Charlie Deets", "https://charliedeets.com"),
         "Abstract (Light)": ("Cliff Warren", "http://www.cliffwarren.com"),
@@ -342,54 +358,60 @@ struct AppIconSelectionView: View {
         "Bubble": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Piece": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Bot": ("Pablo Stanley", "https://x.com/pablostanley"),
-        "Arrow": ("Pablo Stanley", "https://x.com/pablostanley"),
+        "Skeuo": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Pixel": ("Daniel Chung", "https://www.danielchung.tech/")
     ]
     
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 3), spacing: 16) {
-                ForEach(appIcons, id: \.self) { icon in
-                    Button(action: {
-                        selectedAppIcon = icon
-                        changeAppIcon(to: icon)
-                    }) {
-                        VStack {
-                            Image(uiImage: iconImage(for: icon))
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 60, height: 60)
-                                .cornerRadius(12)
-                                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 3)
-                            
-                            IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
-                            
-                            RadioButton(isSelected: selectedAppIcon == icon) {
-                                selectedAppIcon = icon
-                                changeAppIcon(to: icon)
+        VStack {
+            Text("App Icons")
+                .font(.headline)
+                .padding()
+                .foregroundColor(.primary)
+
+            Spacer()
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 16) {
+                    ForEach(appIcons, id: \.self) { icon in
+                        Button(action: {
+                            selectedAppIcon = icon
+                            changeAppIcon(to: icon)
+                            dismiss()
+                        }) {
+                            VStack(alignment: .center, spacing: 4) {
+                                Image(uiImage: iconImage(for: icon))
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 60, height: 60)
+                                    .cornerRadius(12)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 3)
+                                
+                                IconLabel(icon: icon, author: iconAuthors[icon], openURL: openURL)
+                                
+                                Spacer()
                             }
+                            .frame(width: 100, height: 140, alignment: .top)
                         }
-                        .frame(height: 140)
-                        .padding(.bottom, 16)
                     }
                 }
+                .padding()
+                
             }
-            .padding()
-            VStack {
-                Spacer()
-                HStack {
-                    Text("Want to add your own? ")
-                        .foregroundColor(.secondary)
-                    Button("Submit a proposal") {
-                        openEmail()
-                    }
-                    .foregroundColor(.blue)
+            
+            Spacer()
+            
+            HStack {
+                Text("Want to add your own? ")
+                    .foregroundColor(.secondary)
+                Button("Submit a proposal") {
+                    openEmail()
                 }
-                .font(.footnote)
-                .padding(.bottom, 8)
+                .foregroundColor(.blue)
             }
+            .font(.footnote)
+            .padding(.bottom, 8)
         }
-        .navigationBarTitle("App Icons", displayMode: .inline)
         .background(Color(UIColor.secondarySystemBackground))
     }
     
@@ -412,8 +434,10 @@ struct AppIconSelectionView: View {
             iconToSet = "DotGridAppIcon"
         case "Glyph":
             iconToSet = "GlyphAppIcon"
-        case "Arrow (B&W)":
-            iconToSet = "ArrowBWAppIcon"
+        case "1992":
+            iconToSet = "1992AppIcon"
+        case "1993":
+            iconToSet = "1993AppIcon"
         case "2012":
             iconToSet = "2012AppIcon"
         case "2013":
@@ -428,7 +452,7 @@ struct AppIconSelectionView: View {
             iconToSet = "TimePieceAppIcon"
         case "Time Bot":
             iconToSet = "TimeBotAppIcon"
-        case "Arrow":
+        case "Skeuo":
             iconToSet = "ArrowAppIcon"
         case "Pixel":
             iconToSet = "PixelAppIcon"
@@ -471,6 +495,10 @@ struct AppIconSelectionView: View {
                 iconToLoad = "ArrowBWAppIcon"
             case "Dot Grid":
                 iconToLoad = "DotGridAppIcon"
+            case "1992":
+                iconToLoad = "1992AppIcon"
+            case "1993":
+                iconToLoad = "1993AppIcon"
             case "2012":
                 iconToLoad = "2012AppIcon"
             case "2013":
@@ -485,7 +513,7 @@ struct AppIconSelectionView: View {
                 iconToLoad = "TimePieceAppIcon"
             case "Time Bot":
                 iconToLoad = "TimeBotAppIcon"
-            case "Arrow":
+            case "Skeuo":
                 iconToLoad = "ArrowAppIcon"
             case "Pixel":
                 iconToLoad = "PixelAppIcon"
@@ -539,26 +567,5 @@ struct IconLabel: View {
             }
         }
         .padding(.vertical, 4)
-    }
-}
-
-struct RadioButton: View {
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .stroke(isSelected ? Color.blue : Color.secondary, lineWidth: 1)
-                    .frame(width: 20, height: 20)
-                
-                if isSelected {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 12, height: 12)
-                }
-            }
-        }
     }
 }
