@@ -142,8 +142,8 @@ struct CategoriesView: View {
                 appData.defaultCategory = firstCategory
             }
         }
-        .onChange(of: editMode?.wrappedValue) {
-            if let newValue = editMode?.wrappedValue, newValue == .active {
+        .onChange(of: editMode?.wrappedValue) { oldValue, newValue in
+            if newValue == .active {
                 tempCategoryNames = appData.categories.map { $0.name }
             } else {
                 for index in appData.categories.indices {
