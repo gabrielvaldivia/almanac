@@ -119,7 +119,7 @@ struct ContentView: View {
                     }
                 } 
             }
-            .navigationTitle("Upcoming Events")
+            .navigationTitle(filteredEvents().isEmpty ? "" : "Upcoming Events")
             .navigationBarItems(
                 leading: Button(action: {
                     self.showPastEventsSheet = true

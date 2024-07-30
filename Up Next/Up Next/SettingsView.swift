@@ -97,16 +97,25 @@ struct SettingsView: View {
                             appData.eventStyle = "flat"
                         }) {
                             Text("Flat")
+                            if appData.eventStyle == "flat" {
+                                Image(systemName: "checkmark")
+                            }
                         }
                         Button(action: {
                             appData.eventStyle = "bubbly"
                         }) {
                             Text("Bubbly")
+                            if appData.eventStyle == "bubbly" {
+                                Image(systemName: "checkmark")
+                            }
                         }
                         Button(action: {
                             appData.eventStyle = "naked"
                         }) {
                             Text("Naked")
+                            if appData.eventStyle == "naked" {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     } label: {
                         HStack {
@@ -345,7 +354,7 @@ struct AppIconSelectionView: View {
     @State private var iconChangeSuccess: Bool?
     @Environment(\.openURL) var openURL
     @Environment(\.dismiss) var dismiss
-    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "Dot Grid","Glyph", "Pixel", "1992", "1993","2012", "2013", "Abstract (Light)", "Abstract (Dark)", "Bubble", "Skeuo", "Time Bot", "Time Piece"]
+    let appIcons = ["Default", "Dark", "Monochrome", "Star", "Heart", "X", "Dot Grid","Glyph", "Pixel", "1992", "1993","2012", "2013", "Abstract", "Bubble", "Skeuo", "Time Bot", "Time Piece"]
     
     // Dictionary to store author names and links
     let iconAuthors: [String: (name: String, link: String)] = [
@@ -353,8 +362,7 @@ struct AppIconSelectionView: View {
         "1993": ("Sai Perchard", "https://www.perchard.com/"),
         "2012": ("Charlie Deets", "https://charliedeets.com"),
         "2013": ("Charlie Deets", "https://charliedeets.com"),
-        "Abstract (Light)": ("Cliff Warren", "http://www.cliffwarren.com"),
-        "Abstract (Dark)": ("Cliff Warren", "http://www.cliffwarren.com"),
+        "Abstract": ("Cliff Warren", "http://www.cliffwarren.com"),
         "Bubble": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Piece": ("Pablo Stanley", "https://x.com/pablostanley"),
         "Time Bot": ("Pablo Stanley", "https://x.com/pablostanley"),
@@ -442,10 +450,8 @@ struct AppIconSelectionView: View {
             iconToSet = "2012AppIcon"
         case "2013":
             iconToSet = "2013AppIcon"
-        case "Abstract (Light)":
-            iconToSet = "AbstractLightAppIcon"
-        case "Abstract (Dark)":
-            iconToSet = "AbstractDarkAppIcon"
+        case "Abstract":
+            iconToSet = "AbstractAppIcon"
         case "Bubble":
             iconToSet = "BubbleAppIcon"
         case "Time Piece":
@@ -503,10 +509,8 @@ struct AppIconSelectionView: View {
                 iconToLoad = "2012AppIcon"
             case "2013":
                 iconToLoad = "2013AppIcon"
-            case "Abstract (Light)":
-                iconToLoad = "AbstractLightAppIcon"
-            case "Abstract (Dark)":
-                iconToLoad = "AbstractDarkAppIcon"
+            case "Abstract":
+                iconToLoad = "AbstractAppIcon"
             case "Bubble":
                 iconToLoad = "BubbleAppIcon"
             case "Time Piece":
