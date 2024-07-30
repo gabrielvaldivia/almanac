@@ -67,6 +67,11 @@ struct UpNextWidgetEntryView : View {
         let categoryColors = fetchCategoryColors()
         let defaultCategoryColor = appData.defaultCategoryColor
         
+        let filteredEvents = entry.events.filter { event in
+            let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
+            return event.date <= twelveMonthsFromNow
+        }
+        
         VStack(alignment: .leading) {
             HStack {
                 Text("UP NEXT")
@@ -81,7 +86,7 @@ struct UpNextWidgetEntryView : View {
                 }
             }
             
-            if entry.events.isEmpty {
+            if filteredEvents.isEmpty {
                 Spacer()
                 Text("No upcoming events")
                     .foregroundColor(.gray)
@@ -93,12 +98,12 @@ struct UpNextWidgetEntryView : View {
                 
                 // Small widget
                 case .systemSmall:
-                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
+                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     VStack(alignment: .leading) {
                         ForEach(Array(visibleEvents.enumerated()), id: \.offset) { index, event in
                             HStack {
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                    .fill(event.category != nil ? (categoryColors[event.category ?? ""] ?? .gray) : defaultCategoryColor)
                                     .frame(width: 4)
                                     .padding(.vertical, 1)
                                 VStack {
@@ -120,10 +125,17 @@ struct UpNextWidgetEntryView : View {
                     Spacer()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
+                    let remainingEventsCount = getRemainingEventsCount(events: filteredEvents, visibleCount: 2)
+                    if remainingEventsCount > 0 {
+                        Spacer()
+                        Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                    }
 
                 // Medium widget
                 case .systemMedium:
-                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
+                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(2) // Sort events by date
                     let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
@@ -150,7 +162,7 @@ struct UpNextWidgetEntryView : View {
                                 ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) { index, event in
                                     HStack {
                                         RoundedRectangle(cornerRadius: 4)
-                                            .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                            .fill(event.category != nil ? (categoryColors[event.category ?? ""] ?? .gray) : defaultCategoryColor)
                                             .frame(width: 4)
                                             .padding(.vertical, 1)
                                         VStack(alignment: .leading) {
@@ -179,10 +191,17 @@ struct UpNextWidgetEntryView : View {
                         }
                     }
                     Spacer()
+                    let remainingEventsCount = getRemainingEventsCount(events: filteredEvents, visibleCount: 2)
+                    if remainingEventsCount > 0 {
+                        Spacer()
+                        Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                    }
 
                 // Large widget
                 case .systemLarge:
-                    let visibleEvents = entry.events.sorted(by: { $0.date < $1.date }).prefix(5) // Sort events by date
+                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(5) // Sort events by date
                     let groupedEvents = Dictionary(grouping: visibleEvents, by: { event in
                         if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
                             return "Today"
@@ -210,7 +229,7 @@ struct UpNextWidgetEntryView : View {
                                     VStack(alignment: .leading) {
                                         HStack {
                                             RoundedRectangle(cornerRadius: 4)
-                                                .fill(categoryColors[event.category ?? ""] ?? .gray)
+                                                .fill(event.category != nil ? (categoryColors[event.category ?? ""] ?? .gray) : defaultCategoryColor)
                                                 .frame(width: 4)
                                                 .padding(.vertical, 1)
                                             VStack(alignment: .leading) {
@@ -245,10 +264,17 @@ struct UpNextWidgetEntryView : View {
                         }
                     }
                     Spacer()
+                    let remainingEventsCount = getRemainingEventsCount(events: filteredEvents, visibleCount: 5)
+                    if remainingEventsCount > 0 {
+                        Spacer()
+                        Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                    }
 
                 // Next Event widget
                 case .accessoryRectangular:
-                    let visibleEvents = entry.events.prefix(1)
+                    let visibleEvents = filteredEvents.prefix(1)
                     ForEach(visibleEvents) { event in
                         VStack(alignment: .leading) {
                             Text(event.title)
@@ -271,21 +297,29 @@ struct UpNextWidgetEntryView : View {
                         .padding(.bottom, 4)
                     }
                     
+                    let remainingEventsCount = getRemainingEventsCount(events: filteredEvents, visibleCount: 1)
+                    if remainingEventsCount > 0 {
+                        Spacer()
+                        Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
+                            .foregroundColor(.gray)
+                            .font(.caption)
+                    }
+                    
                 default:
                     Text("Unsupported widget size")
                 }
                 
-                let remainingEventsCount = entry.events.count - (widgetFamily == .systemLarge ? 5 : widgetFamily == .systemMedium ? 2 : 2)
-                if remainingEventsCount > 0 {
-                    Spacer()
-                    Text("\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")")
-                        .foregroundColor(.gray)
-                        .font(.caption)
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .widgetURL(URL(string: "upnext://widgetTapped")) // Add this line to handle widget tap
+    }
+
+    // Add this helper function to calculate remaining events count
+    private func getRemainingEventsCount(events: [Event], visibleCount: Int) -> Int {
+        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
+        let futureEvents = events.filter { $0.date <= twelveMonthsFromNow }
+        return max(0, futureEvents.count - visibleCount)
     }
 }
 
@@ -320,10 +354,11 @@ struct NextEventProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (NextEventEntry) -> ()) {
         let events = EventLoader.loadEvents(for: ConfigurationAppIntent().category)
+        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
         let nextEvent = events.filter { event in
             let now = Date()
             let startOfDay = Calendar.current.startOfDay(for: now)
-            return event.date >= startOfDay || (event.endDate ?? event.date) >= now
+            return (event.date >= startOfDay || (event.endDate ?? event.date) >= now) && event.date <= twelveMonthsFromNow
         }.sorted { $0.date < $1.date }.first ?? Event(title: "No upcoming events", date: Date(), color: CodableColor(color: .gray))
         
         let entry = NextEventEntry(date: Date(), event: nextEvent)
@@ -334,10 +369,11 @@ struct NextEventProvider: TimelineProvider {
         var entries: [NextEventEntry] = []
 
         let events = EventLoader.loadEvents(for: ConfigurationAppIntent().category)
+        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
         let nextEvent = events.filter { event in
             let now = Date()
             let startOfDay = Calendar.current.startOfDay(for: now)
-            return event.date >= startOfDay || (event.endDate ?? event.date) >= now
+            return (event.date >= startOfDay || (event.endDate ?? event.date) >= now) && event.date <= twelveMonthsFromNow
         }.sorted { $0.date < $1.date }.first ?? Event(title: "No upcoming events", date: Date(), color: CodableColor(color: .gray))
         
         let entry = NextEventEntry(date: Date(), event: nextEvent)
