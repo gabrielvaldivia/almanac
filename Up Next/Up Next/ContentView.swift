@@ -55,9 +55,9 @@ struct ContentView: View {
                 let groupedEventsByMonth = groupEventsByMonth(events: sortedEvents)
                 let sortedMonths = groupedEventsByMonth.keys.sorted()
 
-                if sortedMonths.isEmpty {
-                     // Empty state view when no events are available
-                    emptyStateView()
+                if sortedEvents.isEmpty {
+                    // Empty state view when no events are available for the current filter
+                    emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
                 } else {
                     ScrollView {
                         LazyVStack {
@@ -119,7 +119,7 @@ struct ContentView: View {
                     }
                 } 
             }
-            .navigationTitle(filteredEvents().isEmpty ? "" : "Upcoming Events")
+            .navigationTitle("Upcoming Events")
             .navigationBarItems(
                 leading: Button(action: {
                     self.showPastEventsSheet = true
@@ -260,15 +260,27 @@ func eventRowView(key: String, events: [Event]) -> some View {
     }
 }
 
-// Empty state view when no events are available
-func emptyStateView() -> some View {
+// Empty state view when no events are available or when a category with no events is selected
+func emptyStateView(selectedCategoryFilter: String?) -> some View {
     VStack {
+        // Category filter view
+        CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+            .padding(.vertical, 10)
+        
         Spacer()
-        Text("No upcoming events")
-            .roundedFont(.headline)
-        Text("Add something you're looking forward to")
-            .roundedFont(.subheadline)
-            .foregroundColor(.gray)
+        if let category = selectedCategoryFilter {
+            Text("No events in \(category)")
+                .roundedFont(.headline)
+            Text("Add an event to this category")
+                .roundedFont(.subheadline)
+                .foregroundColor(.gray)
+        } else {
+            Text("No upcoming events")
+                .roundedFont(.headline)
+            Text("Add something you're looking forward to")
+                .roundedFont(.subheadline)
+                .foregroundColor(.gray)
+        }
         Spacer()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

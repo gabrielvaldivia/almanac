@@ -9,18 +9,9 @@ import SwiftUI
 
 @ViewBuilder
 func CategoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter: Binding<String?>, colorScheme: ColorScheme) -> some View {
-    let filteredCategories = appData.categories.filter { category in
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        return events.contains { event in
-            event.category == category.name && 
-            (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday))
-        }
-    }
-    
     ScrollView(.horizontal, showsIndicators: false) {
         HStack {
-            ForEach(filteredCategories, id: \.name) { category in
+            ForEach(appData.categories, id: \.name) { category in
                 Button(action: {
                     selectedCategoryFilter.wrappedValue = selectedCategoryFilter.wrappedValue == category.name ? nil : category.name
                 }) {

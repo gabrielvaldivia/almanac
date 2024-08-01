@@ -152,7 +152,7 @@ struct CategoriesView: View {
                         let newName = tempCategoryNames[index]
                         if oldName != newName {
                             appData.categories[index].name = newName
-                            updateEventsForCategoryChange(oldName: oldName, newName: newName)
+                            updateEventsForCategoryChange(oldName: oldName, newName: newName, newColor: appData.categories[index].color)
                         }
                     }
                 }
@@ -201,14 +201,17 @@ struct CategoriesView: View {
         }
     }
 
-    private func updateEventsForCategoryChange(oldName: String, newName: String) {
+    private func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
         for i in 0..<appData.events.count {
             if appData.events[i].category == oldName {
                 appData.events[i].category = newName
+                appData.events[i].color = CodableColor(color: newColor)
             }
         }
         appData.objectWillChange.send()
         appData.saveEvents()
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
 
     private func deleteAllEvents() {

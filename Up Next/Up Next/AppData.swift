@@ -363,6 +363,7 @@ class AppData: NSObject, ObservableObject {
             sharedDefaults.set(encoded, forKey: "events")
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
             scheduleDailyNotification() // Reschedule daily notification
+            print("Saved events: \(events)") // Debugging line
         } else {
             print("Failed to encode events.")
         }
@@ -470,6 +471,28 @@ class AppData: NSObject, ObservableObject {
         saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+    }
+
+    // Function to update events when a category is edited
+    func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
+        var eventsUpdated = false
+        for i in 0..<events.count {
+            if events[i].category == oldName {
+                events[i].category = newName
+                events[i].color = CodableColor(color: newColor)
+                eventsUpdated = true
+                print("Updated event: \(events[i])") // Debugging line
+            }
+        }
+        if eventsUpdated {
+            saveEvents()
+            objectWillChange.send()
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+            print("Events updated and saved.") // Debugging line
+        } else {
+            print("No events updated.") // Debugging line
+        }
     }
 }
 
