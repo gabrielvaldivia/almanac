@@ -11,7 +11,11 @@ import SwiftUI
 func CategoryPillsView(appData: AppData, events: [Event], selectedCategoryFilter: Binding<String?>, colorScheme: ColorScheme) -> some View {
     ScrollView(.horizontal, showsIndicators: false) {
         HStack {
-            ForEach(appData.categories, id: \.name) { category in
+            let categoriesWithEvents = appData.categories.filter { category in
+                events.contains { $0.category == category.name }
+            }
+            
+            ForEach(categoriesWithEvents, id: \.name) { category in
                 Button(action: {
                     selectedCategoryFilter.wrappedValue = selectedCategoryFilter.wrappedValue == category.name ? nil : category.name
                 }) {

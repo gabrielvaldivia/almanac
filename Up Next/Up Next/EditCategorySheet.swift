@@ -38,7 +38,7 @@ struct EditCategorySheet: View {
                         print("Save button pressed")
                         let index = categoryToEdit.index
                         let oldName = appData.categories[index].name
-                        let oldColor = appData.categories[index].color
+                        _ = appData.categories[index].color
                         appData.categories[index].name = categoryToEdit.name
                         appData.categories[index].color = categoryToEdit.color
                         appData.saveCategories()
