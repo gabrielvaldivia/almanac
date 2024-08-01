@@ -120,7 +120,9 @@ struct AddEventView: View {
             isTitleFocused = true
             selectedColor = CodableColor(color: .blue) // Set default color to blue
             if selectedCategory == nil {
-                selectedCategory = nil // Set default category to nil
+                selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+            } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
+                selectedColor = CodableColor(color: category.color)
             }
         }
         .onDisappear {

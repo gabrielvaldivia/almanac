@@ -13,11 +13,9 @@ struct CustomColorPickerSheet: View {
     @Binding var showColorPickerSheet: Bool
     @Environment(\.colorScheme) var colorScheme
     
-    static var staticPredefinedColors: [Color] {
-        [
-            .primary, .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
-        ]
-    }
+    static let predefinedColors: [Color] = [
+        .primary, .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
+    ]
 
     var contrastColor: Color {
         let components = UIColor(selectedColor.color).cgColor.components ?? [0, 0, 0, 0]
@@ -33,31 +31,32 @@ struct CustomColorPickerSheet: View {
                     .frame(width: 40, height: 6)
                     .padding(.top, 8)
                 ScrollView {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                        ForEach(predefinedColors, id: \.self) { color in
-                            Button(action: {
-                                selectedColor = CodableColor(color: color)
-                                showColorPickerSheet = false
-                            }) {
-                                Circle()
-                                    .fill(color)
-                                    .frame(width: 50, height: 50)
-                                    .padding(.bottom, 10)
-                            }
-                        }
-                    }
-                    .padding()
+                    ColorGrid()
                 }
                 .padding()
             }
-            // .navigationBarTitle("Select Color", displayMode: .inline)
         }
     }
     
-    var predefinedColors: [Color] {
-        [
-            colorScheme == .dark ? .white : .black,
-            .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
-        ]
+    @ViewBuilder
+    private func ColorGrid() -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
+            ForEach(colorOptions, id: \.self) { color in
+                Button(action: {
+                    selectedColor = CodableColor(color: color)
+                    showColorPickerSheet = false
+                }) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 50, height: 50)
+                        .padding(.bottom, 10)
+                }
+            }
+        }
+        .padding()
+    }
+    
+    private var colorOptions: [Color] {
+        return [colorScheme == .dark ? .white : .black] + Self.predefinedColors
     }
 }

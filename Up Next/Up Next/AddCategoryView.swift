@@ -20,7 +20,7 @@ struct AddCategoryView: View {
     init(showingAddCategorySheet: Binding<Bool>, onSave: @escaping ((name: String, color: Color)) -> Void) {
         self._showingAddCategorySheet = showingAddCategorySheet
         self.onSave = onSave
-        let randomColor = CustomColorPickerSheet.staticPredefinedColors.randomElement() ?? .blue
+        let randomColor = CustomColorPickerSheet.predefinedColors.randomElement() ?? .blue
         self._selectedColor = State(initialValue: CodableColor(color: randomColor))
         self._newCategoryColor = State(initialValue: randomColor)
     }

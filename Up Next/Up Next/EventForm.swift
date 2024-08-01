@@ -530,7 +530,7 @@ struct EventForm: View {
                 } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
                     selectedColor = CodableColor(color: category.color)
                 }
-                predefinedColors = CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: $showColorPickerSheet).predefinedColors
+                predefinedColors = CustomColorPickerSheet.predefinedColors
             }
             .onDisappear {
                 isTitleFocused = false
