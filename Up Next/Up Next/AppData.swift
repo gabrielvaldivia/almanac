@@ -476,12 +476,15 @@ class AppData: NSObject, ObservableObject {
     // Function to update events when a category is edited
     func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
         var eventsUpdated = false
+        print("Total events: \(events.count)")
+        print("Searching for events with category: \(oldName)")
         for i in 0..<events.count {
+            print("Event \(i): title = \(events[i].title), category = \(events[i].category ?? "nil")")
             if events[i].category == oldName {
                 events[i].category = newName
                 events[i].color = CodableColor(color: newColor)
                 eventsUpdated = true
-                print("Updated event: \(events[i])") // Debugging line
+                print("Updated event: \(events[i])")
             }
         }
         if eventsUpdated {
@@ -489,9 +492,9 @@ class AppData: NSObject, ObservableObject {
             objectWillChange.send()
             WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
             WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-            print("Events updated and saved.") // Debugging line
+            print("Events updated and saved.")
         } else {
-            print("No events updated.") // Debugging line
+            print("No events updated.")
         }
     }
 }

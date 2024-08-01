@@ -157,6 +157,10 @@ struct AddEventView: View {
         let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)
         events.append(contentsOf: newEvents)
         saveEvents()
+        
+        // Force a reload of events
+        appData.loadEvents()
+        
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         appData.objectWillChange.send()
         appData.scheduleDailyNotification()

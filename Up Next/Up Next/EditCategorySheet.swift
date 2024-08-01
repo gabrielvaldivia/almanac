@@ -35,6 +35,7 @@ struct EditCategorySheet: View {
                         showingEditCategorySheet = false
                     },
                     trailing: Button(action: {
+                        print("Save button pressed")
                         let index = categoryToEdit.index
                         let oldName = appData.categories[index].name
                         let oldColor = appData.categories[index].color
@@ -42,11 +43,16 @@ struct EditCategorySheet: View {
                         appData.categories[index].color = categoryToEdit.color
                         appData.saveCategories()
                         
+                        // Force a reload of events before updating
+                        appData.loadEvents()
+                        
+                        print("Updating events for category change: \(oldName) -> \(categoryToEdit.name)")
                         appData.updateEventsForCategoryChange(oldName: oldName, newName: categoryToEdit.name, newColor: categoryToEdit.color)
                         
                         DispatchQueue.main.async {
                             appData.objectWillChange.send()
                         }
+                        print("Closing edit sheet")
                         showingEditCategorySheet = false
                     }) {
                         Group {
