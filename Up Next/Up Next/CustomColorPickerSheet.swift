@@ -14,7 +14,7 @@ struct CustomColorPickerSheet: View {
     @Environment(\.colorScheme) var colorScheme
     
     static let predefinedColors: [Color] = [
-        .primary, .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
+        .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
     ]
 
     var contrastColor: Color {
