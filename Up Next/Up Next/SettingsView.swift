@@ -10,6 +10,7 @@ import SwiftUI
 import WidgetKit
 import PassKit
 import UIKit
+import StoreKit
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
@@ -19,6 +20,7 @@ struct SettingsView: View {
     @State private var selectedAppIcon = "Default"
     @State private var iconChangeSuccess: Bool? 
     @State private var showingAppIconSheet = false
+    @State private var isSubscribed = false
     
     var body: some View {
         Form {
@@ -142,6 +144,17 @@ struct SettingsView: View {
                 }) {
                     Text("Rate on App Store")
                 }
+
+                if isSubscribed {
+                    Text("You are currently subscribed")
+                        .foregroundColor(.green)
+                } else {
+                    Button(action: {
+                        purchaseSubscription()
+                    }) {
+                        Text("Subscribe for $2.99/month")
+                    }
+                }
             }
             
             // Danger Zone Section
@@ -165,6 +178,7 @@ struct SettingsView: View {
                     )
                 }
             }
+            
         }
         .navigationTitle("Settings")
         .sheet(isPresented: $showingAppIconSheet) {
@@ -172,7 +186,8 @@ struct SettingsView: View {
                 .presentationDetents([.height(230)])
         }
         .onAppear {
-            dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
+            dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled")
+            checkSubscriptionStatus()
         }
     }
     
@@ -182,6 +197,63 @@ struct SettingsView: View {
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
+    }
+    
+    private func purchaseSubscription() {
+        Task {
+            do {
+                // Initialize StoreKit
+                SKPaymentQueue.default().add(StoreObserver.shared)
+                
+                // Use the product ID from your StoreKit configuration
+                let products = try await Product.products(for: ["AP0001"])
+                print("Products fetched: \(products)")
+                guard let product = products.first else {
+                    print("Product not found. Available products: \(products)")
+                    return
+                }
+                let result = try await product.purchase()
+                
+                switch result {
+                case .success(let verification):
+                    switch verification {
+                    case .verified(let transaction):
+                        // Successful purchase
+                        await transaction.finish()
+                        isSubscribed = true
+                    case .unverified(let transaction, let error):
+                        // Invalid purchase
+                        print("Purchase could not be verified: \(error)")
+                    }
+                case .userCancelled:
+                    print("User cancelled the purchase")
+                case .pending:
+                    print("Purchase is pending")
+                @unknown default:
+                    print("Unknown purchase result")
+                }
+            } catch {
+                print("Failed to purchase subscription: \(error)")
+            }
+        }
+    }
+    
+    private func checkSubscriptionStatus() {
+        Task {
+            for await result in Transaction.currentEntitlements {
+                if case .verified(let transaction) = result {
+                    if transaction.productID == "AP0001" {
+                        let currentDate = Date()
+                        if let expirationDate = transaction.expirationDate,
+                           currentDate < expirationDate {
+                            isSubscribed = true
+                            return
+                        }
+                    }
+                }
+            }
+            isSubscribed = false
+        }
     }
 }
 

@@ -6,20 +6,34 @@
 //
 
 import SwiftUI
+import StoreKit
 
 @main
 struct Up_NextApp: App {
     @StateObject private var appData = AppData.shared
-    @Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appData)
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                // Perform any necessary updates when the app becomes active
+    }
+}
+
+class StoreObserver: NSObject, SKPaymentTransactionObserver {
+    static let shared = StoreObserver()
+    
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        for transaction in transactions {
+            switch transaction.transactionState {
+            case .purchased, .restored:
+                SKPaymentQueue.default().finishTransaction(transaction)
+            case .failed:
+                SKPaymentQueue.default().finishTransaction(transaction)
+            case .deferred, .purchasing:
+                break
+            @unknown default:
+                break
             }
         }
     }

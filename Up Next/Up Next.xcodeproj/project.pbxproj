@@ -34,6 +34,9 @@
 		40790D832C23286C005DDC65 /* Up_NextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D822C23286C005DDC65 /* Up_NextTests.swift */; };
 		40790D8D2C23286C005DDC65 /* Up_NextUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */; };
 		40790D8F2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */; };
+		407AE1B32C6C570800DEAD7C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 407AE1B22C6C570800DEAD7C /* StoreKit.framework */; };
+		407AE1B52C6C573100DEAD7C /* Almanac Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */; };
+		407AE1B62C6C573100DEAD7C /* Almanac Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */; };
 		409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409726472C2DE2CB0050988E /* CategoryPillsView.swift */; };
 		40D9263E2C42423000DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
@@ -115,6 +118,8 @@
 		40790D882C23286C005DDC65 /* Up NextUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Up NextUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		40790D8C2C23286C005DDC65 /* Up_NextUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITests.swift; sourceTree = "<group>"; };
 		40790D8E2C23286C005DDC65 /* Up_NextUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Up_NextUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		407AE1B22C6C570800DEAD7C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Almanac Pro.storekit"; sourceTree = "<group>"; };
 		409726472C2DE2CB0050988E /* CategoryPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPillsView.swift; sourceTree = "<group>"; };
 		40C0A84B2C4B480400B38A14 /* Up-Next-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Up-Next-Info.plist"; sourceTree = SOURCE_ROOT; };
 		40D9263D2C42423000DCDBFB /* AddCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategoryView.swift; sourceTree = "<group>"; };
@@ -140,6 +145,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				407AE1B32C6C570800DEAD7C /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -163,6 +169,7 @@
 		405920A62C236123008A9CF2 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				407AE1B22C6C570800DEAD7C /* StoreKit.framework */,
 				405920A72C236123008A9CF2 /* WidgetKit.framework */,
 				405920A92C236123008A9CF2 /* SwiftUI.framework */,
 			);
@@ -231,6 +238,7 @@
 				40790D772C23286C005DDC65 /* Preview Content */,
 				40FEEC4A2C2919E0008AA61D /* Utilities.swift */,
 				40FEEC482C291558008AA61D /* AppData.swift */,
+				407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */,
 			);
 			path = "Up Next";
 			sourceTree = "<group>";
@@ -395,6 +403,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				407AE1B62C6C573100DEAD7C /* Almanac Pro.storekit in Resources */,
 				405920E92C23B863008A9CF2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -403,6 +412,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				407AE1B52C6C573100DEAD7C /* Almanac Pro.storekit in Resources */,
 				40790D792C23286C005DDC65 /* Preview Assets.xcassets in Resources */,
 				40790D762C23286C005DDC65 /* Assets.xcassets in Resources */,
 			);
@@ -525,7 +535,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -554,7 +564,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next.UpNextWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -710,7 +720,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -748,7 +758,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "ValdiviaWorks.Up-Next";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
