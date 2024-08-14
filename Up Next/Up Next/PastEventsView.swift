@@ -16,7 +16,6 @@ struct PastEventsView: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var selectedCategory: String?
-    @Binding var showPastEventsSheet: Bool
     @Binding var showEditSheet: Bool
     @Binding var selectedColor: CodableColor
     var categories: [(name: String, color: Color)]
@@ -26,17 +25,14 @@ struct PastEventsView: View {
     @State private var isEditSheetPresented = false
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                pastEventsList
-            }
-            .navigationTitle("Past Events")
-            .roundedFont(.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: doneButton)
-            .sheet(isPresented: $isEditSheetPresented) {
-                editEventSheet
-            }
+        ScrollView {
+            pastEventsList
+        }
+        .navigationTitle("Past Events")
+        .roundedFont(.title)
+        .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $isEditSheetPresented) {
+            editEventSheet
         }
     }
 
@@ -87,12 +83,6 @@ struct PastEventsView: View {
         .listRowSeparator(.hidden)
     }
 
-    private var doneButton: some View {
-        Button("Done") {
-            self.showPastEventsSheet = false
-        }
-    }
-
     private var editEventSheet: some View {
         EditEventView(events: $events,
                       selectedEvent: $selectedEvent,
@@ -100,10 +90,11 @@ struct PastEventsView: View {
                       newEventDate: $newEventDate,
                       newEventEndDate: $newEventEndDate,
                       showEndDate: $showEndDate,
-                      showEditSheet: $showEditSheet,
+                      showEditSheet: $isEditSheetPresented,
                       selectedCategory: $selectedCategory,
                       selectedColor: $selectedColor,
                       saveEvent: saveEvent)
+            .environmentObject(appData)
     }
 
     private func selectEvent(_ event: Event) {
@@ -190,7 +181,6 @@ struct PastEventsView_Previews: PreviewProvider {
                        newEventEndDate: .constant(Date()),
                        showEndDate: .constant(false),
                        selectedCategory: .constant(nil),
-                       showPastEventsSheet: .constant(false),
                        showEditSheet: .constant(false),
                        selectedColor: .constant(CodableColor(color: .black)),
                        categories: [],

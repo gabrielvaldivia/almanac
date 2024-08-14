@@ -21,7 +21,7 @@ struct ContentView: View {
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
     @State private var showEndDate: Bool = false
-    @State private var showPastEventsSheet: Bool = false
+    @State private var showPastEventsView: Bool = false
     @State private var selectedCategoryFilter: String? = nil
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
@@ -121,9 +121,20 @@ struct ContentView: View {
             }
             .navigationTitle("Up Next")
             .navigationBarItems(
-                leading: Button(action: {
-                    self.showPastEventsSheet = true
-                }) {
+                leading: NavigationLink(destination: PastEventsView(
+                    events: $events,
+                    selectedEvent: $selectedEvent,
+                    newEventTitle: $newEventTitle,
+                    newEventDate: $newEventDate,
+                    newEventEndDate: $newEventEndDate,
+                    showEndDate: $showEndDate,
+                    selectedCategory: $selectedCategory,
+                    showEditSheet: $showEditSheet,
+                    selectedColor: $selectedColor,
+                    categories: appData.categories,
+                    itemDateFormatter: itemDateFormatter,
+                    saveEvents: saveEvents
+                ).environmentObject(appData), isActive: $showPastEventsView) {
                     Image(systemName: "clock.arrow.circlepath")
                         .imageScale(.large)
                         .fontWeight(.bold)
@@ -190,12 +201,6 @@ struct ContentView: View {
         )
         .environmentObject(appData)
         .focused($isFocused)
-    }
-    .sheet(isPresented: $showPastEventsSheet) {
-        // Past Events Sheet
-        PastEventsView(events: $events, selectedEvent: $selectedEvent, newEventTitle: $newEventTitle, newEventDate: $newEventDate, newEventEndDate: $newEventEndDate, showEndDate: $showEndDate, selectedCategory: $selectedCategory, showPastEventsSheet: $showPastEventsSheet, showEditSheet: $showEditSheet, selectedColor: $selectedColor, categories: appData.categories, itemDateFormatter: itemDateFormatter, saveEvents: saveEvents)
-            .environmentObject(appData)
-            .focused($isFocused)
     }
 }
 

@@ -118,6 +118,7 @@ struct EditEventView: View {
                         } else {
                             showUpdateActionSheet = true
                         }
+                        showEditSheet = false 
                     }) {
                         Group {
                             ZStack {

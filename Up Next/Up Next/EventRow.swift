@@ -109,9 +109,9 @@ struct EventRow: View {
                 // Event Date(s) and Repeat Information
                 HStack(spacing: 4) {
                     if let endDate = event.endDate {
-                        Text("\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate)) \(getDurationText(start: event.date, end: endDate))")
+                        Text("\(event.date.relativeDate(to: endDate)) (\(dateFormatter.string(from: event.date)) → \(dateFormatter.string(from: endDate))) \(getDurationText(start: event.date, end: endDate))")
                     } else {
-                        Text(dateFormatter.string(from: event.date))
+                        Text("\(event.date.relativeDate()) (\(dateFormatter.string(from: event.date)))")
                     }
                     
                     if event.repeatOption != .never {
