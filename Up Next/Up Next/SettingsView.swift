@@ -134,6 +134,14 @@ struct SettingsView: View {
                 }) {
                     Text("Send Feedback")
                 }
+                
+                Button(action: {
+                    if let url = URL(string: "https://itunes.apple.com/app/id6504696550?action=write-review") {
+                        openURL(url)
+                    }
+                }) {
+                    Text("Rate on App Store")
+                }
             }
             
             // Danger Zone Section
