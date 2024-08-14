@@ -182,14 +182,6 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
-    @Published var isSubscribed: Bool = false {
-        didSet {
-            if isDataLoaded {
-                UserDefaults.standard.set(isSubscribed, forKey: "isSubscribed")
-                objectWillChange.send() // Notify observers
-            }
-        }
-    }
     @Published var dailyNotificationEnabled: Bool = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") {
         didSet {
             if isDataLoaded {
@@ -292,8 +284,24 @@ class AppData: NSObject, ObservableObject {
                 }
                 events = decodedEvents
                 print("Loaded \(events.count) events from user defaults.")
+                print("First event: \(events.first?.title ?? "No events")")
             } catch {
                 print("Failed to decode events: \(error)")
+                print("Error description: \(error.localizedDescription)")
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .dataCorrupted(let context):
+                        print("Data corrupted: \(context.debugDescription)")
+                    case .keyNotFound(let key, let context):
+                        print("Key not found: \(key.stringValue) - \(context.debugDescription)")
+                    case .typeMismatch(let type, let context):
+                        print("Type mismatch: \(type) - \(context.debugDescription)")
+                    case .valueNotFound(let type, let context):
+                        print("Value not found: \(type) - \(context.debugDescription)")
+                    @unknown default:
+                        print("Unknown decoding error")
+                    }
+                }
                 // If decoding fails, attempt to recover old events
                 if let oldEvents = decodeOldEvents(from: data) {
                     events = oldEvents
@@ -373,12 +381,47 @@ class AppData: NSObject, ObservableObject {
     func setDailyNotification(enabled: Bool) {
         dailyNotificationEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "dailyNotificationEnabled")
-        scheduleDailyNotification()
+        
+        let center = UNUserNotificationCenter.current()
+        
+        if enabled {
+            // Schedule notifications for upcoming events
+            scheduleDailyNotification()
+            scheduleUpcomingEventNotifications()
+        } else {
+            // Clear all scheduled notifications
+            center.removeAllPendingNotificationRequests()
+            center.removeAllDeliveredNotifications()
+            print("All notifications have been cleared.")
+        }
+    }
+
+    private func scheduleUpcomingEventNotifications() {
+        let center = UNUserNotificationCenter.current()
+        let upcomingEvents = events.filter { $0.date > Date() }.prefix(10) // Schedule for next 10 upcoming events
+        
+        for event in upcomingEvents {
+            let content = UNMutableNotificationContent()
+            content.title = event.title
+            content.body = "Your event is starting soon"
+            content.sound = .default
+            
+            let triggerDate = Calendar.current.date(byAdding: .minute, value: -15, to: event.date)!
+            let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            
+            let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
+            
+            center.add(request) { error in
+                if let error = error {
+                    print("Error scheduling notification for event \(event.title): \(error)")
+                }
+            }
+        }
     }
 
     // Function to schedule daily notification
     func scheduleDailyNotification() {
-        // Check if daily notifications are enabled
         guard dailyNotificationEnabled else {
             print("Daily notifications are disabled.")
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
@@ -393,6 +436,7 @@ class AppData: NSObject, ObservableObject {
         
         // If no events for today, do not schedule a notification
         if eventsCount == 0 {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
             return
         }
         

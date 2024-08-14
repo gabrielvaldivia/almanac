@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 import UIKit
 import WidgetKit
-import StoreKit
+import UserNotifications
 
 extension Color {
     func toHex() -> String? {
@@ -48,7 +48,8 @@ struct CategoriesView: View {
     @State private var showingEditCategorySheet = false
     @State private var categoryToEdit: (index: Int, name: String, color: Color)?
     @State private var showColorPickerSheet = false
-    @State private var showingSubscriptionSheet = false
+    @State private var dailyNotificationTime = Date()
+    @State private var isNotificationEnabled = false
 
     var body: some View {
         Form {

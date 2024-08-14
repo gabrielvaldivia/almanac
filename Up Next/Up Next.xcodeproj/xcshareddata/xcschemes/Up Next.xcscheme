@@ -58,7 +58,7 @@
          </EnvironmentVariable>
       </EnvironmentVariables>
       <StoreKitConfigurationFileReference
-         identifier = "../../Up Next Pro.storekit">
+         identifier = "../../Almanac Pro.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

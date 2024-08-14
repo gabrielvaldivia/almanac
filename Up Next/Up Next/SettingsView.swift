@@ -9,30 +9,24 @@ import Foundation
 import SwiftUI
 import WidgetKit
 import PassKit
-import StoreKit
 import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingDeleteAllAlert = false
     @Environment(\.openURL) var openURL
-    @State private var showingPaymentSheet = false
-    @State private var subscriptionProduct: Product?
-    @State private var isPurchasing = false 
-    @State private var isSubscribed = false 
-    @State private var errorMessage: String? 
     @State private var dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
     @State private var selectedAppIcon = "Default"
     @State private var iconChangeSuccess: Bool? 
     @State private var showingAppIconSheet = false
-
+    
     var body: some View {
         Form {
             // Notifications Section
             Section(header: Text("Notifications")) {
                 Toggle("Daily Notification", isOn: $dailyNotificationEnabled)
                     .onChange(of: dailyNotificationEnabled) { oldValue, newValue in
-                        handleDailyNotificationToggle(newValue)
+                        appData.setDailyNotification(enabled: newValue)
                     }
                 if dailyNotificationEnabled {
                     DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
@@ -140,27 +134,6 @@ struct SettingsView: View {
                 }) {
                     Text("Send Feedback")
                 }
-                if let product = subscriptionProduct {
-                    if appData.isSubscribed {
-                        Text("Thank you for being a subscriber")
-                            .foregroundColor(.green)
-                    } else {
-                        Button(action: {
-                            Task {
-                                await purchaseSubscription(product: product)
-                            }
-                        }) {
-                            Text("Subscribe for \(product.displayPrice)/month")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                } else {
-                    Text("Loading subscription...")
-                }
-                if let errorMessage = errorMessage {
-                    Text("Error: \(errorMessage)")
-                        .foregroundColor(.red)
-                }
             }
             
             // Danger Zone Section
@@ -191,9 +164,6 @@ struct SettingsView: View {
                 .presentationDetents([.height(230)])
         }
         .onAppear {
-            Task {
-                await fetchSubscriptionProduct()
-            }
             dailyNotificationEnabled = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") // Load state from UserDefaults
         }
     }
@@ -204,140 +174,6 @@ struct SettingsView: View {
         appData.events.removeAll()
         appData.saveEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-    }
-
-    // Function to fetch subscription product
-    private func fetchSubscriptionProduct() async {
-        do {
-            print("Fetching products...")
-            let products = try await Product.products(for: ["AP0001"])
-            if let product = products.first {
-                subscriptionProduct = product
-                print("Product fetched successfully: \(product.displayName)")
-            } else {
-                print("No products found")
-            }
-        } catch {
-            print("Failed to fetch products: \(error.localizedDescription)")
-            if let skError = error as? SKError {
-                switch skError.code {
-                case .unknown:
-                    print("Unknown error occurred.")
-                case .clientInvalid:
-                    print("Client is not allowed to issue the request.")
-                case .paymentCancelled:
-                    print("Payment was cancelled.")
-                case .paymentInvalid:
-                    print("The purchase identifier was invalid.")
-                case .paymentNotAllowed:
-                    print("The device is not allowed to make the payment.")
-                case .storeProductNotAvailable:
-                    print("The product is not available in the current storefront.")
-                default:
-                    print("Other error: \(skError.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    // Function to handle subscription purchase
-    private func purchaseSubscription(product: Product) async {
-        do {
-            let result = try await product.purchase()
-            switch result {
-            case .success(let verification):
-                switch verification {
-                case .verified(let transaction):
-                    // Handle successful purchase
-                    isSubscribed = true // Update subscription status
-                    await transaction.finish()
-                case .unverified(_, let error):
-                    // Handle unverified transaction
-                    print("Unverified transaction: \(error)")
-                }
-            case .userCancelled, .pending:
-                break
-            @unknown default:
-                break
-            }
-        } catch {
-            print("Purchase failed: \(error)")
-        }
-    }
-
-    // Function to listen for transactions
-    private func listenForTransactions() {
-        Task {
-            for await verification in Transaction.updates {
-                switch verification {
-                case .verified(let transaction):
-                    // Handle successful purchase
-                    isSubscribed = true // Update subscription status
-                    await transaction.finish()
-                case .unverified(_, let error):
-                    // Handle unverified transaction
-                    print("Unverified transaction: \(error)")
-                }
-            }
-        }
-    }
-
-    // Function to handle daily notification toggle
-    private func handleDailyNotificationToggle(_ isEnabled: Bool) {
-        appData.setDailyNotification(enabled: isEnabled)
-        UserDefaults.standard.set(isEnabled, forKey: "dailyNotificationEnabled") // Save state to UserDefaults
-    }
-
-    init() {
-        listenForTransactions()
-    }
-}
-
-// Wrapper for PaymentViewController
-struct PaymentViewControllerWrapper: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        let viewController = UIViewController()
-        viewController.view.backgroundColor = .clear
-        return viewController
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        if isPresented {
-            let request = PKPaymentRequest()
-            request.merchantIdentifier = "merchant.valdiviaworks.upnext"
-            request.supportedNetworks = [.visa, .masterCard, .amex]
-            request.merchantCapabilities = .threeDSecure // Changed from .capability3DS
-            request.countryCode = "US"
-            request.currencyCode = "USD"
-            request.paymentSummaryItems = [
-                PKPaymentSummaryItem(label: "Up Next Pro - Monthly Subscription", amount: NSDecimalNumber(string: "2.99"))
-            ]
-            
-            if let paymentController = PKPaymentAuthorizationViewController(paymentRequest: request) {
-                paymentController.delegate = context.coordinator
-                if let rootViewController = uiViewController.view.window?.rootViewController {
-                    rootViewController.present(paymentController, animated: true, completion: nil)
-                }
-            }
-            isPresented = false
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    class Coordinator: NSObject, PKPaymentAuthorizationViewControllerDelegate {
-        func paymentAuthorizationViewController(_ controller: PKPaymentAuthorizationViewController, didAuthorizePayment payment: PKPayment, handler completion: @escaping (PKPaymentAuthorizationResult) -> Void) {
-            // Handle successful payment here
-            completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
-        }
-        
-        func paymentAuthorizationViewControllerDidFinish(_ controller: PKPaymentAuthorizationViewController) {
-            controller.dismiss(animated: true, completion: nil)
-        }
     }
 }
 
