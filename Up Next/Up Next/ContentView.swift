@@ -30,6 +30,7 @@ struct ContentView: View {
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     @FocusState private var isFocused: Bool
 
