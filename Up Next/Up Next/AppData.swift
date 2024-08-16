@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import WidgetKit
 import UserNotifications
+import StoreKit
 
 // Model for an event
 struct Event: Identifiable, Codable {
@@ -198,7 +199,11 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
+    @Published var isSubscribed = false
+
     private var isDataLoaded = false
+
+    private var subscriptionProduct: Product?
 
     // Computed property for default category color
     var defaultCategoryColor: Color {
@@ -220,6 +225,7 @@ class AppData: NSObject, ObservableObject {
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
+        loadSubscriptionProduct()
     }
 
     // Function to save categories to UserDefaults
@@ -539,6 +545,46 @@ class AppData: NSObject, ObservableObject {
             print("Events updated and saved.")
         } else {
             print("No events updated.")
+        }
+    }
+
+    func loadSubscriptionProduct() {
+        Task {
+            do {
+                let products = try await Product.products(for: ["AP0001"])
+                if let product = products.first {
+                    self.subscriptionProduct = product
+                }
+            } catch {
+                print("Failed to load subscription product: \(error)")
+            }
+        }
+    }
+
+    func purchase() {
+        guard let product = subscriptionProduct else { return }
+        Task {
+            do {
+                let result = try await product.purchase()
+                switch result {
+                case .success(let verificationResult):
+                    switch verificationResult {
+                    case .verified(let transaction):
+                        await transaction.finish()
+                        isSubscribed = true
+                    case .unverified:
+                        print("Transaction unverified")
+                    }
+                case .userCancelled:
+                    print("User cancelled")
+                case .pending:
+                    print("Transaction pending")
+                @unknown default:
+                    break
+                }
+            } catch {
+                print("Failed to purchase: \(error)")
+            }
         }
     }
 }

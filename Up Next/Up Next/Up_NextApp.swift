@@ -16,6 +16,17 @@ struct Up_NextApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appData)
+                .task {
+                    await updateSubscriptionStatus()
+                }
+        }
+    }
+    
+    func updateSubscriptionStatus() async {
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                appData.isSubscribed = transaction.productID == "AP0001"
+            }
         }
     }
 }
