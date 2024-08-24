@@ -23,5 +23,19 @@
 	<string></string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>DarkAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>DarkAppIcon</string>
+				</array>
+			</dict>
+			<!-- Repeat for each alternate icon -->
+		</dict>
+	</dict>
 </dict>
 </plist>

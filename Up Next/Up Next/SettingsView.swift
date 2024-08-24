@@ -390,12 +390,17 @@ struct AppIconSelectionView: View {
                 iconToLoad = nil
             }
             
-            if let iconName = iconToLoad, let alternateIcon = UIImage(named: iconName) {
-                return alternateIcon
-            } else {
-                // Return the default app icon
-                return UIImage(named: "AppIcon") ?? UIImage(systemName: "app.fill")!
+            if let iconName = iconToLoad {
+                if let alternateIcon = UIImage(named: iconName, in: Bundle.main, compatibleWith: nil) {
+                    print("Successfully loaded icon: \(iconName)")
+                    return alternateIcon
+                } else {
+                    print("Failed to load icon: \(iconName)")
+                }
             }
+            
+            print("Falling back to default icon for: \(iconName)")
+            return UIImage(named: "AppIcon", in: Bundle.main, compatibleWith: nil) ?? UIImage(systemName: "app.fill")!
         }
 
     private func openEmail() {
