@@ -20,29 +20,5 @@
 			</array>
 		</dict>
 	</array>
-	<key>CFBundleIcons</key>
-	<dict>
-		<key>CFBundlePrimaryIcon</key>
-		<dict>
-			<key>CFBundleIconFiles</key>
-			<array>
-				<string>AppIcon</string>
-			</array>
-		</dict>
-		<key>CFBundleAlternateIcons</key>
-		<dict>
-			<key>DarkAppIcon</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>DarkAppIcon</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-		</dict>
-	</dict>
-	<key>GIDClientID</key>
-	<string>108676165289-ofoumldqk4np020qsac1mqp339n6dok0.apps.googleusercontent.com</string>
 </dict>
 </plist>
