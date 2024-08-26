@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var iconChangeSuccess: Bool? 
     @State private var showingAppIconSheet = false
     @State private var showingSubscriptionAlert = false
+    @State private var showingCategoryManagementSheet = false
     
     var body: some View {
         Form {
@@ -61,14 +62,21 @@ struct SettingsView: View {
                             Image(systemName: "chevron.up.chevron.down")
                                 .foregroundColor(.gray)
                         }
-                        // .padding(.horizontal)
                         .padding(.vertical, 6)
                         .background(Color(UIColor.secondarySystemGroupedBackground))
                         .cornerRadius(8)
                     }
                 }
-                NavigationLink(destination: CategoriesView().environmentObject(appData)) {
-                    Text("Manage Categories")
+                Button(action: {
+                    showingCategoryManagementSheet = true
+                }) {
+                    HStack {
+                        Text("Manage Categories")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
+                    }
                 }
             }
 
@@ -191,6 +199,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showingAppIconSheet) {
             AppIconSelectionView(selectedAppIcon: $selectedAppIcon)
                 .presentationDetents([.height(230)])
+        }
+        .sheet(isPresented: $showingCategoryManagementSheet) {
+            NavigationView {
+                CategoriesView()
+                    .environmentObject(appData)
+            }
         }
         .onAppear {
             print("SettingsView appeared")
