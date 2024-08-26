@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
+<plist version="1.0.5">
 <dict>
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -34,8 +34,114 @@
 					<string>DarkAppIcon</string>
 				</array>
 			</dict>
-			<!-- Repeat for each alternate icon -->
+			<key>MonochromeAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>MonochromeAppIcon</string>
+				</array>
+			</dict>
+			<key>StarAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>StarAppIcon</string>
+				</array>
+			</dict>
+			<key>HeartAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>HeartAppIcon</string>
+				</array>
+			</dict>
+			<key>DotGridAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>DotGridAppIcon</string>
+				</array>
+			</dict>
+			<key>GlyphAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>GlyphAppIcon</string>
+				</array>
+			</dict>
+			<key>PixelAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>PixelAppIcon</string>
+				</array>
+			</dict>
+			<key>1992AppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>1992AppIcon</string>
+				</array>
+			</dict>
+			<key>1993AppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>1993AppIcon</string>
+				</array>
+			</dict>
+			<key>2012AppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>2012AppIcon</string>
+				</array>
+			</dict>
+			<key>2013AppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>2013AppIcon</string>
+				</array>
+			</dict>
+			<key>AbstractAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>AbstractAppIcon</string>
+				</array>
+			</dict>
+			<key>BubbleAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>BubbleAppIcon</string>
+				</array>
+			</dict>
+			<key>SkeuoAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>SkeuoAppIcon</string>
+				</array>
+			</dict>
+			<key>TimebotAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>TimebotAppIcon</string>
+				</array>
+			</dict>
+			<key>TimePieceAppIcon</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array>
+					<string>TimePieceAppIcon</string>
+				</array>
+			</dict>
 		</dict>
 	</dict>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 </dict>
 </plist>
