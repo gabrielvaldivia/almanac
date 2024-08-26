@@ -51,6 +51,7 @@ struct ContentView: View {
     NavigationView {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
+
                 // Sorting and grouping events
                 let sortedEvents = filteredEvents().sorted(by: { $0.date < $1.date })
                 let groupedEventsByMonth = groupEventsByMonth(events: sortedEvents)
