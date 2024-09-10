@@ -81,8 +81,6 @@ extension UIColor {
     }
 }
 
-// Utility Functions
-
 // Converts a relative date string to the number of days from today
 func daysFromRelativeDate(_ relativeDate: String) -> Int {
     switch relativeDate {
@@ -247,5 +245,30 @@ func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, co
         default:
             return nil
         }
+    }
+}
+
+private let dateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "E, MMM d"
+    return formatter
+}()
+
+func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
+    guard let endDate = endDate else {
+        return startDate.relativeDate()
+    }
+    let now = Date()
+    let calendar = Calendar.current
+    let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
+    let dayText = daysRemaining == 1 ? "day" : "days"
+    
+    let startDateString = dateFormatter.string(from: startDate)
+    let endDateString = dateFormatter.string(from: endDate)
+    
+    if calendar.isDate(startDate, inSameDayAs: endDate) {
+        return "\(startDateString) (\(daysRemaining) \(dayText) left)"
+    } else {
+        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
     }
 }
