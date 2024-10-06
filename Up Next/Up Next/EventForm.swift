@@ -66,15 +66,15 @@ struct EventForm: View {
                             .sheet(isPresented: $showCustomStartDatePicker) {
                                 VStack {
                                     CustomDatePicker(
-                                        selectedDate: Binding<Date?>(
-                                            get: { newEventDate },
-                                            set: { newEventDate = $0 ?? Date() }
-                                        ),
+                                        selectedDate: $newEventDate,
                                         showCustomDatePicker: $showCustomStartDatePicker,
                                         minimumDate: nil,
                                         onDateSelected: {
-                                            showCustomStartDatePicker = false
-                                        }
+                                            // This will be called automatically when a date is selected
+                                        },
+                                        onRemoveEndDate: nil,
+                                        isEndDatePicker: false,
+                                        showEndDate: showEndDate  // Add this line
                                     )
                                     .presentationDetents([.medium])
                                 }
@@ -87,6 +87,7 @@ struct EventForm: View {
                                     .foregroundColor(.primary)
                                     .padding(.trailing, 6)
                                 Button(action: {
+                                    tempEndDate = newEventEndDate
                                     showCustomEndDatePicker = true
                                 }) {
                                     Text(newEventEndDate, formatter: dateFormatter)
@@ -99,28 +100,27 @@ struct EventForm: View {
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
                                         CustomDatePicker(
-                                            selectedDate: $tempEndDate,
+                                            selectedDate: Binding(
+                                                get: { self.tempEndDate ?? Date() },
+                                                set: { self.tempEndDate = $0 }
+                                            ),
                                             showCustomDatePicker: $showCustomEndDatePicker,
                                             minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
                                             onDateSelected: {
-                                                if let selectedDate = tempEndDate {
+                                                if let tempEndDate = tempEndDate {
+                                                    newEventEndDate = tempEndDate
                                                     showEndDate = true
-                                                    newEventEndDate = selectedDate
                                                 }
-                                                showCustomEndDatePicker = false
-                                            }
-                                        )
-                                        Button(action: {
+                                            },
+                                            onRemoveEndDate: {
                                                 showEndDate = false
                                                 newEventEndDate = newEventDate
                                                 tempEndDate = nil
                                                 showCustomEndDatePicker = false
-                                            }) {
-                                                Text("Remove End Date")
-                                                    .font(.headline)
-                                                    .foregroundColor(.red)
-                                            }
-                                            .padding()
+                                            },
+                                            isEndDatePicker: true,
+                                            showEndDate: showEndDate
+                                        )
                                         .presentationDetents([.medium])
                                     }
                                     .frame(maxHeight: .infinity, alignment: .top)
@@ -139,38 +139,31 @@ struct EventForm: View {
                                         .background(Color.gray.opacity(0.2))
                                         .cornerRadius(8)
                                 }
-
                                 .padding(.trailing, 6)
                                 .sheet(isPresented: $showCustomEndDatePicker) {
                                     VStack {
-                                        Text("Add End Date")
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.primary)
-                                            .padding(.top, 20)
                                         CustomDatePicker(
-                                            selectedDate: $tempEndDate,
+                                            selectedDate: Binding(
+                                                get: { self.tempEndDate ?? Date() },
+                                                set: { self.tempEndDate = $0 }
+                                            ),
                                             showCustomDatePicker: $showCustomEndDatePicker,
                                             minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: newEventDate) ?? newEventDate,
                                             onDateSelected: {
-                                                if let selectedDate = tempEndDate {
+                                                if let tempEndDate = tempEndDate {
+                                                    newEventEndDate = tempEndDate
                                                     showEndDate = true
-                                                    newEventEndDate = selectedDate
                                                 }
+                                            },
+                                            onRemoveEndDate: {
+                                                showEndDate = false
+                                                newEventEndDate = newEventDate
+                                                tempEndDate = nil
                                                 showCustomEndDatePicker = false
-                                            }
+                                            },
+                                            isEndDatePicker: true,
+                                            showEndDate: showEndDate
                                         )
-                                        // Button(action: {
-                                        //         showEndDate = false
-                                        //         newEventEndDate = newEventDate
-                                        //         tempEndDate = nil
-                                        //         showCustomEndDatePicker = false
-                                        //     }) {
-                                        //         Text("Cancel")
-                                        //             .font(.headline)
-                                        //             .foregroundColor(.red)
-                                        //     }
-                                        //     .padding()
                                         .presentationDetents([.medium])
                                     }
                                     .frame(maxHeight: .infinity, alignment: .top)
@@ -547,31 +540,58 @@ struct EventForm: View {
 }
 
 struct CustomDatePicker: View {
-    @Binding var selectedDate: Date?
+    @Binding var selectedDate: Date
     @Binding var showCustomDatePicker: Bool
     var minimumDate: Date?
     var onDateSelected: () -> Void
     var onRemoveEndDate: (() -> Void)?
+    var isEndDatePicker: Bool
+    var showEndDate: Bool  // Add this new property
+
+    @State private var tempDate: Date
+
+    init(selectedDate: Binding<Date>, showCustomDatePicker: Binding<Bool>, minimumDate: Date?, onDateSelected: @escaping () -> Void, onRemoveEndDate: (() -> Void)?, isEndDatePicker: Bool, showEndDate: Bool) {  // Update the initializer
+        self._selectedDate = selectedDate
+        self._showCustomDatePicker = showCustomDatePicker
+        self.minimumDate = minimumDate
+        self.onDateSelected = onDateSelected
+        self.onRemoveEndDate = onRemoveEndDate
+        self.isEndDatePicker = isEndDatePicker
+        self.showEndDate = showEndDate  // Initialize the new property
+        self._tempDate = State(initialValue: selectedDate.wrappedValue)
+    }
 
     var body: some View {
         VStack {
+            if isEndDatePicker && !showEndDate {
+                Text("Add End Date")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .padding(.top, 20)
+            }
+            
             DatePicker(
                 "Date",
-                selection: Binding(
-                    get: { selectedDate ?? Date() },
-                    set: { selectedDate = $0 }
-                ),
+                selection: $tempDate,
                 in: dateRange(),
-                displayedComponents: .date
+                displayedComponents: [.date]
             )
             .datePickerStyle(GraphicalDatePickerStyle())
-            .onChange(of: selectedDate) { _, _ in
-                onDateSelected()
+            .onChange(of: tempDate) { oldValue, newValue in
+                if !Calendar.current.isDate(oldValue, equalTo: newValue, toGranularity: .month) {
+                    // Month or year changed, update tempDate but don't dismiss
+                    tempDate = newValue
+                } else if !Calendar.current.isDate(oldValue, equalTo: newValue, toGranularity: .day) {
+                    // Day changed, update selectedDate, call onDateSelected, and dismiss
+                    selectedDate = newValue
+                    onDateSelected()
+                    showCustomDatePicker = false
+                }
             }
-            if let onRemoveEndDate = onRemoveEndDate {
-                Button(action: {
-                    onRemoveEndDate()
-                }) {
+            
+            if isEndDatePicker && showEndDate, let onRemoveEndDate = onRemoveEndDate {
+                Button(action: onRemoveEndDate) {
                     Text("Remove End Date")
                         .font(.headline)
                         .foregroundColor(.red)
