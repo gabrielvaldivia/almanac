@@ -225,32 +225,37 @@ struct EventForm: View {
                                     Text("Repeat")
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Menu {
-                                        ForEach(RepeatOption.allCases.filter { option in
-                                            if option == .never {
-                                                return false
+                                    if selectedCategory == "Birthdays" || selectedCategory == "Holidays" {
+                                        Text("Yearly")
+                                            .foregroundColor(.gray)
+                                    } else {
+                                        Menu {
+                                            ForEach(RepeatOption.allCases.filter { option in
+                                                if option == .never {
+                                                    return false
+                                                }
+                                                if option == .daily && showEndDate {
+                                                    return false
+                                                }
+                                                if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
+                                                    return false
+                                                }
+                                                return true
+                                            }, id: \.self) { option in
+                                                Button(action: {
+                                                    repeatOption = option
+                                                }) {
+                                                    Text(option.rawValue)
+                                                        .foregroundColor(option == repeatOption ? .gray : .primary)
+                                                }
                                             }
-                                            if option == .daily && showEndDate {
-                                                return false
+                                        } label: {
+                                            HStack {
+                                                Text(repeatOption.rawValue)
+                                                    .foregroundColor(.gray)
+                                                Image(systemName: "chevron.up.chevron.down")
+                                                    .foregroundColor(.gray)
                                             }
-                                            if option == .weekly && showEndDate && Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day! > 6 {
-                                                return false
-                                            }
-                                            return true
-                                        }, id: \.self) { option in
-                                            Button(action: {
-                                                repeatOption = option
-                                            }) {
-                                                Text(option.rawValue)
-                                                    .foregroundColor(option == repeatOption ? .gray : .primary)
-                                            }
-                                        }
-                                    } label: {
-                                        HStack {
-                                            Text(repeatOption.rawValue)
-                                                .foregroundColor(.gray)
-                                            Image(systemName: "chevron.up.chevron.down")
-                                                .foregroundColor(.gray)
                                         }
                                     }
                                 }

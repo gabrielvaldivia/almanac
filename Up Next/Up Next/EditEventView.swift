@@ -199,6 +199,12 @@ struct EditEventView: View {
                 shouldDismissEditSheet = false
             }
         }
+        .onChange(of: selectedCategory) { newCategory in
+            if newCategory == "Birthdays" || newCategory == "Holidays" {
+                repeatOption = .yearly
+                showRepeatOptions = true
+            }
+        }
     }
 
     // Function to delete an event

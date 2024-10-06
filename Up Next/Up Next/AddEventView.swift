@@ -129,6 +129,12 @@ struct AddEventView: View {
             // Clear focus when view disappears
             isTitleFocused = false
         }
+        .onChange(of: selectedCategory) { newCategory in
+            if newCategory == "Birthdays" || newCategory == "Holidays" {
+                repeatOption = .yearly
+                showRepeatOptions = true
+            }
+        }
     }
 
     // Function to save the new event

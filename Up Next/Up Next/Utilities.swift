@@ -142,6 +142,11 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
     currentEvent.seriesID = seriesID
     repeatingEvents.append(currentEvent)
     
+    // Special handling for Birthday and Holidays categories
+    if event.category == "Birthdays" || event.category == "Holidays" {
+        currentEvent.repeatOption = .yearly
+    }
+    
     var repetitionCount = 1
     let maxRepetitions: Int
     
