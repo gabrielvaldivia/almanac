@@ -61,6 +61,7 @@ struct EditEventView: View {
     @State private var repeatUnit: String = "Days" // Add this line
     @State private var repeatUntilCount: Int = 1 // Add this line
     @State private var customRepeatCount: Int = 1 // Add this line
+    @State private var shouldDismissEditSheet = false
 
     // Function to save the event
     var saveEvent: () -> Void
@@ -115,10 +116,10 @@ struct EditEventView: View {
                     Button(action: {
                         if selectedEvent?.repeatOption == .never {
                             applyChanges(to: .thisEvent)
+                            showEditSheet = false
                         } else {
                             showUpdateActionSheet = true
                         }
-                        showEditSheet = false 
                     }) {
                         Group {
                             ZStack {
@@ -154,15 +155,18 @@ struct EditEventView: View {
                         buttons: [
                             .default(Text("This Event Only")) {
                                 applyChanges(to: .thisEvent)
+                                shouldDismissEditSheet = true
                             },
                             .default(Text("All Events in Series")) {
                                 applyChanges(to: .allEvents)
+                                shouldDismissEditSheet = true
                             },
                             .cancel()
                         ]
                     )
                 } else {
                     applyChanges(to: .thisEvent)
+                    shouldDismissEditSheet = true
                     return ActionSheet(title: Text(""), message: Text(""), buttons: [])
                 }
             }
@@ -189,6 +193,12 @@ struct EditEventView: View {
             }
         }
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
+        .onChange(of: shouldDismissEditSheet) { newValue in
+            if newValue {
+                showEditSheet = false
+                shouldDismissEditSheet = false
+            }
+        }
     }
 
     // Function to delete an event
@@ -365,10 +375,14 @@ struct EditEventView: View {
                         }
                     }
                     if let newEventDate = newEventDate, eventCount < 100 {
+                        events[eventIndex].title = newEventTitle
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
-                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
+                        events[eventIndex].category = selectedCategory
+                        events[eventIndex].color = selectedColor
+                        events[eventIndex].repeatOption = repeatOption
+                        events[eventIndex].customRepeatCount = customRepeatCount
+                        events[eventIndex].repeatUnit = repeatUnit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)
@@ -408,10 +422,14 @@ struct EditEventView: View {
                         }
                     }
                     if let newEventDate = newEventDate, eventCount < 100 {
+                        events[eventIndex].title = newEventTitle
                         events[eventIndex].date = newEventDate
                         events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].customRepeatCount = customRepeatCount // Update custom repeat count
-                        events[eventIndex].repeatUnit = repeatUnit // Update repeat unit
+                        events[eventIndex].category = selectedCategory
+                        events[eventIndex].color = selectedColor
+                        events[eventIndex].repeatOption = repeatOption
+                        events[eventIndex].customRepeatCount = customRepeatCount
+                        events[eventIndex].repeatUnit = repeatUnit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)
