@@ -20,9 +20,9 @@ struct AddCategoryView: View {
     @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
     @State private var repeatUntilCount: Int = 1
     @State private var repeatUntil: Date = Date()
-    var onSave: ((name: String, color: Color)) -> Void
+    var onSave: ((name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)) -> Void
     
-    init(showingAddCategorySheet: Binding<Bool>, onSave: @escaping ((name: String, color: Color)) -> Void) {
+    init(showingAddCategorySheet: Binding<Bool>, onSave: @escaping ((name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)) -> Void) {
         self._showingAddCategorySheet = showingAddCategorySheet
         self.onSave = onSave
         let randomColor = CustomColorPickerSheet.predefinedColors.randomElement() ?? .blue
@@ -41,7 +41,20 @@ struct AddCategoryView: View {
             repeatUntilOption: $repeatUntilOption,
             repeatUntilCount: $repeatUntilCount,
             repeatUntil: $repeatUntil,
-            isEditing: false
+            isEditing: false,
+            saveAction: {
+                onSave((
+                    name: newCategoryName,
+                    color: newCategoryColor,
+                    repeatOption: repeatOption,
+                    customRepeatCount: customRepeatCount,
+                    repeatUnit: repeatUnit,
+                    repeatUntilOption: repeatUntilOption,
+                    repeatUntilCount: repeatUntilCount,
+                    repeatUntil: repeatUntil
+                ))
+                showingAddCategorySheet = false
+            }
         )
         .navigationTitle("Add Category")
         .navigationBarTitleDisplayMode(.inline)
@@ -53,7 +66,16 @@ struct AddCategoryView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save") {
-                    onSave((name: newCategoryName, color: newCategoryColor))
+                    onSave((
+                        name: newCategoryName,
+                        color: newCategoryColor,
+                        repeatOption: repeatOption,
+                        customRepeatCount: customRepeatCount,
+                        repeatUnit: repeatUnit,
+                        repeatUntilOption: repeatUntilOption,
+                        repeatUntilCount: repeatUntilCount,
+                        repeatUntil: repeatUntil
+                    ))
                     showingAddCategorySheet = false
                 }
                 .disabled(newCategoryName.isEmpty)

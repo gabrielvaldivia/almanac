@@ -13,6 +13,7 @@ struct CategoryForm: View {
     @Binding var repeatUntil: Date
     @FocusState private var isCategoryNameFieldFocused: Bool
     var isEditing: Bool
+    var saveAction: () -> Void
     
     var body: some View {
         Form {

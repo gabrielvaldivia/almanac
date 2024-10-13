@@ -16,82 +16,101 @@ enum DeleteOption {
     case allEvents
 }
 
+// Struct for event details
+public struct EventDetails {
+    var title: String
+    var selectedEvent: Event?
+}
+
+// Struct for date options
+public struct DateOptions {
+    var date: Date
+    var endDate: Date
+    var showEndDate: Bool
+    var repeatOption: RepeatOption
+    var repeatUntil: Date
+    var repeatUntilOption: RepeatUntilOption
+    var repeatUntilCount: Int
+    var showRepeatOptions: Bool
+    var repeatUnit: String
+    var customRepeatCount: Int
+}
+
+// Struct for category options
+public struct CategoryOptions {
+    var selectedCategory: String?
+    var selectedColor: CodableColor
+}
+
+// Struct for view state
+public struct ViewState {
+    var showCategoryManagementView: Bool
+    var showDeleteActionSheet: Bool
+    var showDeleteButtons: Bool
+}
+
 // Main view for editing an event
 struct EditEventView: View {
-    // Bindings to parent view's state
     @Binding var events: [Event]
-    @Binding var selectedEvent: Event? {
-        didSet {
-            if let event = selectedEvent {
-                repeatOption = event.repeatOption
-                repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                repeatIndefinitely = event.repeatUntil == nil
-                repeatCount = calculateRepeatCount(for: event)
-                updateRepeatUntilOption(for: event)
-                
-                // Ensure custom repeat values are set correctly
-                if event.repeatOption == .custom {
-                    customRepeatCount = event.customRepeatCount ?? 1
-                    repeatUnit = event.repeatUnit ?? "Days"
-                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
-                }
-            }
-        }
-    }
-    @Binding var newEventTitle: String
-    @Binding var newEventDate: Date
-    @Binding var newEventEndDate: Date
-    @Binding var showEndDate: Bool
+    @Binding var selectedEvent: Event?
     @Binding var showEditSheet: Bool
-    @Binding var selectedCategory: String?
-    @Binding var selectedColor: CodableColor
-
-    // State variables for repeat options
-    @State private var repeatOption: RepeatOption = .never
-    @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
-    @State private var repeatCount: Int = 1
-    @State private var repeatIndefinitely: Bool = false
-    @State private var showDeleteActionSheet = false
-    @State private var deleteOption: DeleteOption = .thisEvent
-    @State private var showCategoryManagementView = false
-    @State private var showUpdateActionSheet = false
+    
+    @State private var eventDetails: EventDetails
+    @State private var dateOptions: DateOptions
+    @State private var categoryOptions: CategoryOptions
+    @State private var viewState: ViewState
+    
     @State private var showDeleteSeriesAlert = false
-    @State private var showRepeatOptions = false // Change this line
-    @State private var repeatUnit: String = "Days" // Add this line
-    @State private var repeatUntilCount: Int = 1 // Add this line
-    @State private var customRepeatCount: Int = 1 // Add this line
+    @State private var deleteOption: DeleteOption = .thisEvent
+    @State private var showUpdateActionSheet = false
     @State private var shouldDismissEditSheet = false
 
     // Function to save the event
-    var saveEvent: () -> Void
+    let saveEvents: () -> Void
 
     // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
 
+    init(events: Binding<[Event]>, selectedEvent: Binding<Event?>, showEditSheet: Binding<Bool>, saveEvents: @escaping () -> Void) {
+        self._events = events
+        self._selectedEvent = selectedEvent
+        self._showEditSheet = showEditSheet
+        self.saveEvents = saveEvents
+        
+        let event = selectedEvent.wrappedValue ?? Event(title: "", date: Date(), color: CodableColor(color: .blue))
+        self._eventDetails = State(initialValue: EventDetails(title: event.title, selectedEvent: event))
+        self._dateOptions = State(initialValue: DateOptions(
+            date: event.date,
+            endDate: event.endDate ?? event.date,
+            showEndDate: event.endDate != nil,
+            repeatOption: event.repeatOption,
+            repeatUntil: event.repeatUntil ?? Date(),
+            repeatUntilOption: event.repeatUntil == nil ? .indefinitely : .onDate,
+            repeatUntilCount: event.repeatUntilCount ?? 1,
+            showRepeatOptions: event.repeatOption != .never,
+            repeatUnit: event.repeatUnit ?? "Days",
+            customRepeatCount: event.customRepeatCount ?? 1
+        ))
+        self._categoryOptions = State(initialValue: CategoryOptions(
+            selectedCategory: event.category,
+            selectedColor: event.color
+        ))
+        self._viewState = State(initialValue: ViewState(
+            showCategoryManagementView: false,
+            showDeleteActionSheet: false,
+            showDeleteButtons: true
+        ))
+    }
+
     var body: some View {
         NavigationView {
-            // Event form view
             EventForm(
-                newEventTitle: $newEventTitle,
-                newEventDate: $newEventDate,
-                newEventEndDate: $newEventEndDate,
-                showEndDate: $showEndDate,
-                selectedCategory: $selectedCategory,
-                selectedColor: $selectedColor,
-                repeatOption: $repeatOption,
-                repeatUntil: $repeatUntil,
-                repeatUntilOption: $repeatUntilOption,
-                repeatUntilCount: $repeatUntilCount, // Pass the binding
-                showCategoryManagementView: $showCategoryManagementView,
-                showDeleteActionSheet: $showDeleteActionSheet,
-                selectedEvent: $selectedEvent,
+                eventDetails: $eventDetails,
+                dateOptions: $dateOptions,
+                categoryOptions: $categoryOptions,
+                viewState: $viewState,
                 deleteEvent: deleteEvent,
-                deleteSeries: { showDeleteSeriesAlert = true },
-                showDeleteButtons: true, // Ensure delete buttons are shown in EditEventView
-                showRepeatOptions: $showRepeatOptions, // Pass the binding
-                repeatUnit: $repeatUnit, // Add this line
-                customRepeatCount: $customRepeatCount // Add this line
+                deleteSeries: { showDeleteSeriesAlert = true }
             )
             .environmentObject(appData)
             .navigationTitle("Edit Event")
@@ -114,7 +133,7 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        if selectedEvent?.repeatOption == .never {
+                        if eventDetails.selectedEvent?.repeatOption == .never {
                             applyChanges(to: .thisEvent)
                             showEditSheet = false
                         } else {
@@ -124,19 +143,19 @@ struct EditEventView: View {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(selectedColor.color)
+                                    .fill(categoryOptions.selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Save")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
+                                    .foregroundColor(CustomColorPickerSheet(selectedColor: $categoryOptions.selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
                             }
                         }
-                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
+                        .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
-                    .disabled(newEventTitle.isEmpty)
+                    .disabled(eventDetails.title.isEmpty)
                 }
             }
-            .alert(isPresented: $showDeleteActionSheet) {
+            .alert(isPresented: $viewState.showDeleteActionSheet) {
                 Alert(
                     title: Text("Delete Event"),
                     message: Text("Are you sure you want to delete this event?"),
@@ -148,7 +167,7 @@ struct EditEventView: View {
                 )
             }
             .actionSheet(isPresented: $showUpdateActionSheet) {
-                if selectedEvent?.repeatOption != .never {
+                if eventDetails.selectedEvent?.repeatOption != .never {
                     return ActionSheet(
                         title: Text("Update Event"),
                         message: Text("Do you want to apply the changes to this event only or all events in the series?"),
@@ -171,27 +190,7 @@ struct EditEventView: View {
                 }
             }
         }
-        .onAppear {
-            // Set initial values when the view appears
-            if let event = selectedEvent {
-                repeatOption = event.repeatOption
-                repeatUntil = event.repeatUntil ?? Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-                repeatIndefinitely = event.repeatUntil == nil
-                repeatCount = calculateRepeatCount(for: event)
-                updateRepeatUntilOption(for: event)
-                
-                // Ensure custom repeat values are set correctly
-                if event.repeatOption == .custom {
-                    customRepeatCount = event.customRepeatCount ?? 1
-                    repeatUnit = event.repeatUnit ?? "Days"
-                    repeatUntilCount = event.repeatUntilCount ?? 1 // Ensure repeatUntilCount is set
-                }
-                selectedColor = event.color
-                
-                // Update showRepeatOptions based on the event's repeat option
-                showRepeatOptions = event.repeatOption != .never
-            }
-        }
+        .onAppear(perform: setupInitialState)
         .alertController(isPresented: $showDeleteSeriesAlert, title: "Delete Series", message: "Are you sure you want to delete all events in this series?", confirmAction: deleteSeries)
         .onChange(of: shouldDismissEditSheet) { newValue in
             if newValue {
@@ -199,17 +198,17 @@ struct EditEventView: View {
                 shouldDismissEditSheet = false
             }
         }
-        .onChange(of: selectedCategory) { newCategory in
+        .onChange(of: categoryOptions.selectedCategory) { newCategory in
             if newCategory == "Birthdays" || newCategory == "Holidays" {
-                repeatOption = .yearly
-                showRepeatOptions = true
+                dateOptions.repeatOption = .yearly
+                dateOptions.showRepeatOptions = true
             }
         }
     }
 
     // Function to delete an event
     func deleteEvent() {
-        guard let event = selectedEvent else { return }
+        guard let event = eventDetails.selectedEvent else { return }
         
         switch deleteOption {
         case .thisEvent:
@@ -226,7 +225,7 @@ struct EditEventView: View {
 
     // Function to delete a series of events
     func deleteSeries() {
-        guard let event = selectedEvent else { return }
+        guard let event = eventDetails.selectedEvent else { return }
         events.removeAll { $0.seriesID == event.seriesID }
         saveEvents()
         showEditSheet = false
@@ -234,35 +233,20 @@ struct EditEventView: View {
 
     // Function to delete a single event
     func deleteSingleEvent() {
-        if let event = selectedEvent {
-            if let index = appData.events.firstIndex(where: { $0.id == event.id }) {
-                appData.events.remove(at: index)
-                appData.saveEvents()
-                WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-                WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-            }
+        guard let event = eventDetails.selectedEvent else { return }
+        if let index = appData.events.firstIndex(where: { $0.id == event.id }) {
+            appData.events.remove(at: index)
+            appData.saveEvents()
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         }
     }
 
     // Function to get the color of the selected category
     func getCategoryColor() -> Color {
-        return selectedColor.color
+        return categoryOptions.selectedColor.color
     }
 
-    // Function to save events to UserDefaults
-    func saveEvents() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
-            sharedDefaults.set(encoded, forKey: "events")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-        } else {
-            print("Failed to encode events.")
-        }
-    }
-    
     // Custom date formatter
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -273,15 +257,15 @@ struct EditEventView: View {
     // Function to update the repeat until option based on the event's repeat until date
     private func updateRepeatUntilOption(for event: Event) {
         if let repeatUntil = event.repeatUntil {
-            if repeatUntil == Calendar.current.date(byAdding: .day, value: repeatCount - 1, to: event.date) {
-                repeatUntilOption = .after
+            if repeatUntil == Calendar.current.date(byAdding: .day, value: calculateRepeatCount(for: event) - 1, to: event.date) {
+                dateOptions.repeatUntilOption = .after
             } else if Calendar.current.isDate(repeatUntil, inSameDayAs: event.date) {
-                repeatUntilOption = .indefinitely
+                dateOptions.repeatUntilOption = .indefinitely
             } else if repeatUntil > event.date {
-                repeatUntilOption = .onDate
+                dateOptions.repeatUntilOption = .onDate
             }
         } else {
-            repeatUntilOption = .indefinitely
+            dateOptions.repeatUntilOption = .indefinitely
         }
     }
     
@@ -300,15 +284,15 @@ struct EditEventView: View {
         case .never:
             return 1
         case .custom:
-            switch repeatUnit {
+            switch dateOptions.repeatUnit {
             case "Days":
-                return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! / customRepeatCount + 1
+                return Calendar.current.dateComponents([.day], from: event.date, to: repeatUntil).day! / dateOptions.customRepeatCount + 1
             case "Weeks":
-                return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! / customRepeatCount + 1
+                return Calendar.current.dateComponents([.weekOfYear], from: event.date, to: repeatUntil).weekOfYear! / dateOptions.customRepeatCount + 1
             case "Months":
-                return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! / customRepeatCount + 1
+                return Calendar.current.dateComponents([.month], from: event.date, to: repeatUntil).month! / dateOptions.customRepeatCount + 1
             case "Years":
-                return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! / customRepeatCount + 1
+                return Calendar.current.dateComponents([.year], from: event.date, to: repeatUntil).year! / dateOptions.customRepeatCount + 1
             default:
                 return 1
             }
@@ -317,37 +301,37 @@ struct EditEventView: View {
     
     // Function to apply changes to an event or series of events
     func applyChanges(to option: DeleteOption) {
-        guard let selectedEvent = selectedEvent else { return }
+        guard let event = eventDetails.selectedEvent else { return }
 
         // Calculate the new duration based on the updated end date
-        let newDuration = Calendar.current.dateComponents([.day], from: newEventDate, to: newEventEndDate).day ?? 0
+        let newDuration = Calendar.current.dateComponents([.day], from: dateOptions.date, to: dateOptions.endDate).day ?? 0
 
         switch option {
         case .thisEvent:
-            if let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
-                events[index].title = newEventTitle
-                events[index].date = newEventDate
-                events[index].endDate = showEndDate ? newEventEndDate : nil
-                events[index].category = selectedCategory
-                events[index].color = selectedColor
-                events[index].repeatOption = repeatOption
-                events[index].customRepeatCount = customRepeatCount
-                events[index].repeatUnit = repeatUnit
+            if let index = events.firstIndex(where: { $0.id == event.id }) {
+                events[index].title = eventDetails.title
+                events[index].date = dateOptions.date
+                events[index].endDate = dateOptions.showEndDate ? dateOptions.endDate : nil
+                events[index].category = categoryOptions.selectedCategory
+                events[index].color = categoryOptions.selectedColor
+                events[index].repeatOption = dateOptions.repeatOption
+                events[index].customRepeatCount = dateOptions.customRepeatCount
+                events[index].repeatUnit = dateOptions.repeatUnit
             }
         case .allEvents:
-            let repeatingEvents = events.filter { $0.seriesID == selectedEvent.seriesID }
-            let repeatOption = self.repeatOption
+            let repeatingEvents = events.filter { $0.seriesID == event.seriesID }
+            let repeatOption = dateOptions.repeatOption
 
             // Update the selected event
-            guard let selectedIndex = events.firstIndex(where: { $0.id == selectedEvent.id }) else { return }
-            events[selectedIndex].title = newEventTitle
-            events[selectedIndex].date = newEventDate
-            events[selectedIndex].endDate = showEndDate ? newEventEndDate : nil
-            events[selectedIndex].category = selectedCategory
-            events[selectedIndex].color = selectedColor
+            guard let selectedIndex = events.firstIndex(where: { $0.id == event.id }) else { return }
+            events[selectedIndex].title = eventDetails.title
+            events[selectedIndex].date = dateOptions.date
+            events[selectedIndex].endDate = dateOptions.showEndDate ? dateOptions.endDate : nil
+            events[selectedIndex].category = categoryOptions.selectedCategory
+            events[selectedIndex].color = categoryOptions.selectedColor
             events[selectedIndex].repeatOption = repeatOption
-            events[selectedIndex].customRepeatCount = customRepeatCount
-            events[selectedIndex].repeatUnit = repeatUnit
+            events[selectedIndex].customRepeatCount = dateOptions.customRepeatCount
+            events[selectedIndex].repeatUnit = dateOptions.repeatUnit
 
             // Update future events
             var eventCount = 1
@@ -367,28 +351,28 @@ struct EditEventView: View {
                     case .never:
                         newEventDate = nil
                     case .custom:
-                        switch repeatUnit {
+                        switch dateOptions.repeatUnit {
                         case "Days":
-                            newEventDate = Calendar.current.date(byAdding: .day, value: customRepeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .day, value: dateOptions.customRepeatCount, to: previousEventDate)
                         case "Weeks":
-                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: dateOptions.customRepeatCount, to: previousEventDate)
                         case "Months":
-                            newEventDate = Calendar.current.date(byAdding: .month, value: customRepeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .month, value: dateOptions.customRepeatCount, to: previousEventDate)
                         case "Years":
-                            newEventDate = Calendar.current.date(byAdding: .year, value: customRepeatCount, to: previousEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .year, value: dateOptions.customRepeatCount, to: previousEventDate)
                         default:
                             newEventDate = nil
                         }
                     }
                     if let newEventDate = newEventDate, eventCount < 100 {
-                        events[eventIndex].title = newEventTitle
+                        events[eventIndex].title = eventDetails.title
                         events[eventIndex].date = newEventDate
-                        events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].category = selectedCategory
-                        events[eventIndex].color = selectedColor
+                        events[eventIndex].endDate = dateOptions.showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].category = categoryOptions.selectedCategory
+                        events[eventIndex].color = categoryOptions.selectedColor
                         events[eventIndex].repeatOption = repeatOption
-                        events[eventIndex].customRepeatCount = customRepeatCount
-                        events[eventIndex].repeatUnit = repeatUnit
+                        events[eventIndex].customRepeatCount = dateOptions.customRepeatCount
+                        events[eventIndex].repeatUnit = dateOptions.repeatUnit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)
@@ -414,28 +398,28 @@ struct EditEventView: View {
                     case .never:
                         newEventDate = nil
                     case .custom:
-                        switch repeatUnit {
+                        switch dateOptions.repeatUnit {
                         case "Days":
-                            newEventDate = Calendar.current.date(byAdding: .day, value: -customRepeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .day, value: -dateOptions.customRepeatCount, to: nextEventDate)
                         case "Weeks":
-                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -customRepeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .weekOfYear, value: -dateOptions.customRepeatCount, to: nextEventDate)
                         case "Months":
-                            newEventDate = Calendar.current.date(byAdding: .month, value: -customRepeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .month, value: -dateOptions.customRepeatCount, to: nextEventDate)
                         case "Years":
-                            newEventDate = Calendar.current.date(byAdding: .year, value: -customRepeatCount, to: nextEventDate)
+                            newEventDate = Calendar.current.date(byAdding: .year, value: -dateOptions.customRepeatCount, to: nextEventDate)
                         default:
                             newEventDate = nil
                         }
                     }
                     if let newEventDate = newEventDate, eventCount < 100 {
-                        events[eventIndex].title = newEventTitle
+                        events[eventIndex].title = eventDetails.title
                         events[eventIndex].date = newEventDate
-                        events[eventIndex].endDate = showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].category = selectedCategory
-                        events[eventIndex].color = selectedColor
+                        events[eventIndex].endDate = dateOptions.showEndDate ? Calendar.current.date(byAdding: .day, value: newDuration, to: newEventDate) : nil
+                        events[eventIndex].category = categoryOptions.selectedCategory
+                        events[eventIndex].color = categoryOptions.selectedColor
                         events[eventIndex].repeatOption = repeatOption
-                        events[eventIndex].customRepeatCount = customRepeatCount
-                        events[eventIndex].repeatUnit = repeatUnit
+                        events[eventIndex].customRepeatCount = dateOptions.customRepeatCount
+                        events[eventIndex].repeatUnit = dateOptions.repeatUnit
                         eventCount += 1
                     } else {
                         events.remove(at: eventIndex)
@@ -446,7 +430,7 @@ struct EditEventView: View {
         
         // Check if the event will be included in the daily notification for the date of the event
         let calendar = Calendar.current
-        let eventDayStart = calendar.startOfDay(for: newEventDate)
+        let eventDayStart = calendar.startOfDay(for: dateOptions.date)
         let eventDayEnd = calendar.date(byAdding: .day, value: 1, to: eventDayStart)!
         
         let eventsOnEventDay = events.filter { event in
@@ -454,15 +438,33 @@ struct EditEventView: View {
             return eventStart >= eventDayStart && eventStart < eventDayEnd
         }
         
-        if eventsOnEventDay.contains(where: { $0.id == selectedEvent.id }) {
-            print("The event '\(newEventTitle)' will be included in the daily notification for \(newEventDate).")
+        if eventsOnEventDay.contains(where: { $0.id == event.id }) {
+            print("The event '\(eventDetails.title)' will be included in the daily notification for \(dateOptions.date).")
         } else {
-            print("The event '\(newEventTitle)' will NOT be included in the daily notification for \(newEventDate).")
+            print("The event '\(eventDetails.title)' will NOT be included in the daily notification for \(dateOptions.date).")
         }
 
         appData.objectWillChange.send() // Notify observers of changes
         saveEvents()
         showEditSheet = false
+    }
+
+    private func setupInitialState() {
+        if let event = selectedEvent {
+            eventDetails.title = event.title
+            dateOptions.date = event.date
+            dateOptions.endDate = event.endDate ?? event.date
+            dateOptions.showEndDate = event.endDate != nil
+            dateOptions.repeatOption = event.repeatOption
+            dateOptions.repeatUntil = event.repeatUntil ?? Date()
+            dateOptions.repeatUntilOption = event.repeatUntil == nil ? .indefinitely : .onDate
+            dateOptions.repeatUntilCount = event.repeatUntilCount ?? 1
+            dateOptions.showRepeatOptions = event.repeatOption != .never
+            dateOptions.repeatUnit = event.repeatUnit ?? "Days"
+            dateOptions.customRepeatCount = event.customRepeatCount ?? 1
+            categoryOptions.selectedCategory = event.category
+            categoryOptions.selectedColor = event.color
+        }
     }
 }
 

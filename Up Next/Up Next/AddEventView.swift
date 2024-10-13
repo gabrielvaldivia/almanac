@@ -42,30 +42,21 @@ struct AddEventView: View {
     @State private var showDeleteActionSheet = false // Add this state variable
     @State private var showRepeatOptions = false // Set this to false by default
 
+    @State private var eventDetails = EventDetails(title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
+    @State private var dateOptions = DateOptions(date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never, repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1, showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
+    @State private var categoryOptions = CategoryOptions(selectedCategory: nil, selectedColor: CodableColor(color: .blue))
+    @State private var viewState = ViewState(showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: false)
+
     var body: some View {
         NavigationView {
             // Event form view
             EventForm(
-                newEventTitle: $newEventTitle,
-                newEventDate: $newEventDate,
-                newEventEndDate: $newEventEndDate,
-                showEndDate: $showEndDate,
-                selectedCategory: $selectedCategory,
-                selectedColor: $selectedColor,
-                repeatOption: $repeatOption,
-                repeatUntil: $repeatUntil,
-                repeatUntilOption: $repeatUntilOption,
-                repeatUntilCount: $repeatUntilCount, // Pass the binding
-                showCategoryManagementView: $showCategoryManagementView,
-                showDeleteActionSheet: $showDeleteActionSheet,
-                selectedEvent: $selectedEvent,
-                isTitleFocused: _isTitleFocused, // Pass FocusState directly
-                deleteEvent: {}, // Remove deleteEvent functionality
-                deleteSeries: {}, // Remove deleteSeries functionality
-                showDeleteButtons: false, // Do not show delete buttons
-                showRepeatOptions: $showRepeatOptions, // Pass the binding
-                repeatUnit: $repeatUnit,
-                customRepeatCount: $customRepeatCount // Add this line
+                eventDetails: $eventDetails,
+                dateOptions: $dateOptions,
+                categoryOptions: $categoryOptions,
+                viewState: $viewState,
+                deleteEvent: {},
+                deleteSeries: {}
             )
             .environmentObject(appData)
             .navigationTitle("Add Event")
@@ -116,13 +107,12 @@ struct AddEventView: View {
             .presentationDetents([.medium, .large], selection: .constant(.medium))
         }
         .onAppear {
-            // Set initial focus and default values
             isTitleFocused = true
-            selectedColor = CodableColor(color: .blue) // Set default color to blue
+            categoryOptions.selectedColor = CodableColor(color: .blue)
             if selectedCategory == nil {
-                selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+                categoryOptions.selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
             } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
-                selectedColor = CodableColor(color: category.color)
+                categoryOptions.selectedColor = CodableColor(color: category.color)
             }
         }
         .onDisappear {
@@ -140,29 +130,29 @@ struct AddEventView: View {
     // Function to save the new event
     func saveNewEvent() {
         let repeatUntilDate: Date?
-        switch repeatUntilOption {
+        switch dateOptions.repeatUntilOption {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(for: repeatOption, from: newEventDate, count: repeatUntilCount, repeatUnit: repeatUnit)
+            repeatUntilDate = calculateRepeatUntilDate(for: dateOptions.repeatOption, from: dateOptions.date, count: dateOptions.repeatUntilCount, repeatUnit: dateOptions.repeatUnit)
         case .onDate:
-            repeatUntilDate = repeatUntil
+            repeatUntilDate = dateOptions.repeatUntil
         }
 
         let newEvent = Event(
-            title: newEventTitle,
-            date: newEventDate,
-            endDate: showEndDate ? newEventEndDate : nil,
-            color: selectedColor,
-            category: selectedCategory,
-            repeatOption: repeatOption,
+            title: eventDetails.title,
+            date: dateOptions.date,
+            endDate: dateOptions.showEndDate ? dateOptions.endDate : nil,
+            color: categoryOptions.selectedColor,
+            category: categoryOptions.selectedCategory,
+            repeatOption: dateOptions.repeatOption,
             repeatUntil: repeatUntilDate,
-            customRepeatCount: customRepeatCount,
-            repeatUnit: repeatUnit,
-            repeatUntilCount: repeatUntilCount
+            customRepeatCount: dateOptions.customRepeatCount,
+            repeatUnit: dateOptions.repeatUnit,
+            repeatUntilCount: dateOptions.repeatUntilCount
         )
 
-        let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: repeatUntilOption, showEndDate: showEndDate)
+        let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: dateOptions.repeatUntilOption, showEndDate: dateOptions.showEndDate)
         events.append(contentsOf: newEvents)
         saveEvents()
         

@@ -93,10 +93,24 @@ enum RepeatOption: String, Codable, CaseIterable {
     case custom = "Custom"
 }
 
+// Enum for repeat until options
+enum RepeatUntilOption: String, Codable {
+    case indefinitely = "Indefinitely"
+    case after = "After"
+    case onDate = "On Date"
+}
+
 // Model for category data
 struct CategoryData: Codable {
     let name: String
     let color: CodableColor
+    let repeatOption: RepeatOption
+    let showRepeatOptions: Bool
+    let customRepeatCount: Int
+    let repeatUnit: String
+    let repeatUntilOption: RepeatUntilOption
+    let repeatUntilCount: Int
+    let repeatUntil: Date
 }
 
 // Model for a color that can be encoded and decoded
@@ -154,11 +168,11 @@ class AppData: NSObject, ObservableObject {
     static let shared = AppData() // Singleton instance
 
     @Published var events: [Event] = []
-    @Published var categories: [(name: String, color: Color)] = [
-        ("Work", .blue),
-        ("Social", .green),
-        ("Birthdays", .red),
-        ("Holidays", .purple)
+    @Published var categories: [(name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)] = [
+        ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
+        ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
+        ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
+        ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date())
     ] {
         didSet {
             if isDataLoaded {
@@ -230,7 +244,7 @@ class AppData: NSObject, ObservableObject {
 
     // Function to save categories to UserDefaults
     func saveCategories() {
-        let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color)) }
+        let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption, showRepeatOptions: false, customRepeatCount: $0.customRepeatCount, repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption, repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil) }
         encodeToUserDefaults(categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
     }
 
@@ -238,14 +252,14 @@ class AppData: NSObject, ObservableObject {
     func loadCategories() {
         if let decoded: [CategoryData] = decodeFromUserDefaults([CategoryData].self, forKey: "categories", suiteName: "group.UpNextIdentifier") {
             self.categories = decoded.map { categoryData in
-                return (name: categoryData.name, color: categoryData.color.color)
+                return (name: categoryData.name, color: categoryData.color.color, repeatOption: categoryData.repeatOption, customRepeatCount: categoryData.customRepeatCount, repeatUnit: categoryData.repeatUnit, repeatUntilOption: categoryData.repeatUntilOption, repeatUntilCount: categoryData.repeatUntilCount, repeatUntil: categoryData.repeatUntil)
             }
         } else {
             self.categories = [
-                ("Work", .blue),
-                ("Social", .green),
-                ("Birthdays", .red),
-                ("Holidays", .purple)
+                ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
+                ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
+                ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
+                ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date())
             ]
         }
         

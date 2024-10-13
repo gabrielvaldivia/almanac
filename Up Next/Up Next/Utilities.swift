@@ -217,12 +217,12 @@ func getNextRepeatDate(for event: Event) -> Date? {
     }
 }
 
-// Enum to represent different repeat until options
-enum RepeatUntilOption: String, CaseIterable {
-    case indefinitely = "Never"
-    case after = "After"
-    case onDate = "On"
-}
+// // Enum to represent different repeat until options
+// enum RepeatUntilOption: String, CaseIterable {
+//     case indefinitely = "Never"
+//     case after = "After"
+//     case onDate = "On"
+// }
 
 // Calculates the repeat until date based on the repeat option, start date, count, and repeat unit
 func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date? {

@@ -117,7 +117,16 @@ struct CategoriesView: View {
                 AddCategoryView(
                     showingAddCategorySheet: $showingAddCategorySheet,
                     onSave: { newCategory in
-                        appData.categories.append((name: newCategory.name, color: newCategory.color))
+                        appData.categories.append((
+                            name: newCategory.name,
+                            color: newCategory.color,
+                            repeatOption: newCategory.repeatOption,
+                            customRepeatCount: newCategory.customRepeatCount,
+                            repeatUnit: newCategory.repeatUnit,
+                            repeatUntilOption: newCategory.repeatUntilOption,
+                            repeatUntilCount: newCategory.repeatUntilCount,
+                            repeatUntil: newCategory.repeatUntil
+                        ))
                         appData.saveCategories()
                     }
                 )
