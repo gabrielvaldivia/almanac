@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		40109BFE2CBB696D00962D7C /* CategoryForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40109BFD2CBB696D00962D7C /* CategoryForm.swift */; };
+		40109BFF2CBB6CA800962D7C /* CategoryForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40109BFD2CBB696D00962D7C /* CategoryForm.swift */; };
 		4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4011A1512C3CE97D00F275DE /* EventForm.swift */; };
 		4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
 		4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4038EA9D2C33832400E0CE8E /* EventLoader.swift */; };
@@ -86,6 +88,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		40109BFD2CBB696D00962D7C /* CategoryForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryForm.swift; sourceTree = "<group>"; };
 		4011A1512C3CE97D00F275DE /* EventForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventForm.swift; sourceTree = "<group>"; };
 		4038EA9D2C33832400E0CE8E /* EventLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLoader.swift; sourceTree = "<group>"; };
 		403EA2F22C2F69EE003207ED /* FontModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontModifier.swift; sourceTree = "<group>"; };
@@ -225,6 +228,7 @@
 				40FEEC462C2911DD008AA61D /* CategoriesView.swift */,
 				40D9263D2C42423000DCDBFB /* AddCategoryView.swift */,
 				40595AFB2C4EBA01007CE39E /* EditCategorySheet.swift */,
+				40109BFD2CBB696D00962D7C /* CategoryForm.swift */,
 				40595AF72C4EB248007CE39E /* CustomColorPickerSheet.swift */,
 				40790D752C23286C005DDC65 /* Assets.xcassets */,
 				40790D772C23286C005DDC65 /* Preview Content */,
@@ -421,6 +425,7 @@
 				405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */,
 				405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */,
 				4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */,
+				40109BFF2CBB6CA800962D7C /* CategoryForm.swift in Sources */,
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
 				40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */,
 				40595AFA2C4EB33A007CE39E /* CustomColorPickerSheet.swift in Sources */,
@@ -446,6 +451,7 @@
 				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
 				4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */,
 				40790D722C23286B005DDC65 /* Up_NextApp.swift in Sources */,
+				40109BFE2CBB696D00962D7C /* CategoryForm.swift in Sources */,
 				40FEEC492C291558008AA61D /* AppData.swift in Sources */,
 				40595AFC2C4EBA01007CE39E /* EditCategorySheet.swift in Sources */,
 				40595AF82C4EB248007CE39E /* CustomColorPickerSheet.swift in Sources */,

@@ -12,72 +12,58 @@ struct AddCategoryView: View {
     @Binding var showingAddCategorySheet: Bool
     @State private var newCategoryName: String = ""
     @State private var newCategoryColor: Color
-    @FocusState private var isCategoryNameFieldFocused: Bool
-    var onSave: ((name: String, color: Color)) -> Void
     @State private var showColorPickerSheet = false
-    @State private var selectedColor: CodableColor
+    @State private var repeatOption: RepeatOption = .never
+    @State private var showRepeatOptions: Bool = false
+    @State private var customRepeatCount: Int = 1
+    @State private var repeatUnit: String = "Days"
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
+    @State private var repeatUntilCount: Int = 1
+    @State private var repeatUntil: Date = Date()
+    var onSave: ((name: String, color: Color)) -> Void
     
     init(showingAddCategorySheet: Binding<Bool>, onSave: @escaping ((name: String, color: Color)) -> Void) {
         self._showingAddCategorySheet = showingAddCategorySheet
         self.onSave = onSave
         let randomColor = CustomColorPickerSheet.predefinedColors.randomElement() ?? .blue
-        self._selectedColor = State(initialValue: CodableColor(color: randomColor))
         self._newCategoryColor = State(initialValue: randomColor)
     }
 
     var body: some View {
-        Form {
-            TextField("Category Name", text: $newCategoryName)
-                .focused($isCategoryNameFieldFocused)
-            HStack {
-                Text("Color")
-                Spacer()
-                Button(action: {
-                    showColorPickerSheet = true
-                }) {
-                    Circle()
-                        .fill(newCategoryColor)
-                        .frame(width: 24, height: 24)
-                }
-            }
-        }
-        .navigationBarTitle("Add Category", displayMode: .inline)
-        .navigationBarItems(
-            leading: Button("Cancel") {
-                showingAddCategorySheet = false
-            },
-            trailing: Button(action: {
-                onSave((name: newCategoryName, color: selectedColor.color))
-                showingAddCategorySheet = false
-            }) {
-                Group {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(selectedColor.color)
-                            .frame(width: 60, height: 32)
-                        Text("Save")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(selectedColor.color.contrastColor)
-                    }
-                }
-                .opacity(newCategoryName.isEmpty ? 0.3 : 1.0)
-            }
-            .disabled(newCategoryName.isEmpty)
+        CategoryForm(
+            categoryName: $newCategoryName,
+            categoryColor: $newCategoryColor,
+            showColorPickerSheet: $showColorPickerSheet,
+            repeatOption: $repeatOption,
+            showRepeatOptions: $showRepeatOptions,
+            customRepeatCount: $customRepeatCount,
+            repeatUnit: $repeatUnit,
+            repeatUntilOption: $repeatUntilOption,
+            repeatUntilCount: $repeatUntilCount,
+            repeatUntil: $repeatUntil,
+            isEditing: false
         )
-        .sheet(isPresented: $showColorPickerSheet) {
-            CustomColorPickerSheet(
-                selectedColor: $selectedColor,
-                showColorPickerSheet: $showColorPickerSheet
-            )
-            .presentationDetents([.fraction(0.4)]) 
-        }
-        .onChange(of: selectedColor.color) {
-            newCategoryColor = selectedColor.color
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isCategoryNameFieldFocused = true
+        .navigationTitle("Add Category")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    showingAddCategorySheet = false
+                }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    onSave((name: newCategoryName, color: newCategoryColor))
+                    showingAddCategorySheet = false
+                }
+                .disabled(newCategoryName.isEmpty)
+            }
+        }
+        .sheet(isPresented: $showColorPickerSheet) {
+            CustomColorPickerSheet(selectedColor: Binding(
+                get: { CodableColor(color: newCategoryColor) },
+                set: { newCategoryColor = $0.color }
+            ), showColorPickerSheet: $showColorPickerSheet)
         }
     }
 }

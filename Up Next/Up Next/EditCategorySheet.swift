@@ -1,94 +1,75 @@
 import Foundation
 import SwiftUI
 
+import SwiftUI
+
 struct EditCategorySheet: View {
     @Binding var categoryToEdit: (index: Int, name: String, color: Color)?
     @Binding var showingEditCategorySheet: Bool
     @EnvironmentObject var appData: AppData
-    @FocusState private var isCategoryNameFieldFocused: Bool
     @Binding var showColorPickerSheet: Bool
+    @State private var editedName: String = ""
+    @State private var editedColor: Color = .blue
+    @State private var repeatOption: RepeatOption = .never
+    @State private var showRepeatOptions: Bool = false
+    @State private var customRepeatCount: Int = 1
+    @State private var repeatUnit: String = "Days"
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely
+    @State private var repeatUntilCount: Int = 1
+    @State private var repeatUntil: Date = Date()
 
     var body: some View {
         NavigationView {
-            if let categoryToEdit = categoryToEdit {
-                Form {
-                    TextField("Category Name", text: Binding(
-                        get: { categoryToEdit.name },
-                        set: { self.categoryToEdit?.name = $0 }
-                    ))
-                    .focused($isCategoryNameFieldFocused)
-                    HStack {
-                        Text("Color")
-                        Spacer()
-                        Button(action: {
-                            showColorPickerSheet = true
-                        }) {
-                            Circle()
-                                .fill(categoryToEdit.color)
-                                .frame(width: 24, height: 24)
-                        }
+            CategoryForm(
+                categoryName: $editedName,
+                categoryColor: $editedColor,
+                showColorPickerSheet: $showColorPickerSheet,
+                repeatOption: $repeatOption,
+                showRepeatOptions: $showRepeatOptions,
+                customRepeatCount: $customRepeatCount,
+                repeatUnit: $repeatUnit,
+                repeatUntilOption: $repeatUntilOption,
+                repeatUntilCount: $repeatUntilCount,
+                repeatUntil: $repeatUntil,
+                isEditing: true
+            )
+            .navigationTitle("Edit Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        showingEditCategorySheet = false
                     }
                 }
-                .navigationBarTitle("Edit Category", displayMode: .inline)
-                .navigationBarItems(
-                    leading: Button("Cancel") {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveCategory()
                         showingEditCategorySheet = false
-                    },
-                    trailing: Button(action: {
-                        print("Save button pressed")
-                        let index = categoryToEdit.index
-                        let oldName = appData.categories[index].name
-                        _ = appData.categories[index].color
-                        appData.categories[index].name = categoryToEdit.name
-                        appData.categories[index].color = categoryToEdit.color
-                        appData.saveCategories()
-                        
-                        // Force a reload of events before updating
-                        appData.loadEvents()
-                        
-                        print("Updating events for category change: \(oldName) -> \(categoryToEdit.name)")
-                        appData.updateEventsForCategoryChange(oldName: oldName, newName: categoryToEdit.name, newColor: categoryToEdit.color)
-                        
-                        DispatchQueue.main.async {
-                            appData.objectWillChange.send()
-                        }
-                        print("Closing edit sheet")
-                        showingEditCategorySheet = false
-                    }) {
-                        Group {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(categoryToEdit.color)
-                                    .frame(width: 60, height: 32)
-                                Text("Save")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(CustomColorPickerSheet(selectedColor: Binding(
-                                        get: { CodableColor(color: categoryToEdit.color) },
-                                        set: { _ in }
-                                    ), showColorPickerSheet: .constant(false)).contrastColor)
-                            }
-                        }
-                        .opacity(categoryToEdit.name.isEmpty ? 0.3 : 1.0)
                     }
-                    .disabled(categoryToEdit.name.isEmpty)
-                )
-                .sheet(isPresented: $showColorPickerSheet) {
-                    CustomColorPickerSheet(
-                        selectedColor: Binding(
-                            get: { CodableColor(color: categoryToEdit.color) },
-                            set: { self.categoryToEdit?.color = $0.color }
-                        ),
-                        showColorPickerSheet: $showColorPickerSheet
-                    )
-                    .presentationDetents([.fraction(0.4)]) 
+                    .disabled(editedName.isEmpty)
                 }
-                
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isCategoryNameFieldFocused = true
+            if let category = categoryToEdit {
+                editedName = category.name
+                editedColor = category.color
             }
+        }
+        .sheet(isPresented: $showColorPickerSheet) {
+            CustomColorPickerSheet(selectedColor: Binding(
+                get: { CodableColor(color: editedColor) },
+                set: { editedColor = $0.color }
+            ), showColorPickerSheet: $showColorPickerSheet)
+        }
+    }
+
+    private func saveCategory() {
+        if let index = categoryToEdit?.index {
+            appData.categories[index].name = editedName
+            appData.categories[index].color = editedColor
+            appData.saveCategories()
+            appData.updateEventsForCategoryChange(oldName: categoryToEdit!.name, newName: editedName, newColor: editedColor)
         }
     }
 }
