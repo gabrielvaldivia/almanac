@@ -120,9 +120,14 @@ struct AddEventView: View {
             isTitleFocused = false
         }
         .onChange(of: selectedCategory) { newCategory in
-            if newCategory == "Birthdays" || newCategory == "Holidays" {
-                repeatOption = .yearly
-                showRepeatOptions = true
+            if let category = appData.categories.first(where: { $0.name == newCategory }) {
+                dateOptions.repeatOption = category.repeatOption
+                dateOptions.showRepeatOptions = category.repeatOption != .never
+                dateOptions.customRepeatCount = category.customRepeatCount
+                dateOptions.repeatUnit = category.repeatUnit
+                dateOptions.repeatUntilOption = category.repeatUntilOption
+                dateOptions.repeatUntilCount = category.repeatUntilCount
+                dateOptions.repeatUntil = category.repeatUntil
             }
         }
     }

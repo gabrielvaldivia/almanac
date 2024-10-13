@@ -29,7 +29,7 @@ struct EventForm: View {
             ScrollView {
                 VStack(spacing: 16) {
                     TitleSection(newEventTitle: $eventDetails.title, isTitleFocused: _isTitleFocused)
-                    DateSection(dateOptions: $dateOptions, showCustomStartDatePicker: $showCustomStartDatePicker, showCustomEndDatePicker: $showCustomEndDatePicker, tempEndDate: $tempEndDate)
+                    DateSection(dateOptions: $dateOptions, showCustomStartDatePicker: $showCustomStartDatePicker, showCustomEndDatePicker: $showCustomEndDatePicker, tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
                     CategoryAndColorSection(categoryOptions: $categoryOptions, showingAddCategorySheet: $showingAddCategorySheet, showColorPickerSheet: $showColorPickerSheet, appData: appData)
                     if viewState.showDeleteButtons {
                         DeleteSection(selectedEvent: eventDetails.selectedEvent, showDeleteActionSheet: $viewState.showDeleteActionSheet, deleteEvent: deleteEvent, deleteSeries: deleteSeries)
@@ -81,6 +81,7 @@ struct DateSection: View {
     @Binding var showCustomStartDatePicker: Bool
     @Binding var showCustomEndDatePicker: Bool
     @Binding var tempEndDate: Date?
+    @Binding var categoryOptions: CategoryOptions
     
     var body: some View {
         VStack {
@@ -166,49 +167,56 @@ struct DateSection: View {
                 }
 
                 // Repeat Button
-                if !dateOptions.showRepeatOptions {
-                    Menu {
-                        ForEach(RepeatOption.allCases.filter { option in
-                            if option == .never { return false }
-                            if option == .daily && dateOptions.showEndDate { return false }
-                            if option == .weekly && dateOptions.showEndDate && Calendar.current.dateComponents([.day], from: dateOptions.date, to: dateOptions.endDate).day! > 6 { return false }
-                            return true
-                        }, id: \.self) { option in
-                            Button(action: {
-                                dateOptions.repeatOption = option
-                                dateOptions.showRepeatOptions = option != .never
-                            }) {
-                                Text(option.rawValue)
-                                    .foregroundColor(option == dateOptions.repeatOption ? .gray : .primary)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "repeat")
-                            .foregroundColor(.primary)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                    }
-                    .padding(.trailing, 6)
-                } else {
-                    Button(action: {
+                Button(action: {
+                    if dateOptions.showRepeatOptions {
                         dateOptions.repeatOption = .never
                         dateOptions.showRepeatOptions = false
-                    }) {
-                        Image(systemName: "repeat")
-                            .foregroundColor(.primary)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
                     }
-                    .padding(.trailing, 6)
+                }) {
+                    Image(systemName: "repeat")
+                        .foregroundColor(dateOptions.repeatOption != .never ? .white : .gray)
+                        .padding(8)
+                        .background(
+                            dateOptions.repeatOption != .never
+                            ? categoryOptions.selectedColor.color
+                            : Color.gray.opacity(0.2)
+                        )
+                        .cornerRadius(8)
                 }
+                .overlay(
+                    Group {
+                        if !dateOptions.showRepeatOptions {
+                            Menu {
+                                ForEach(RepeatOption.allCases, id: \.self) { option in
+                                    Button(action: {
+                                        dateOptions.repeatOption = option
+                                        dateOptions.showRepeatOptions = option != .never
+                                    }) {
+                                        Text(option.rawValue)
+                                    }
+                                }
+                            } label: {
+                                Color.clear
+                                    .frame(width: 40, height: 40)
+                            }
+                        }
+                    }
+                )
+                .padding(.trailing, 6)
             }
             .padding(.vertical, 6)
 
             if dateOptions.showRepeatOptions {
-                // Implement repeat options here
-                Text("Repeat options")
+                RepeatOptions(
+                    repeatOption: $dateOptions.repeatOption,
+                    showRepeatOptions: $dateOptions.showRepeatOptions,
+                    customRepeatCount: $dateOptions.customRepeatCount,
+                    repeatUnit: $dateOptions.repeatUnit,
+                    repeatUntilOption: $dateOptions.repeatUntilOption,
+                    repeatUntilCount: $dateOptions.repeatUntilCount,
+                    repeatUntil: $dateOptions.repeatUntil
+                )
+                // .padding(.horizontal)
             }
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))

@@ -455,13 +455,26 @@ struct EditEventView: View {
             dateOptions.date = event.date
             dateOptions.endDate = event.endDate ?? event.date
             dateOptions.showEndDate = event.endDate != nil
-            dateOptions.repeatOption = event.repeatOption
-            dateOptions.repeatUntil = event.repeatUntil ?? Date()
-            dateOptions.repeatUntilOption = event.repeatUntil == nil ? .indefinitely : .onDate
-            dateOptions.repeatUntilCount = event.repeatUntilCount ?? 1
-            dateOptions.showRepeatOptions = event.repeatOption != .never
-            dateOptions.repeatUnit = event.repeatUnit ?? "Days"
-            dateOptions.customRepeatCount = event.customRepeatCount ?? 1
+            
+            // Check if the event has its own repeat options, if not, use the category's
+            if event.repeatOption == .never, let category = appData.categories.first(where: { $0.name == event.category }) {
+                dateOptions.repeatOption = category.repeatOption
+                dateOptions.repeatUntil = category.repeatUntil
+                dateOptions.repeatUntilOption = category.repeatUntilOption
+                dateOptions.repeatUntilCount = category.repeatUntilCount
+                dateOptions.showRepeatOptions = category.repeatOption != .never
+                dateOptions.repeatUnit = category.repeatUnit
+                dateOptions.customRepeatCount = category.customRepeatCount
+            } else {
+                dateOptions.repeatOption = event.repeatOption
+                dateOptions.repeatUntil = event.repeatUntil ?? Date()
+                dateOptions.repeatUntilOption = event.repeatUntil == nil ? .indefinitely : .onDate
+                dateOptions.repeatUntilCount = event.repeatUntilCount ?? 1
+                dateOptions.showRepeatOptions = event.repeatOption != .never
+                dateOptions.repeatUnit = event.repeatUnit ?? "Days"
+                dateOptions.customRepeatCount = event.customRepeatCount ?? 1
+            }
+            
             categoryOptions.selectedCategory = event.category
             categoryOptions.selectedColor = event.color
         }

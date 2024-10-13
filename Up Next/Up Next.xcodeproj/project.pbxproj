@@ -37,6 +37,8 @@
 		407AE1B52C6C573100DEAD7C /* Almanac Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */; };
 		407AE1B62C6C573100DEAD7C /* Almanac Pro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */; };
 		409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409726472C2DE2CB0050988E /* CategoryPillsView.swift */; };
+		40B4AEAA2CBB998B00E4719E /* RepeatOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B4AEA92CBB998B00E4719E /* RepeatOptions.swift */; };
+		40B4AEAB2CBB999B00E4719E /* RepeatOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B4AEA92CBB998B00E4719E /* RepeatOptions.swift */; };
 		40D9263E2C42423000DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D9263D2C42423000DCDBFB /* AddCategoryView.swift */; };
 		40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
@@ -118,6 +120,7 @@
 		407AE1B22C6C570800DEAD7C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		407AE1B42C6C573100DEAD7C /* Almanac Pro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Almanac Pro.storekit"; sourceTree = "<group>"; };
 		409726472C2DE2CB0050988E /* CategoryPillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPillsView.swift; sourceTree = "<group>"; };
+		40B4AEA92CBB998B00E4719E /* RepeatOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatOptions.swift; sourceTree = "<group>"; };
 		40C0A84B2C4B480400B38A14 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		40D9263D2C42423000DCDBFB /* AddCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategoryView.swift; sourceTree = "<group>"; };
 		40FEEC462C2911DD008AA61D /* CategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoriesView.swift; sourceTree = "<group>"; };
@@ -227,6 +230,7 @@
 				40FEEC522C292617008AA61D /* EditEventView.swift */,
 				40FEEC462C2911DD008AA61D /* CategoriesView.swift */,
 				40D9263D2C42423000DCDBFB /* AddCategoryView.swift */,
+				40B4AEA92CBB998B00E4719E /* RepeatOptions.swift */,
 				40595AFB2C4EBA01007CE39E /* EditCategorySheet.swift */,
 				40109BFD2CBB696D00962D7C /* CategoryForm.swift */,
 				40595AF72C4EB248007CE39E /* CustomColorPickerSheet.swift */,
@@ -427,6 +431,7 @@
 				4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */,
 				40109BFF2CBB6CA800962D7C /* CategoryForm.swift in Sources */,
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
+				40B4AEAB2CBB999B00E4719E /* RepeatOptions.swift in Sources */,
 				40D9263F2C4243C700DCDBFB /* AddCategoryView.swift in Sources */,
 				40595AFA2C4EB33A007CE39E /* CustomColorPickerSheet.swift in Sources */,
 				40595AFE2C4EBA8D007CE39E /* AppData.swift in Sources */,
@@ -456,6 +461,7 @@
 				40595AFC2C4EBA01007CE39E /* EditCategorySheet.swift in Sources */,
 				40595AF82C4EB248007CE39E /* CustomColorPickerSheet.swift in Sources */,
 				405F66792C33A5C4003C9DC4 /* AddEventButton.swift in Sources */,
+				40B4AEAA2CBB998B00E4719E /* RepeatOptions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
