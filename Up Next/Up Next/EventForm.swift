@@ -1,6 +1,5 @@
 import SwiftUI
 import WidgetKit
-import Up_Next
 
 struct EventForm: View {
     @EnvironmentObject var appData: AppData
@@ -288,20 +287,20 @@ struct CategoryAndColorSection: View {
         .cornerRadius(12)
         .sheet(isPresented: $showingAddCategorySheet) {
             NavigationView {
-                AddCategoryView(
-                    showingAddCategorySheet: $showingAddCategorySheet,
+                CategoryForm(
+                    showingSheet: $showingAddCategorySheet,
                     onSave: { newCategory in
                         categoryOptions.selectedCategory = newCategory.name
                         categoryOptions.selectedColor = CodableColor(color: newCategory.color)
                         appData.categories.append((
                             name: newCategory.name,
                             color: newCategory.color,
-                            repeatOption: .never,
-                            customRepeatCount: 1,
-                            repeatUnit: "Days",
-                            repeatUntilOption: .indefinitely,
-                            repeatUntilCount: 1,
-                            repeatUntil: Date()
+                            repeatOption: newCategory.repeatOption,
+                            customRepeatCount: newCategory.customRepeatCount,
+                            repeatUnit: newCategory.repeatUnit,
+                            repeatUntilOption: newCategory.repeatUntilOption,
+                            repeatUntilCount: newCategory.repeatUntilCount,
+                            repeatUntil: newCategory.repeatUntil
                         ))
                         appData.saveCategories()
                     }

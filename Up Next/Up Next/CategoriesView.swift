@@ -46,7 +46,7 @@ struct CategoriesView: View {
     @State private var tempCategoryNames: [String] = []
     @Environment(\.editMode) private var editMode
     @State private var showingEditCategorySheet = false
-    @State private var categoryToEdit: (index: Int, name: String, color: Color)?
+    @State private var categoryToEdit: (name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)?
     @State private var showColorPickerSheet = false
     @State private var dailyNotificationTime = Date()
     @State private var isNotificationEnabled = false
@@ -84,7 +84,7 @@ struct CategoriesView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         if editMode?.wrappedValue != .active {
-                            categoryToEdit = (index: index, name: appData.categories[index].name, color: appData.categories[index].color)
+                            categoryToEdit = appData.categories[index]
                             showingEditCategorySheet = true
                         }
                     }
@@ -113,37 +113,52 @@ struct CategoriesView: View {
 
         // Add Category View
         .sheet(isPresented: $showingAddCategorySheet) {
-            NavigationView {
-                AddCategoryView(
-                    showingAddCategorySheet: $showingAddCategorySheet,
-                    onSave: { newCategory in
-                        appData.categories.append((
-                            name: newCategory.name,
-                            color: newCategory.color,
-                            repeatOption: newCategory.repeatOption,
-                            customRepeatCount: newCategory.customRepeatCount,
-                            repeatUnit: newCategory.repeatUnit,
-                            repeatUntilOption: newCategory.repeatUntilOption,
-                            repeatUntilCount: newCategory.repeatUntilCount,
-                            repeatUntil: newCategory.repeatUntil
-                        ))
-                        appData.saveCategories()
-                    }
-                )
-                .environmentObject(appData)
-            }
-            .presentationDetents([.medium])
+            CategoryForm(
+                showingSheet: $showingAddCategorySheet,
+                onSave: { newCategory in
+                    appData.categories.append((
+                        name: newCategory.name,
+                        color: newCategory.color,
+                        repeatOption: newCategory.repeatOption,
+                        customRepeatCount: newCategory.customRepeatCount,
+                        repeatUnit: newCategory.repeatUnit,
+                        repeatUntilOption: newCategory.repeatUntilOption,
+                        repeatUntilCount: newCategory.repeatUntilCount,
+                        repeatUntil: newCategory.repeatUntil
+                    ))
+                    appData.saveCategories()
+                }
+            )
+            .environmentObject(appData)
         }
 
         // Edit Category Sheet
         .sheet(isPresented: $showingEditCategorySheet) {
-            EditCategorySheet(
-                categoryToEdit: $categoryToEdit,
-                showingEditCategorySheet: $showingEditCategorySheet,
-                showColorPickerSheet: $showColorPickerSheet
-            )
-            .environmentObject(appData)
-            .presentationDetents([.medium])
+            if let category = categoryToEdit {
+                NavigationView {
+                    CategoryForm(
+                        showingSheet: $showingEditCategorySheet,
+                        isEditing: true,
+                        editingCategory: category,
+                        onSave: { updatedCategory in
+                            if let index = appData.categories.firstIndex(where: { $0.name == category.name }) {
+                                appData.categories[index] = updatedCategory
+                                appData.saveCategories()
+                                appData.updateEventsForCategoryChange(oldName: category.name, newName: updatedCategory.name, newColor: updatedCategory.color)
+                            }
+                            categoryToEdit = nil // Reset categoryToEdit after saving
+                        }
+                    )
+                    .environmentObject(appData)
+                    .navigationTitle("Edit Category")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+        }
+        .onChange(of: showingEditCategorySheet) { newValue in
+            if !newValue {
+                categoryToEdit = nil // Reset categoryToEdit when sheet is dismissed
+            }
         }
 
         .onAppear {
