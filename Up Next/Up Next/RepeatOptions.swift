@@ -155,23 +155,31 @@ struct RepeatOptions: View {
                         .padding(.leading)
                     
                     HStack {
-                        Text("After")
+                        HStack(spacing: 4) {
+                            TextField("", value: $repeatUntilCount, formatter: NumberFormatter())
+                                .keyboardType(.numberPad)
+                                .frame(width: 20)
+                                .multilineTextAlignment(.leading)
+                                .foregroundColor(.primary)
+                            Text(repeatUntilCount > 1 ? repeatUnit : String(repeatUnit.dropLast()))
+                        }
+                        .foregroundColor(.gray)
+                        
                         Spacer()
-                        TextField("", value: $repeatUntilCount, formatter: NumberFormatter())
-                            .keyboardType(.numberPad)
-                            .frame(width: 40)
-                            .multilineTextAlignment(.center)
-                        Text(repeatUntilCount > 1 ? repeatUnit : String(repeatUnit.dropLast()))
-                            .foregroundColor(.gray)
+                        
+                        Stepper("", value: $repeatUntilCount, in: 1...100)
+                            .labelsHidden()
                     }
-                    .padding(.bottom)
-                    .padding(.top, 4)
-                    .padding(.horizontal)
+                    .padding(.bottom, 6)
+                    // .padding(.top, 4)
+                    .padding(.leading)
+                    .padding(.trailing, 6)
+
                 case .indefinitely:
                     EmptyView()
-                }
-            }
-        }
+                                }
+                            }
+                        }
         // .padding(.horizontal)
     }
 }
