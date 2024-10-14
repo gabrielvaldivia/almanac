@@ -135,24 +135,20 @@ struct CategoriesView: View {
         // Edit Category Sheet
         .sheet(isPresented: $showingEditCategorySheet) {
             if let category = categoryToEdit {
-                NavigationView {
-                    CategoryForm(
-                        showingSheet: $showingEditCategorySheet,
-                        isEditing: true,
-                        editingCategory: category,
-                        onSave: { updatedCategory in
-                            if let index = appData.categories.firstIndex(where: { $0.name == category.name }) {
-                                appData.categories[index] = updatedCategory
-                                appData.saveCategories()
-                                appData.updateEventsForCategoryChange(oldName: category.name, newName: updatedCategory.name, newColor: updatedCategory.color)
-                            }
-                            categoryToEdit = nil // Reset categoryToEdit after saving
+                CategoryForm(
+                    showingSheet: $showingEditCategorySheet,
+                    isEditing: true,
+                    editingCategory: category,
+                    onSave: { updatedCategory in
+                        if let index = appData.categories.firstIndex(where: { $0.name == category.name }) {
+                            appData.categories[index] = updatedCategory
+                            appData.saveCategories()
+                            appData.updateEventsForCategoryChange(oldName: category.name, newName: updatedCategory.name, newColor: updatedCategory.color)
                         }
-                    )
-                    .environmentObject(appData)
-                    .navigationTitle("Edit Category")
-                    .navigationBarTitleDisplayMode(.inline)
-                }
+                        categoryToEdit = nil // Reset categoryToEdit after saving
+                    }
+                )
+                .environmentObject(appData)
             }
         }
         .onChange(of: showingEditCategorySheet) { newValue in

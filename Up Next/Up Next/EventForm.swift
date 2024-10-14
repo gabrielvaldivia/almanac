@@ -286,29 +286,27 @@ struct CategoryAndColorSection: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)
         .sheet(isPresented: $showingAddCategorySheet) {
-            NavigationView {
-                CategoryForm(
-                    showingSheet: $showingAddCategorySheet,
-                    onSave: { newCategory in
-                        categoryOptions.selectedCategory = newCategory.name
-                        categoryOptions.selectedColor = CodableColor(color: newCategory.color)
-                        appData.categories.append((
-                            name: newCategory.name,
-                            color: newCategory.color,
-                            repeatOption: newCategory.repeatOption,
-                            customRepeatCount: newCategory.customRepeatCount,
-                            repeatUnit: newCategory.repeatUnit,
-                            repeatUntilOption: newCategory.repeatUntilOption,
-                            repeatUntilCount: newCategory.repeatUntilCount,
-                            repeatUntil: newCategory.repeatUntil
-                        ))
-                        appData.saveCategories()
-                    }
-                )
-                .environmentObject(appData)
-            }
-            .presentationDetents([.medium, .large], selection: .constant(.medium))
+            CategoryForm(
+                showingSheet: $showingAddCategorySheet,
+                onSave: { newCategory in
+                    categoryOptions.selectedCategory = newCategory.name
+                    categoryOptions.selectedColor = CodableColor(color: newCategory.color)
+                    appData.categories.append((
+                        name: newCategory.name,
+                        color: newCategory.color,
+                        repeatOption: newCategory.repeatOption,
+                        customRepeatCount: newCategory.customRepeatCount,
+                        repeatUnit: newCategory.repeatUnit,
+                        repeatUntilOption: newCategory.repeatUntilOption,
+                        repeatUntilCount: newCategory.repeatUntilCount,
+                        repeatUntil: newCategory.repeatUntil
+                    ))
+                    appData.saveCategories()
+                }
+            )
+            .environmentObject(appData)
         }
+        .presentationDetents([.medium, .large])
         .sheet(isPresented: $showColorPickerSheet) {
             CustomColorPickerSheet(
                 selectedColor: $categoryOptions.selectedColor,
