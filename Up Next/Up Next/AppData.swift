@@ -605,6 +605,16 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
+
+    func deleteEvent(_ event: Event) {
+        if let index = events.firstIndex(where: { $0.id == event.id }) {
+            events.remove(at: index)
+            saveEvents()
+            objectWillChange.send()
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
+        }
+    }
 }
 
 // Extend AppData to conform to UNUserNotificationCenterDelegate

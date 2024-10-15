@@ -38,7 +38,7 @@ struct PastEventsView: View {
 
     private var pastEventsList: some View {
         LazyVStack {
-            ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+            ForEach(groupedPastEvents().sorted(by: { $0.key > $1.key }), id: \.key) { monthYear, events in
                 pastEventSection(monthYear: monthYear, events: events)
             }
         }

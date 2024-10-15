@@ -13,7 +13,6 @@ import UserNotifications
 struct ContentView: View {
 
     // State variables to manage the view's state
-    @State private var events: [Event] = []
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
     @State private var newEventEndDate: Date = Date()
@@ -100,7 +99,7 @@ struct ContentView: View {
         .navigationBarItems(leading: pastEventsButton, trailing: settingsButton)
         .onAppear {
             print("ContentView appeared")
-            loadEvents()
+            appData.loadEvents()
             appData.loadCategories()
         }
         .onOpenURL { url in
@@ -110,7 +109,7 @@ struct ContentView: View {
 
     private var pastEventsButton: some View {
         NavigationLink(destination: PastEventsView(
-            events: $events,
+            events: $appData.events,
             selectedEvent: $selectedEvent,
             newEventTitle: $newEventTitle,
             newEventDate: $newEventDate,
@@ -121,7 +120,7 @@ struct ContentView: View {
             selectedColor: $selectedColor,
             categories: simplifiedCategories,
             itemDateFormatter: itemDateFormatter,
-            saveEvents: saveEvents
+            saveEvents: appData.saveEvents
         ).environmentObject(appData), isActive: $showPastEventsView) {
             Image(systemName: "clock.arrow.circlepath")
                 .imageScale(.large)
@@ -138,7 +137,7 @@ struct ContentView: View {
 
     private var addEventSheet: some View {
         AddEventView(
-            events: $events,
+            events: $appData.events,
             selectedEvent: $selectedEvent,
             newEventTitle: $newEventTitle,
             newEventDate: $newEventDate,
@@ -154,10 +153,10 @@ struct ContentView: View {
 
     private var editEventSheet: some View {
         EditEventView(
-            events: $events,
+            events: $appData.events,
             selectedEvent: $selectedEvent,
             showEditSheet: $showEditSheet,
-            saveEvents: saveEvents
+            saveEvents: appData.saveEvents
         )
         .environmentObject(appData)
         .focused($isFocused)
@@ -166,7 +165,7 @@ struct ContentView: View {
     private func eventListView(sortedMonths: [Date], groupedEventsByMonth: [Date: [Event]]) -> some View {
         ScrollView {
             LazyVStack {
-                CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+                CategoryPillsView(appData: appData, events: appData.events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                     .padding(.vertical, 10)
                 
                 ForEach(sortedMonths, id: \.self) { month in
@@ -182,7 +181,7 @@ struct ContentView: View {
         .listRowSeparator(.hidden)
         .background(Color.clear)
         .refreshable {
-            loadEvents()
+            appData.loadEvents()
         }
     }
 
@@ -211,7 +210,7 @@ struct ContentView: View {
                 if hasMoreEventsToLoad() {
                     Button(action: {
                         self.monthsToLoad += 12
-                        loadEvents()
+                        appData.loadEvents()
                     }) {
                         Text("View More")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -287,7 +286,7 @@ struct ContentView: View {
     func emptyStateView(selectedCategoryFilter: String?) -> some View {
         VStack {
             // Category filter view
-            CategoryPillsView(appData: appData, events: events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
+            CategoryPillsView(appData: appData, events: appData.events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
                 .padding(.vertical, 10)
             
             Spacer()
@@ -330,7 +329,7 @@ struct ContentView: View {
         let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
         var allEvents = [Event]()
 
-        for event in events {
+        for event in appData.events {
             if let filter = selectedCategoryFilter {
                 if event.category == filter && (event.date >= startOfToday && event.date <= endDate || (event.endDate != nil && event.endDate! >= startOfToday && event.endDate! <= endDate)) {
                     allEvents.append(event)
@@ -347,39 +346,7 @@ struct ContentView: View {
 
     // Delete an event
     func deleteEvent(at event: Event) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
-            saveEvents()
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-        }
-    }
-
-    // Load events from UserDefaults
-    func loadEvents() {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "events"),
-           let decoded = try? decoder.decode([Event].self, from: data) {
-            events = decoded
-        } else {
-            print("No events found in shared UserDefaults.")
-        }
-    }
-
-    // Save events to UserDefaults
-    func saveEvents() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
-            sharedDefaults.set(encoded, forKey: "events")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-        } else {
-            print("Failed to encode events.")
-        }
+        appData.deleteEvent(event)
     }
     
     // Check if there are more events to load
@@ -387,7 +354,7 @@ struct ContentView: View {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
         let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
-        return events.contains { event in
+        return appData.events.contains { event in
             let eventDate = event.endDate ?? event.date
             if let filter = selectedCategoryFilter {
                 return event.category == filter && eventDate > endDate

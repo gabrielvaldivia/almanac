@@ -214,20 +214,12 @@ struct EditEventView: View {
         
         switch deleteOption {
         case .thisEvent:
-            if let index = events.firstIndex(where: { $0.id == event.id }) {
-                events.remove(at: index)
-            }
+            appData.deleteEvent(event)
         case .allEvents:
-            events.removeAll { $0.seriesID == event.seriesID }
+            events.filter { $0.seriesID == event.seriesID }.forEach { appData.deleteEvent($0) }
         }
         
-        saveEvents()
         showEditSheet = false
-        
-        // Add these lines to ensure the parent view is updated
-        appData.objectWillChange.send()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
 
     // Function to delete a series of events
