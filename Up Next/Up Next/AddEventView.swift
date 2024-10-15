@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 import UserNotifications
-import WidgetKit // Add this import
+import WidgetKit  // Add this import
 
 // Main view for adding a new event
 struct AddEventView: View {
@@ -21,31 +21,41 @@ struct AddEventView: View {
     @Binding var showEndDate: Bool
     @Binding var showAddEventSheet: Bool
     @Binding var selectedCategory: String?
-    @Binding var selectedColor: CodableColor // Use CodableColor to store color
+    @Binding var selectedColor: CodableColor  // Use CodableColor to store color
 
     // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
 
     // Focus state for managing keyboard focus
-    @FocusState private var isTitleFocused: Bool // Add this line to manage focus state
+    @FocusState private var isTitleFocused: Bool  // Add this line to manage focus state
 
     // State variables for repeat options
-    @State private var repeatOption: RepeatOption = .never // Changed from .none to .never
-    @State private var repeatUntil: Date = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
-    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely // New state variable
-    @State private var repeatUntilCount: Int = 1 // New state variable for number of repetitions
-    @State private var customRepeatCount: Int = 1 // Initialize customRepeatCount to 1
-    @State private var repeatUnit: String = "Days" // Initialize repeatUnit to "Days"
+    @State private var repeatOption: RepeatOption = .never  // Changed from .none to .never
+    @State private var repeatUntil: Date =
+        Calendar.current.date(
+            from: DateComponents(
+                year: Calendar.current.component(.year, from: Date()), month: 12, day: 31))
+        ?? Date()
+    @State private var repeatUntilOption: RepeatUntilOption = .indefinitely  // New state variable
+    @State private var repeatUntilCount: Int = 1  // New state variable for number of repetitions
+    @State private var customRepeatCount: Int = 1  // Initialize customRepeatCount to 1
+    @State private var repeatUnit: String = "Days"  // Initialize repeatUnit to "Days"
 
     // State variables for UI management
-    @State private var showCategoryManagementView = false // Add this state variable
-    @State private var showDeleteActionSheet = false // Add this state variable
-    @State private var showRepeatOptions = false // Set this to false by default
+    @State private var showCategoryManagementView = false  // Add this state variable
+    @State private var showDeleteActionSheet = false  // Add this state variable
+    @State private var showRepeatOptions = false  // Set this to false by default
 
-    @State private var eventDetails = EventDetails(title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
-    @State private var dateOptions = DateOptions(date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never, repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1, showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
-    @State private var categoryOptions = CategoryOptions(selectedCategory: nil, selectedColor: CodableColor(color: .blue))
-    @State private var viewState = ViewState(showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: false)
+    @State private var eventDetails = EventDetails(
+        title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
+    @State private var dateOptions = DateOptions(
+        date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never,
+        repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1,
+        showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
+    @State private var categoryOptions = CategoryOptions(
+        selectedCategory: nil, selectedColor: CodableColor(color: .blue))
+    @State private var viewState = ViewState(
+        showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: false)
 
     var body: some View {
         NavigationView {
@@ -85,16 +95,20 @@ struct AddEventView: View {
                         Group {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .fill(selectedColor.color)
+                                    .fill(categoryOptions.selectedColor.color)
                                     .frame(width: 60, height: 32)
                                 Text("Add")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(CustomColorPickerSheet(selectedColor: $selectedColor, showColorPickerSheet: .constant(false)).contrastColor)
+                                    .foregroundColor(
+                                        CustomColorPickerSheet(
+                                            selectedColor: $categoryOptions.selectedColor,
+                                            showColorPickerSheet: .constant(false)
+                                        ).contrastColor)
                             }
                         }
-                        .opacity(newEventTitle.isEmpty ? 0.3 : 1.0)
+                        .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
-                    .disabled(newEventTitle.isEmpty)
+                    .disabled(eventDetails.title.isEmpty)
                 }
             }
         }
@@ -110,8 +124,10 @@ struct AddEventView: View {
             isTitleFocused = true
             categoryOptions.selectedColor = CodableColor(color: .blue)
             if selectedCategory == nil {
-                categoryOptions.selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
-            } else if let category = appData.categories.first(where: { $0.name == selectedCategory }) {
+                categoryOptions.selectedCategory =
+                    appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+            } else if let category = appData.categories.first(where: { $0.name == selectedCategory }
+            ) {
                 categoryOptions.selectedColor = CodableColor(color: category.color)
             }
         }
@@ -128,6 +144,7 @@ struct AddEventView: View {
                 dateOptions.repeatUntilOption = category.repeatUntilOption
                 dateOptions.repeatUntilCount = category.repeatUntilCount
                 dateOptions.repeatUntil = category.repeatUntil
+                categoryOptions.selectedColor = CodableColor(color: category.color)  // Add this line
             }
         }
     }
@@ -139,7 +156,9 @@ struct AddEventView: View {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(for: dateOptions.repeatOption, from: dateOptions.date, count: dateOptions.repeatUntilCount, repeatUnit: dateOptions.repeatUnit)
+            repeatUntilDate = calculateRepeatUntilDate(
+                for: dateOptions.repeatOption, from: dateOptions.date,
+                count: dateOptions.repeatUntilCount, repeatUnit: dateOptions.repeatUnit)
         case .onDate:
             repeatUntilDate = dateOptions.repeatUntil
         }
@@ -157,13 +176,15 @@ struct AddEventView: View {
             repeatUntilCount: dateOptions.repeatUntilCount
         )
 
-        let newEvents = generateRepeatingEvents(for: newEvent, repeatUntilOption: dateOptions.repeatUntilOption, showEndDate: dateOptions.showEndDate)
+        let newEvents = generateRepeatingEvents(
+            for: newEvent, repeatUntilOption: dateOptions.repeatUntilOption,
+            showEndDate: dateOptions.showEndDate)
         events.append(contentsOf: newEvents)
         saveEvents()
-        
+
         // Force a reload of events
         appData.loadEvents()
-        
+
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         appData.objectWillChange.send()
         appData.scheduleDailyNotification()
@@ -174,24 +195,26 @@ struct AddEventView: View {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
+            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
+        {
             sharedDefaults.set(encoded, forKey: "events")
             // print("Saved events: \(events)")
         } else {
             print("Failed to encode events.")
         }
     }
-    
+
     // Helper function to get the color of the selected category
     func getCategoryColor() -> Color {
         return selectedColor.color
     }
-    
+
 }
 
 // Helper function to hide the keyboard
 private func hideKeyboard() {
-    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
 // Custom date formatter
