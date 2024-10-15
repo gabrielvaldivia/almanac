@@ -12,7 +12,7 @@ import UserNotifications
 import StoreKit
 
 // Model for an event
-struct Event: Identifiable, Codable {
+struct Event: Identifiable, Codable, Equatable {
     var id = UUID()
     var title: String
     var date: Date
@@ -84,6 +84,10 @@ struct Event: Identifiable, Codable {
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
         case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount, useCustomRepeatOptions // Added repeatUntilCount
+    }
+
+    static func == (lhs: Event, rhs: Event) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 
@@ -610,9 +614,6 @@ class AppData: NSObject, ObservableObject {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events.remove(at: index)
             saveEvents()
-            objectWillChange.send()
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         }
     }
 }

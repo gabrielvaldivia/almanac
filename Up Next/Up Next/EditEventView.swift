@@ -209,16 +209,9 @@ struct EditEventView: View {
     }
 
     // Function to delete an event
-    func deleteEvent() {
-        guard let event = eventDetails.selectedEvent else { return }
-        
-        switch deleteOption {
-        case .thisEvent:
-            appData.deleteEvent(event)
-        case .allEvents:
-            events.filter { $0.seriesID == event.seriesID }.forEach { appData.deleteEvent($0) }
-        }
-        
+    private func deleteEvent() {
+        guard let event = selectedEvent else { return }
+        appData.deleteEvent(event)
         showEditSheet = false
     }
 
