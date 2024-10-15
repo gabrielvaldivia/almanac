@@ -57,6 +57,8 @@ struct AddEventView: View {
     @State private var viewState = ViewState(
         showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: false)
 
+    @State private var useCustomRepeatOptions: Bool = false
+
     var body: some View {
         NavigationView {
             // Event form view
@@ -65,6 +67,7 @@ struct AddEventView: View {
                 dateOptions: $dateOptions,
                 categoryOptions: $categoryOptions,
                 viewState: $viewState,
+                useCustomRepeatOptions: $useCustomRepeatOptions,
                 deleteEvent: {},
                 deleteSeries: {}
             )
@@ -135,16 +138,18 @@ struct AddEventView: View {
             // Clear focus when view disappears
             isTitleFocused = false
         }
-        .onChange(of: selectedCategory) { newCategory in
+        .onChange(of: categoryOptions.selectedCategory) { newCategory in
             if let category = appData.categories.first(where: { $0.name == newCategory }) {
-                dateOptions.repeatOption = category.repeatOption
-                dateOptions.showRepeatOptions = category.repeatOption != .never
-                dateOptions.customRepeatCount = category.customRepeatCount
-                dateOptions.repeatUnit = category.repeatUnit
-                dateOptions.repeatUntilOption = category.repeatUntilOption
-                dateOptions.repeatUntilCount = category.repeatUntilCount
-                dateOptions.repeatUntil = category.repeatUntil
-                categoryOptions.selectedColor = CodableColor(color: category.color)  // Add this line
+                if !useCustomRepeatOptions {
+                    dateOptions.repeatOption = category.repeatOption
+                    dateOptions.showRepeatOptions = category.repeatOption != .never
+                    dateOptions.customRepeatCount = category.customRepeatCount
+                    dateOptions.repeatUnit = category.repeatUnit
+                    dateOptions.repeatUntilOption = category.repeatUntilOption
+                    dateOptions.repeatUntilCount = category.repeatUntilCount
+                    dateOptions.repeatUntil = category.repeatUntil
+                }
+                categoryOptions.selectedColor = CodableColor(color: category.color)
             }
         }
     }
@@ -169,11 +174,12 @@ struct AddEventView: View {
             endDate: dateOptions.showEndDate ? dateOptions.endDate : nil,
             color: categoryOptions.selectedColor,
             category: categoryOptions.selectedCategory,
-            repeatOption: dateOptions.repeatOption,
-            repeatUntil: repeatUntilDate,
-            customRepeatCount: dateOptions.customRepeatCount,
-            repeatUnit: dateOptions.repeatUnit,
-            repeatUntilCount: dateOptions.repeatUntilCount
+            repeatOption: useCustomRepeatOptions ? dateOptions.repeatOption : .never,
+            repeatUntil: useCustomRepeatOptions ? repeatUntilDate : nil,
+            customRepeatCount: useCustomRepeatOptions ? dateOptions.customRepeatCount : nil,
+            repeatUnit: useCustomRepeatOptions ? dateOptions.repeatUnit : nil,
+            repeatUntilCount: useCustomRepeatOptions ? dateOptions.repeatUntilCount : nil,
+            useCustomRepeatOptions: useCustomRepeatOptions
         )
 
         let newEvents = generateRepeatingEvents(

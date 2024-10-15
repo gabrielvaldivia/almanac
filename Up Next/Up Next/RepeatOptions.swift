@@ -134,7 +134,7 @@ struct RepeatOptions: View {
                     }
                     .padding (.top, 6)
                     .padding (.horizontal)
-                    .padding(.bottom, shouldShowBottomPadding ? 16 : 0)
+                    .padding(.bottom, shouldShowBottomPadding ? 12 : 0)
 
                 }
 

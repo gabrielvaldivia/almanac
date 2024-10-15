@@ -59,6 +59,7 @@ struct EditEventView: View {
     @State private var dateOptions: DateOptions
     @State private var categoryOptions: CategoryOptions
     @State private var viewState: ViewState
+    @State private var useCustomRepeatOptions: Bool = false
     
     @State private var showDeleteSeriesAlert = false
     @State private var deleteOption: DeleteOption = .thisEvent
@@ -109,6 +110,7 @@ struct EditEventView: View {
                 dateOptions: $dateOptions,
                 categoryOptions: $categoryOptions,
                 viewState: $viewState,
+                useCustomRepeatOptions: $useCustomRepeatOptions,
                 deleteEvent: deleteEvent,
                 deleteSeries: { showDeleteSeriesAlert = true }
             )
@@ -216,11 +218,16 @@ struct EditEventView: View {
                 events.remove(at: index)
             }
         case .allEvents:
-            events.removeAll { $0.title == event.title && $0.category == event.category }
+            events.removeAll { $0.seriesID == event.seriesID }
         }
         
         saveEvents()
         showEditSheet = false
+        
+        // Add these lines to ensure the parent view is updated
+        appData.objectWillChange.send()
+        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
 
     // Function to delete a series of events
@@ -445,8 +452,7 @@ struct EditEventView: View {
         }
 
         appData.objectWillChange.send() // Notify observers of changes
-        saveEvents()
-        showEditSheet = false
+        saveEvents() // Call the saveEvents function
     }
 
     private func setupInitialState() {
@@ -477,6 +483,8 @@ struct EditEventView: View {
             
             categoryOptions.selectedCategory = event.category
             categoryOptions.selectedColor = event.color
+            
+            useCustomRepeatOptions = event.repeatOption != .never
         }
     }
 }

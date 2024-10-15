@@ -135,6 +135,15 @@ struct EventRow: View {
             .cornerRadius(appData.eventStyle == "naked" ? 0 : 12)
         }
         .clipShape(RoundedRectangle(cornerRadius: appData.eventStyle == "naked" ? 0 : 12))
+        .onTapGesture {
+            selectedEvent = event
+            newEventTitle = event.title
+            newEventDate = event.date
+            newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
+            showEndDate = event.endDate != nil
+            selectedCategory = event.category
+            showEditSheet = true
+        }
     }
 
     private var eventDateAndRepeatText: String {

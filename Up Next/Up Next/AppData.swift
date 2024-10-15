@@ -26,6 +26,7 @@ struct Event: Identifiable, Codable {
     var customRepeatCount: Int?
     var repeatUnit: String?
     var repeatUntilCount: Int? // Added this line
+    var useCustomRepeatOptions: Bool = false
 
     // Initializer for Event
     init(
@@ -41,7 +42,8 @@ struct Event: Identifiable, Codable {
         seriesID: UUID? = nil,
         customRepeatCount: Int? = nil,
         repeatUnit: String? = nil,
-        repeatUntilCount: Int? = nil
+        repeatUntilCount: Int? = nil,
+        useCustomRepeatOptions: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -56,6 +58,7 @@ struct Event: Identifiable, Codable {
         self.customRepeatCount = customRepeatCount
         self.repeatUnit = repeatUnit
         self.repeatUntilCount = repeatUntilCount
+        self.useCustomRepeatOptions = useCustomRepeatOptions
         print("Event initialized: \(self)")
     }
 
@@ -75,11 +78,12 @@ struct Event: Identifiable, Codable {
         customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
         repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1 // Default value
+        useCustomRepeatOptions = try container.decode(Bool.self, forKey: .useCustomRepeatOptions)
     }
 
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
-        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount // Added repeatUntilCount
+        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount, useCustomRepeatOptions // Added repeatUntilCount
     }
 }
 

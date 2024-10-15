@@ -9,6 +9,7 @@ struct EventForm: View {
     @Binding var dateOptions: DateOptions
     @Binding var categoryOptions: CategoryOptions
     @Binding var viewState: ViewState
+    @Binding var useCustomRepeatOptions: Bool
     
     var deleteEvent: () -> Void
     var deleteSeries: () -> Void
