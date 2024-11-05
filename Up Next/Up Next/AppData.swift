@@ -6,10 +6,10 @@
 //
 
 import Foundation
-import SwiftUI
-import WidgetKit
-import UserNotifications
 import StoreKit
+import SwiftUI
+import UserNotifications
+import WidgetKit
 
 // Model for an event
 struct Event: Identifiable, Codable, Equatable {
@@ -25,7 +25,7 @@ struct Event: Identifiable, Codable, Equatable {
     var seriesID: UUID?
     var customRepeatCount: Int?
     var repeatUnit: String?
-    var repeatUntilCount: Int? // Added this line
+    var repeatUntilCount: Int?  // Added this line
     var useCustomRepeatOptions: Bool = false
 
     // Initializer for Event
@@ -75,15 +75,17 @@ struct Event: Identifiable, Codable, Equatable {
         repeatOption = try container.decode(RepeatOption.self, forKey: .repeatOption)
         repeatUntil = try container.decodeIfPresent(Date.self, forKey: .repeatUntil)
         seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
-        customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1 // Default value
-        repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days" // Default value
-        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1 // Default value
+        customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1  // Default value
+        repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days"  // Default value
+        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1  // Default value
         useCustomRepeatOptions = try container.decode(Bool.self, forKey: .useCustomRepeatOptions)
     }
 
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
-        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption, repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount, useCustomRepeatOptions // Added repeatUntilCount
+        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption,
+            repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount,
+            useCustomRepeatOptions  // Added repeatUntilCount
     }
 
     static func == (lhs: Event, rhs: Event) -> Bool {
@@ -173,15 +175,21 @@ struct CodableColor: Codable {
 
 // Main class for managing app data
 class AppData: NSObject, ObservableObject {
-    static let shared = AppData() // Singleton instance
+    static let shared = AppData()  // Singleton instance
 
     @Published var events: [Event] = []
-    @Published var categories: [(name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)] = [
-        ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
-        ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
-        ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
-        ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date())
-    ] {
+    @Published var categories:
+        [(
+            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
+            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
+            repeatUntil: Date
+        )] = [
+            ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
+            ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
+            ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
+            ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date()),
+        ]
+    {
         didSet {
             if isDataLoaded {
                 saveCategories()
@@ -192,11 +200,13 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
-                objectWillChange.send() // Notify observers
+                objectWillChange.send()  // Notify observers
             }
         }
     }
-    @Published var notificationTime: Date = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date() {
+    @Published var notificationTime: Date =
+        Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date()
+    {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
@@ -205,15 +215,19 @@ class AppData: NSObject, ObservableObject {
             }
         }
     }
-    @Published var dailyNotificationEnabled: Bool = UserDefaults.standard.bool(forKey: "dailyNotificationEnabled") {
+    @Published var dailyNotificationEnabled: Bool = UserDefaults.standard.bool(
+        forKey: "dailyNotificationEnabled")
+    {
         didSet {
             if isDataLoaded {
-                UserDefaults.standard.set(dailyNotificationEnabled, forKey: "dailyNotificationEnabled")
+                UserDefaults.standard.set(
+                    dailyNotificationEnabled, forKey: "dailyNotificationEnabled")
                 scheduleDailyNotification()
             }
         }
     }
-    @Published var eventStyle: String = UserDefaults.standard.string(forKey: "eventStyle") ?? "flat" {
+    @Published var eventStyle: String = UserDefaults.standard.string(forKey: "eventStyle") ?? "flat"
+    {
         didSet {
             if isDataLoaded {
                 UserDefaults.standard.set(eventStyle, forKey: "eventStyle")
@@ -238,9 +252,9 @@ class AppData: NSObject, ObservableObject {
     // Initializer for AppData
     override init() {
         super.init()
-        migrateUserDefaults() // Call the migration function
+        migrateUserDefaults()  // Call the migration function
         loadCategories()
-        defaultCategory = "" // Ensure no default category is set
+        defaultCategory = ""  // Ensure no default category is set
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
         }
@@ -252,25 +266,42 @@ class AppData: NSObject, ObservableObject {
 
     // Function to save categories to UserDefaults
     func saveCategories() {
-        let categoryData = categories.map { CategoryData(name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption, showRepeatOptions: false, customRepeatCount: $0.customRepeatCount, repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption, repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil) }
-        encodeToUserDefaults(categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
+        let categoryData = categories.map {
+            CategoryData(
+                name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption,
+                showRepeatOptions: false, customRepeatCount: $0.customRepeatCount,
+                repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption,
+                repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil)
+        }
+        encodeToUserDefaults(
+            categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
     }
 
     // Function to load categories from UserDefaults
     func loadCategories() {
-        if let decoded: [CategoryData] = decodeFromUserDefaults([CategoryData].self, forKey: "categories", suiteName: "group.UpNextIdentifier") {
+        if let decoded: [CategoryData] = decodeFromUserDefaults(
+            [CategoryData].self, forKey: "categories", suiteName: "group.UpNextIdentifier")
+        {
             self.categories = decoded.map { categoryData in
-                return (name: categoryData.name, color: categoryData.color.color, repeatOption: categoryData.repeatOption, customRepeatCount: categoryData.customRepeatCount, repeatUnit: categoryData.repeatUnit, repeatUntilOption: categoryData.repeatUntilOption, repeatUntilCount: categoryData.repeatUntilCount, repeatUntil: categoryData.repeatUntil)
+                return (
+                    name: categoryData.name, color: categoryData.color.color,
+                    repeatOption: categoryData.repeatOption,
+                    customRepeatCount: categoryData.customRepeatCount,
+                    repeatUnit: categoryData.repeatUnit,
+                    repeatUntilOption: categoryData.repeatUntilOption,
+                    repeatUntilCount: categoryData.repeatUntilCount,
+                    repeatUntil: categoryData.repeatUntil
+                )
             }
         } else {
             self.categories = [
                 ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
                 ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
                 ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
-                ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date())
+                ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date()),
             ]
         }
-        
+
         if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
         }
@@ -284,11 +315,16 @@ class AppData: NSObject, ObservableObject {
 
         for event in events {
             if let filter = selectedCategoryFilter {
-                if event.category == filter && (event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday)) {
+                if event.category == filter
+                    && (event.date >= startOfToday
+                        || (event.endDate != nil && event.endDate! >= startOfToday))
+                {
                     allEvents.append(event)
                 }
             } else {
-                if event.date >= startOfToday || (event.endDate != nil && event.endDate! >= startOfToday) {
+                if event.date >= startOfToday
+                    || (event.endDate != nil && event.endDate! >= startOfToday)
+                {
                     allEvents.append(event)
                 }
             }
@@ -302,12 +338,17 @@ class AppData: NSObject, ObservableObject {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "events") {
+            let data = sharedDefaults.data(forKey: "events")
+        {
             do {
                 var decodedEvents = try decoder.decode([Event].self, from: data)
                 for i in 0..<decodedEvents.count {
                     if decodedEvents[i].repeatUntil == nil {
-                        decodedEvents[i].repeatUntil = Calendar.current.date(from: DateComponents(year: Calendar.current.component(.year, from: Date()), month: 12, day: 31)) ?? Date()
+                        decodedEvents[i].repeatUntil =
+                            Calendar.current.date(
+                                from: DateComponents(
+                                    year: Calendar.current.component(.year, from: Date()),
+                                    month: 12, day: 31)) ?? Date()
                     }
                 }
                 events = decodedEvents
@@ -334,7 +375,7 @@ class AppData: NSObject, ObservableObject {
                 if let oldEvents = decodeOldEvents(from: data) {
                     events = oldEvents
                     print("Recovered \(events.count) events from old format.")
-                    saveEvents() // Save events in the new format
+                    saveEvents()  // Save events in the new format
                 }
             }
         } else {
@@ -346,7 +387,7 @@ class AppData: NSObject, ObservableObject {
     private func decodeOldEvents(from data: Data) -> [Event]? {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        
+
         // Define a struct that matches the old Event structure
         struct OldEvent: Codable {
             var id = UUID()
@@ -361,9 +402,9 @@ class AppData: NSObject, ObservableObject {
             var seriesID: UUID?
             var customRepeatCount: Int?
             var repeatUnit: String?
-            var repeatUntilCount: Int? // Added this line
+            var repeatUntilCount: Int?  // Added this line
         }
-        
+
         do {
             let oldEvents = try decoder.decode([OldEvent].self, from: data)
             // Convert OldEvent to Event, setting isGoogleCalendarEvent to false
@@ -395,11 +436,12 @@ class AppData: NSObject, ObservableObject {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let encoded = try? encoder.encode(events),
-           let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier") {
+            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
+        {
             sharedDefaults.set(encoded, forKey: "events")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget") // Notify widget to reload
-            scheduleDailyNotification() // Reschedule daily notification
-            print("Saved events: \(events)") // Debugging line
+            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")  // Notify widget to reload
+            scheduleDailyNotification()  // Reschedule daily notification
+            print("Saved events: \(events)")  // Debugging line
         } else {
             print("Failed to encode events.")
         }
@@ -409,9 +451,9 @@ class AppData: NSObject, ObservableObject {
     func setDailyNotification(enabled: Bool) {
         dailyNotificationEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "dailyNotificationEnabled")
-        
+
         let center = UNUserNotificationCenter.current()
-        
+
         if enabled {
             // Schedule notifications for upcoming events
             scheduleDailyNotification()
@@ -426,20 +468,22 @@ class AppData: NSObject, ObservableObject {
 
     private func scheduleUpcomingEventNotifications() {
         let center = UNUserNotificationCenter.current()
-        let upcomingEvents = events.filter { $0.date > Date() }.prefix(10) // Schedule for next 10 upcoming events
-        
+        let upcomingEvents = events.filter { $0.date > Date() }.prefix(10)  // Schedule for next 10 upcoming events
+
         for event in upcomingEvents {
             let content = UNMutableNotificationContent()
             content.title = event.title
             content.body = "Your event is starting soon"
             content.sound = .default
-            
+
             let triggerDate = Calendar.current.date(byAdding: .minute, value: -15, to: event.date)!
-            let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: triggerDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-            
-            let request = UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: trigger)
-            
+
+            let request = UNNotificationRequest(
+                identifier: event.id.uuidString, content: content, trigger: trigger)
+
             center.add(request) { error in
                 if let error = error {
                     print("Error scheduling notification for event \(event.title): \(error)")
@@ -452,35 +496,41 @@ class AppData: NSObject, ObservableObject {
     func scheduleDailyNotification() {
         guard dailyNotificationEnabled else {
             print("Daily notifications are disabled.")
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [
+                "dailyNotification"
+            ])
             return
         }
 
         let content = UNMutableNotificationContent()
-        
+
         // Get today's events
         let todayEvents = getTodayEvents()
         let eventsCount = todayEvents.count
-        
+
         // If no events for today, do not schedule a notification
         if eventsCount == 0 {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyNotification"])
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [
+                "dailyNotification"
+            ])
             return
         }
-        
+
         // Set notification content
         content.title = "You have \(eventsCount) event\(eventsCount > 1 ? "s" : "") today"
         content.body = todayEvents.map { $0.title }.joined(separator: ", ")
         content.sound = .default
         content.categoryIdentifier = "DAILY_NOTIFICATION"
-        
+
         // Set notification trigger time
-        var dateComponents = Calendar.current.dateComponents([.hour, .minute], from: notificationTime)
+        var dateComponents = Calendar.current.dateComponents(
+            [.hour, .minute], from: notificationTime)
         dateComponents.second = 0
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
-        
+        let request = UNNotificationRequest(
+            identifier: "dailyNotification", content: content, trigger: trigger)
+
         // Add the notification request to the notification center
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
@@ -551,7 +601,8 @@ class AppData: NSObject, ObservableObject {
         print("Total events: \(events.count)")
         print("Searching for events with category: \(oldName)")
         for i in 0..<events.count {
-            print("Event \(i): title = \(events[i].title), category = \(events[i].category ?? "nil")")
+            print(
+                "Event \(i): title = \(events[i].title), category = \(events[i].category ?? "nil")")
             if events[i].category == oldName {
                 events[i].category = newName
                 events[i].color = CodableColor(color: newColor)
@@ -620,12 +671,19 @@ class AppData: NSObject, ObservableObject {
 
 // Extend AppData to conform to UNUserNotificationCenterDelegate
 extension AppData: UNUserNotificationCenterDelegate {
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) ->
+            Void
+    ) {
         print("Notification will present: \(notification.request.content.body)")
         completionHandler([.banner, .sound])
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         if response.actionIdentifier == "VIEW_ACTION" {
             print("Notification action triggered: \(response.actionIdentifier)")
         }
@@ -634,9 +692,12 @@ extension AppData: UNUserNotificationCenterDelegate {
 }
 
 // Helper function to decode from UserDefaults
-private func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, suiteName: String) -> T? {
+private func decodeFromUserDefaults<T: Decodable>(
+    _ type: T.Type, forKey key: String, suiteName: String
+) -> T? {
     if let sharedDefaults = UserDefaults(suiteName: suiteName),
-       let data = sharedDefaults.data(forKey: key) {
+        let data = sharedDefaults.data(forKey: key)
+    {
         let decoder = JSONDecoder()
         return try? decoder.decode(type, from: data)
     }
@@ -659,28 +720,36 @@ func migrateUserDefaults() {
     let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
 
     // Migrate events
-    if let oldEventsData = defaults.data(forKey: "events"), sharedDefaults?.data(forKey: "events") == nil {
+    if let oldEventsData = defaults.data(forKey: "events"),
+        sharedDefaults?.data(forKey: "events") == nil
+    {
         sharedDefaults?.set(oldEventsData, forKey: "events")
         defaults.removeObject(forKey: "events")
         print("Migrated events to shared UserDefaults.")
     }
 
     // Migrate categories
-    if let oldCategoriesData = defaults.data(forKey: "categories"), sharedDefaults?.data(forKey: "categories") == nil {
+    if let oldCategoriesData = defaults.data(forKey: "categories"),
+        sharedDefaults?.data(forKey: "categories") == nil
+    {
         sharedDefaults?.set(oldCategoriesData, forKey: "categories")
         defaults.removeObject(forKey: "categories")
         print("Migrated categories to shared UserDefaults.")
     }
 
     // Migrate notification time
-    if let oldNotificationTime = defaults.object(forKey: "notificationTime") as? Date, sharedDefaults?.object(forKey: "notificationTime") == nil {
+    if let oldNotificationTime = defaults.object(forKey: "notificationTime") as? Date,
+        sharedDefaults?.object(forKey: "notificationTime") == nil
+    {
         sharedDefaults?.set(oldNotificationTime, forKey: "notificationTime")
         defaults.removeObject(forKey: "notificationTime")
         print("Migrated notification time to shared UserDefaults.")
     }
 
     // Migrate default category
-    if let oldDefaultCategory = defaults.string(forKey: "defaultCategory"), sharedDefaults?.string(forKey: "defaultCategory") == nil {
+    if let oldDefaultCategory = defaults.string(forKey: "defaultCategory"),
+        sharedDefaults?.string(forKey: "defaultCategory") == nil
+    {
         sharedDefaults?.set(oldDefaultCategory, forKey: "defaultCategory")
         defaults.removeObject(forKey: "defaultCategory")
         print("Migrated default category to shared UserDefaults.")
