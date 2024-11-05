@@ -65,11 +65,11 @@ struct EventRow: View {
 
     private func pluralForm(of unit: String) -> String {
         switch unit.lowercased() {
-        case "day", "days": return "Days"
-        case "week", "weeks": return "Weeks"
-        case "month", "months": return "Months"
-        case "year", "years": return "Years"
-        default: return unit.capitalized + "s"
+        case "day", "days": return "days"
+        case "week", "weeks": return "weeks"
+        case "month", "months": return "months"
+        case "year", "years": return "years"
+        default: return unit.lowercased() + "s"
         }
     }
 
@@ -88,15 +88,24 @@ struct EventRow: View {
                     Text(event.title)
                         .roundedFont(.headline)
                         .fontWeight(.medium)
-                        .foregroundColor(colorScheme == .dark ? .white : (appData.eventStyle == "naked" ? .primary : event.color.color))
-                        .padding (.bottom, 1)
+                        .foregroundColor(
+                            colorScheme == .dark
+                                ? .white
+                                : (appData.eventStyle == "naked" ? .primary : event.color.color)
+                        )
+                        .padding(.bottom, 1)
                     Spacer()
                 }
-                
+
                 // Event Date(s) and Repeat Information
                 Text(eventDateAndRepeatText)
                     .roundedFont(.footnote)
-                    .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.5) : (appData.eventStyle == "naked" ? .secondary : event.color.color.opacity(0.7)))
+                    .foregroundColor(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.5)
+                            : (appData.eventStyle == "naked"
+                                ? .secondary : event.color.color.opacity(0.7))
+                    )
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.vertical, appData.eventStyle == "naked" ? 4 : 12)
@@ -139,7 +148,9 @@ struct EventRow: View {
             selectedEvent = event
             newEventTitle = event.title
             newEventDate = event.date
-            newEventEndDate = event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date) ?? event.date
+            newEventEndDate =
+                event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date)
+                ?? event.date
             showEndDate = event.endDate != nil
             selectedCategory = event.category
             showEditSheet = true
@@ -147,14 +158,32 @@ struct EventRow: View {
     }
 
     private var eventDateAndRepeatText: String {
-        var text = dateFormatter.string(from: event.date)
-        if let endDate = event.endDate {
-            text += " → " + dateFormatter.string(from: endDate)
-        }
+        var text = calculateTimeRemaining(from: event.date, to: event.endDate)
         if event.repeatOption != .never {
             text += " • \(getRepeatText())"
         }
         return text
+    }
+
+    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
+        let startDateString = dateFormatter.string(from: startDate)
+
+        // For single-day events
+        guard let endDate = endDate else {
+            return startDateString
+        }
+
+        // For multi-day events
+        let today = Calendar.current.startOfDay(for: Date())
+        let isActive = startDate <= today && endDate >= today
+
+        let daysRemaining =
+            Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        let dayText = daysRemaining == 1 ? "day" : "days"
+        let endDateString = dateFormatter.string(from: endDate)
+
+        return
+            "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText)\(isActive ? " left" : ""))"
     }
 }
 

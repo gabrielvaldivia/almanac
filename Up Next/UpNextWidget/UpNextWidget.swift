@@ -52,7 +52,7 @@ struct UpNextWidgetEntryView: View {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.dateFormat = "E, MMM d"
         return formatter
     }()
 
@@ -350,15 +350,22 @@ struct UpNextWidgetEntryView: View {
     }
 
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return startDate.relativeDate()
-        }
-        let daysRemaining =
-            Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
         let startDateString = dateFormatter.string(from: startDate)
+        
+        // For single-day events
+        guard let endDate = endDate else {
+            return startDateString
+        }
+        
+        // For multi-day events
+        let today = Calendar.current.startOfDay(for: Date())
+        let isActive = startDate <= today && endDate >= today
+        
+        let daysRemaining = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        let dayText = daysRemaining == 1 ? "day" : "days"
         let endDateString = dateFormatter.string(from: endDate)
-        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
+        
+        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText)\(isActive ? " left" : ""))"
     }
 }
 
