@@ -400,11 +400,9 @@ struct CustomDatePicker: View {
             )
             .datePickerStyle(GraphicalDatePickerStyle())
             .onChange(of: tempDate) { oldValue, newValue in
-                if !Calendar.current.isDate(oldValue, equalTo: newValue, toGranularity: .month) {
-                    // Month or year changed, update tempDate but don't dismiss
-                    tempDate = newValue
-                } else if !Calendar.current.isDate(oldValue, equalTo: newValue, toGranularity: .day) {
-                    // Day changed, update selectedDate, call onDateSelected, and dismiss
+                if Calendar.current.component(.month, from: oldValue) == Calendar.current.component(.month, from: newValue) &&
+                   Calendar.current.component(.year, from: oldValue) == Calendar.current.component(.year, from: newValue) &&
+                   !Calendar.current.isDate(oldValue, inSameDayAs: newValue) {
                     selectedDate = newValue
                     onDateSelected()
                     showCustomDatePicker = false
