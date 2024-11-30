@@ -159,11 +159,13 @@ struct AddEventView: View {
         let repeatUntilDate: Date?
         switch dateOptions.repeatUntilOption {
         case .indefinitely:
-            repeatUntilDate = nil
+            repeatUntilDate = Calendar.current.date(byAdding: .year, value: 1, to: dateOptions.date)
         case .after:
             repeatUntilDate = calculateRepeatUntilDate(
-                for: dateOptions.repeatOption, from: dateOptions.date,
-                count: dateOptions.repeatUntilCount, repeatUnit: dateOptions.repeatUnit)
+                for: dateOptions.repeatOption,
+                from: dateOptions.date,
+                count: dateOptions.repeatUntilCount,
+                repeatUnit: dateOptions.repeatUnit)
         case .onDate:
             repeatUntilDate = dateOptions.repeatUntil
         }
@@ -174,23 +176,28 @@ struct AddEventView: View {
             endDate: dateOptions.showEndDate ? dateOptions.endDate : nil,
             color: categoryOptions.selectedColor,
             category: categoryOptions.selectedCategory,
-            repeatOption: useCustomRepeatOptions ? dateOptions.repeatOption : .never,
-            repeatUntil: useCustomRepeatOptions ? repeatUntilDate : nil,
-            customRepeatCount: useCustomRepeatOptions ? dateOptions.customRepeatCount : nil,
-            repeatUnit: useCustomRepeatOptions ? dateOptions.repeatUnit : nil,
-            repeatUntilCount: useCustomRepeatOptions ? dateOptions.repeatUntilCount : nil,
-            useCustomRepeatOptions: useCustomRepeatOptions
+            repeatOption: dateOptions.repeatOption,
+            repeatUntil: repeatUntilDate,
+            seriesID: dateOptions.repeatOption != .never ? UUID() : nil,
+            customRepeatCount: dateOptions.customRepeatCount,
+            repeatUnit: dateOptions.repeatUnit,
+            repeatUntilCount: dateOptions.repeatUntilCount,
+            useCustomRepeatOptions: true
         )
 
-        let newEvents = generateRepeatingEvents(
-            for: newEvent, repeatUntilOption: dateOptions.repeatUntilOption,
-            showEndDate: dateOptions.showEndDate)
-        events.append(contentsOf: newEvents)
+        if dateOptions.repeatOption != .never {
+            let repeatingEvents = generateRepeatingEvents(
+                for: newEvent,
+                repeatUntilOption: dateOptions.repeatUntilOption,
+                showEndDate: dateOptions.showEndDate
+            )
+            events.append(contentsOf: repeatingEvents)
+        } else {
+            events.append(newEvent)
+        }
+        
         saveEvents()
-
-        // Force a reload of events
         appData.loadEvents()
-
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         appData.objectWillChange.send()
         appData.scheduleDailyNotification()
