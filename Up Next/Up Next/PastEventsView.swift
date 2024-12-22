@@ -38,7 +38,7 @@ struct PastEventsView: View {
 
     private var pastEventsList: some View {
         LazyVStack {
-            ForEach(groupedPastEvents().sorted(by: { $1.key > $0.key }), id: \.key) { monthYear, events in
+            ForEach(groupedPastEvents().sorted(by: { $0.key > $1.key }), id: \.key) { monthYear, events in
                 pastEventSection(monthYear: monthYear, events: events)
             }
         }
@@ -78,23 +78,19 @@ struct PastEventsView: View {
                      showEndDate: $showEndDate,
                      selectedCategory: $selectedCategory,
                      showEditSheet: $isEditSheetPresented,
-                     categories: appData.categories)
+                     categories: appData.categories.map { (name: $0.name, color: $0.color) })
         }
         .listRowSeparator(.hidden)
     }
 
     private var editEventSheet: some View {
-        EditEventView(events: $events,
-                      selectedEvent: $selectedEvent,
-                      newEventTitle: $newEventTitle,
-                      newEventDate: $newEventDate,
-                      newEventEndDate: $newEventEndDate,
-                      showEndDate: $showEndDate,
-                      showEditSheet: $isEditSheetPresented,
-                      selectedCategory: $selectedCategory,
-                      selectedColor: $selectedColor,
-                      saveEvent: saveEvent)
-            .environmentObject(appData)
+        EditEventView(
+            events: $events,
+            selectedEvent: $selectedEvent,
+            showEditSheet: $isEditSheetPresented,
+            saveEvents: saveEvents
+        )
+        .environmentObject(appData)
     }
 
     private func selectEvent(_ event: Event) {
@@ -158,18 +154,18 @@ struct PastEventsView: View {
         saveEvents()
     }
 
-    func saveEvent() {
-        if let selectedEvent = selectedEvent,
-           let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
-            events[index].title = newEventTitle
-            events[index].date = newEventDate
-            events[index].endDate = showEndDate ? newEventEndDate : nil
-            events[index].category = selectedCategory
-            events[index].color = selectedColor
-            saveEvents()
-        }
-        isEditSheetPresented = false
-    }
+    // func saveEvents() {
+    //     if let selectedEvent = selectedEvent,
+    //        let index = events.firstIndex(where: { $0.id == selectedEvent.id }) {
+    //         events[index].title = newEventTitle
+    //         events[index].date = newEventDate
+    //         events[index].endDate = showEndDate ? newEventEndDate : nil
+    //         events[index].category = selectedCategory
+    //         events[index].color = selectedColor
+    //         saveEvents()
+    //     }
+    //     isEditSheetPresented = false
+    // }
 }
 
 struct PastEventsView_Previews: PreviewProvider {

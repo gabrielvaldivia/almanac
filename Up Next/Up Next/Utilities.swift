@@ -81,8 +81,6 @@ extension UIColor {
     }
 }
 
-// Utility Functions
-
 // Converts a relative date string to the number of days from today
 func daysFromRelativeDate(_ relativeDate: String) -> Int {
     switch relativeDate {
@@ -139,29 +137,92 @@ func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, su
 // Generates a series of repeating events based on the given event and repeat options
 func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOption, showEndDate: Bool) -> [Event] {
     var repeatingEvents = [Event]()
+    
+    // If no repetition is needed, return just the original event
+    if !event.useCustomRepeatOptions || event.repeatOption == .never {
+        var singleEvent = event
+        singleEvent.seriesID = nil  // Ensure no series ID for non-repeating events
+        repeatingEvents.append(singleEvent)
+        return repeatingEvents
+    }
+    
+    // Create initial event with series ID
     var currentEvent = event
     let seriesID = UUID()
     currentEvent.seriesID = seriesID
     repeatingEvents.append(currentEvent)
     
-    var repetitionCount = 1
+    // Set maximum number of repetitions to prevent infinite loops
     let maxRepetitions: Int
-    
     switch repeatUntilOption {
-    case .indefinitely, .onDate:
-        maxRepetitions = 100
+    case .indefinitely:
+        maxRepetitions = 365  // Limit to 1 year for indefinite repeats
+    case .onDate:
+        maxRepetitions = 365  // Also limit date-based repeats
     case .after:
         maxRepetitions = event.repeatUntilCount ?? 1
     }
     
-    let duration = Calendar.current.dateComponents([.day], from: event.date, to: event.endDate ?? event.date).day ?? 0
+    // Calculate event duration for end date
+    let duration = Calendar.current.dateComponents(
+        [.day], 
+        from: event.date, 
+        to: event.endDate ?? event.date
+    ).day ?? 0
     
-    while let nextDate = getNextRepeatDate(for: currentEvent),
-          repetitionCount < maxRepetitions {
-        currentEvent = Event(
+    var currentDate = event.date
+    var repetitionCount = 1
+    
+    while repetitionCount < maxRepetitions {
+        // Calculate next date based on repeat option
+        let nextDate: Date?
+        
+        if case .custom = event.repeatOption,
+           let count = event.customRepeatCount,
+           let unit = event.repeatUnit?.lowercased() {
+            // Handle custom repeat interval
+            switch unit {
+            case "days":
+                nextDate = Calendar.current.date(byAdding: .day, value: count, to: currentDate)
+            case "weeks":
+                nextDate = Calendar.current.date(byAdding: .weekOfYear, value: count, to: currentDate)
+            case "months":
+                nextDate = Calendar.current.date(byAdding: .month, value: count, to: currentDate)
+            case "years":
+                nextDate = Calendar.current.date(byAdding: .year, value: count, to: currentDate)
+            default:
+                nextDate = nil
+            }
+        } else {
+            // Handle standard repeat intervals
+            switch event.repeatOption {
+            case .daily:
+                nextDate = Calendar.current.date(byAdding: .day, value: 1, to: currentDate)
+            case .weekly:
+                nextDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: currentDate)
+            case .monthly:
+                nextDate = Calendar.current.date(byAdding: .month, value: 1, to: currentDate)
+            case .yearly:
+                nextDate = Calendar.current.date(byAdding: .year, value: 1, to: currentDate)
+            case .custom, .never:
+                nextDate = nil
+            }
+        }
+        
+        guard let validNextDate = nextDate else { break }
+        
+        // Check if we've reached the until date
+        if case .onDate = repeatUntilOption,
+           let untilDate = event.repeatUntil,
+           validNextDate > untilDate {
+            break
+        }
+        
+        // Create the next event
+        let nextEvent = Event(
             title: event.title,
-            date: nextDate,
-            endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: nextDate) : nil,
+            date: validNextDate,
+            endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: validNextDate) : nil,
             color: event.color,
             category: event.category,
             repeatOption: event.repeatOption,
@@ -169,11 +230,13 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
             seriesID: seriesID,
             customRepeatCount: event.customRepeatCount,
             repeatUnit: event.repeatUnit,
-            repeatUntilCount: event.repeatUntilCount // Ensure this is passed
+            repeatUntilCount: event.repeatUntilCount,
+            useCustomRepeatOptions: event.useCustomRepeatOptions
         )
-        repeatingEvents.append(currentEvent)
+        
+        repeatingEvents.append(nextEvent)
+        currentDate = validNextDate
         repetitionCount += 1
-        print("Generated event: \(currentEvent)")
     }
     
     return repeatingEvents
@@ -181,12 +244,6 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
 
 // Calculates the next repeat date for a given event based on its repeat option
 func getNextRepeatDate(for event: Event) -> Date? {
-    guard let repeatUnit = event.repeatUnit, let customRepeatCount = event.customRepeatCount else {
-        return nil
-    }
-    
-    print("Calculating next repeat date for event: \(event)")
-
     switch event.repeatOption {
     case .daily:
         return Calendar.current.date(byAdding: .day, value: 1, to: event.date)
@@ -197,6 +254,11 @@ func getNextRepeatDate(for event: Event) -> Date? {
     case .yearly:
         return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
     case .custom:
+        guard let repeatUnit = event.repeatUnit, 
+              let customRepeatCount = event.customRepeatCount else {
+            return nil
+        }
+        
         switch repeatUnit.lowercased() {
         case "days":
             return Calendar.current.date(byAdding: .day, value: customRepeatCount, to: event.date)
@@ -214,38 +276,65 @@ func getNextRepeatDate(for event: Event) -> Date? {
     }
 }
 
-// Enum to represent different repeat until options
-enum RepeatUntilOption: String, CaseIterable {
-    case indefinitely = "Never"
-    case after = "After"
-    case onDate = "On"
-}
+// // Enum to represent different repeat until options
+// enum RepeatUntilOption: String, CaseIterable {
+//     case indefinitely = "Never"
+//     case after = "After"
+//     case onDate = "On"
+// }
 
 // Calculates the repeat until date based on the repeat option, start date, count, and repeat unit
-func calculateRepeatUntilDate(for option: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date? {
-    switch option {
-    case .never:
-        return nil
+func calculateRepeatUntilDate(for repeatOption: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date {
+    let calendar = Calendar.current
+    
+    switch repeatOption {
     case .daily:
-        return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
+        return calendar.date(byAdding: .day, value: count, to: startDate) ?? startDate
     case .weekly:
-        return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
+        return calendar.date(byAdding: .weekOfYear, value: count, to: startDate) ?? startDate
     case .monthly:
-        return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
+        return calendar.date(byAdding: .month, value: count, to: startDate) ?? startDate
     case .yearly:
-        return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+        return calendar.date(byAdding: .year, value: count, to: startDate) ?? startDate
     case .custom:
-        switch repeatUnit {
-        case "Days":
-            return Calendar.current.date(byAdding: .day, value: count - 1, to: startDate)
-        case "Weeks":
-            return Calendar.current.date(byAdding: .weekOfYear, value: count - 1, to: startDate)
-        case "Months":
-            return Calendar.current.date(byAdding: .month, value: count - 1, to: startDate)
-        case "Years":
-            return Calendar.current.date(byAdding: .year, value: count - 1, to: startDate)
+        switch repeatUnit.lowercased() {
+        case "days":
+            return calendar.date(byAdding: .day, value: count, to: startDate) ?? startDate
+        case "weeks":
+            return calendar.date(byAdding: .weekOfYear, value: count, to: startDate) ?? startDate
+        case "months":
+            return calendar.date(byAdding: .month, value: count, to: startDate) ?? startDate
+        case "years":
+            return calendar.date(byAdding: .year, value: count, to: startDate) ?? startDate
         default:
-            return nil
+            return startDate
         }
+    case .never:
+        return startDate
+    }
+}
+
+private let dateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "E, MMM d"
+    return formatter
+}()
+
+func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
+    guard let endDate = endDate else {
+        return startDate.relativeDate()
+    }
+    let now = Date()
+    let calendar = Calendar.current
+    let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
+    let dayText = daysRemaining == 1 ? "day" : "days"
+    
+    let startDateString = dateFormatter.string(from: startDate)
+    let endDateString = dateFormatter.string(from: endDate)
+    
+    if calendar.isDate(startDate, inSameDayAs: endDate) {
+        return "\(startDateString) (\(daysRemaining) \(dayText) left)"
+    } else {
+        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
     }
 }
