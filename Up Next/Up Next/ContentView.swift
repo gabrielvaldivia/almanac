@@ -5,10 +5,10 @@
 //  Created by Gabriel Valdivia on 6/19/24.
 //
 
-import SwiftUI
 import Foundation
-import WidgetKit
+import SwiftUI
 import UserNotifications
+import WidgetKit
 
 struct ContentView: View {
 
@@ -25,10 +25,16 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
     @State private var monthsToLoad: Int = 12
-    @State private var eventDetails = EventDetails(title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
-    @State private var dateOptions = DateOptions(date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never, repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1, showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
-    @State private var categoryOptions = CategoryOptions(selectedCategory: nil, selectedColor: CodableColor(color: .blue))
-    @State private var viewState = ViewState(showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: true)
+    @State private var eventDetails = EventDetails(
+        title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
+    @State private var dateOptions = DateOptions(
+        date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never,
+        repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1,
+        showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
+    @State private var categoryOptions = CategoryOptions(
+        selectedCategory: nil, selectedColor: CodableColor(color: .blue))
+    @State private var viewState = ViewState(
+        showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: true)
 
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
@@ -96,7 +102,8 @@ struct ContentView: View {
             if sortedEvents.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
-                eventListView(sortedMonths: sortedMonths, groupedEventsByMonth: groupedEventsByMonth)
+                eventListView(
+                    sortedMonths: sortedMonths, groupedEventsByMonth: groupedEventsByMonth)
             }
         }
         .navigationTitle("Up Next")
@@ -112,20 +119,22 @@ struct ContentView: View {
     }
 
     private var pastEventsButton: some View {
-        NavigationLink(destination: PastEventsView(
-            events: $appData.events,
-            selectedEvent: $selectedEvent,
-            newEventTitle: $newEventTitle,
-            newEventDate: $newEventDate,
-            newEventEndDate: $newEventEndDate,
-            showEndDate: $showEndDate,
-            selectedCategory: $selectedCategory,
-            showEditSheet: $showEditSheet,
-            selectedColor: $selectedColor,
-            categories: simplifiedCategories,
-            itemDateFormatter: itemDateFormatter,
-            saveEvents: appData.saveEvents
-        ).environmentObject(appData), isActive: $showPastEventsView) {
+        NavigationLink(
+            destination: PastEventsView(
+                events: $appData.events,
+                selectedEvent: $selectedEvent,
+                newEventTitle: $newEventTitle,
+                newEventDate: $newEventDate,
+                newEventEndDate: $newEventEndDate,
+                showEndDate: $showEndDate,
+                selectedCategory: $selectedCategory,
+                showEditSheet: $showEditSheet,
+                selectedColor: $selectedColor,
+                categories: simplifiedCategories,
+                itemDateFormatter: itemDateFormatter,
+                saveEvents: appData.saveEvents
+            ).environmentObject(appData), isActive: $showPastEventsView
+        ) {
             Image(systemName: "clock.arrow.circlepath")
                 .imageScale(.large)
                 .fontWeight(.bold)
@@ -166,18 +175,23 @@ struct ContentView: View {
         .focused($isFocused)
     }
 
-    private func eventListView(sortedMonths: [Date], groupedEventsByMonth: [Date: [Event]]) -> some View {
+    private func eventListView(sortedMonths: [Date], groupedEventsByMonth: [Date: [Event]])
+        -> some View
+    {
         ScrollView {
             LazyVStack {
-                CategoryPillsView(appData: appData, events: appData.events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
-                    .padding(.vertical, 10)
-                
+                CategoryPillsView(
+                    appData: appData, events: appData.events,
+                    selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme
+                )
+                .padding(.vertical, 10)
+
                 ForEach(sortedMonths, id: \.self) { month in
                     monthSection(month: month, events: groupedEventsByMonth[month]!)
                 }
-                
+
                 viewMoreButton
-                
+
                 Spacer(minLength: 80)
             }
         }
@@ -195,7 +209,7 @@ struct ContentView: View {
                 .roundedFont(.headline)
                 .padding(.horizontal)
                 .padding(.top, 10)
-            
+
             let groupedEventsByDate = groupEventsByDate(events: events)
             let sortedKeys = sortKeys(Array(groupedEventsByDate.keys))
 
@@ -232,21 +246,27 @@ struct ContentView: View {
 
     // Group events by month
     func groupEventsByMonth(events: [Event]) -> [Date: [Event]] {
-        return Dictionary(grouping: events, by: { event in
-            let components = Calendar.current.dateComponents([.year, .month], from: event.date)
-            return Calendar.current.date(from: components)!
-        })
+        return Dictionary(
+            grouping: events,
+            by: { event in
+                let components = Calendar.current.dateComponents([.year, .month], from: event.date)
+                return Calendar.current.date(from: components)!
+            })
     }
 
     // Group events by date
     func groupEventsByDate(events: [Event]) -> [String: [Event]] {
-        return Dictionary(grouping: events, by: { event in
-            if event.date <= Date() && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date()) {
-                return "Today"
-            } else {
-                return event.date.relativeDate()
-            }
-        })
+        return Dictionary(
+            grouping: events,
+            by: { event in
+                if event.date <= Date()
+                    && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date())
+                {
+                    return "Today"
+                } else {
+                    return event.date.relativeDate()
+                }
+            })
     }
 
     // Sort keys for grouped events
@@ -268,19 +288,21 @@ struct ContentView: View {
                 .padding(.vertical, 14)
             VStack(alignment: .leading) {
                 ForEach(events, id: \.id) { event in
-                    EventRow(event: event,
-                             selectedEvent: $selectedEvent,
-                             newEventTitle: $newEventTitle,
-                             newEventDate: $newEventDate,
-                             newEventEndDate: $newEventEndDate,
-                             showEndDate: $showEndDate,
-                             selectedCategory: $selectedCategory,
-                             showEditSheet: $showEditSheet,
-                             categories: simplifiedCategories)
-                        .onTapGesture {
-                            selectEvent(event)
-                        }
-                        .listRowSeparator(.hidden)
+                    EventRow(
+                        event: event,
+                        selectedEvent: $selectedEvent,
+                        newEventTitle: $newEventTitle,
+                        newEventDate: $newEventDate,
+                        newEventEndDate: $newEventEndDate,
+                        showEndDate: $showEndDate,
+                        selectedCategory: $selectedCategory,
+                        showEditSheet: $showEditSheet,
+                        categories: simplifiedCategories
+                    )
+                    .onTapGesture {
+                        selectEvent(event)
+                    }
+                    .listRowSeparator(.hidden)
                 }
             }
         }
@@ -290,9 +312,12 @@ struct ContentView: View {
     func emptyStateView(selectedCategoryFilter: String?) -> some View {
         VStack {
             // Category filter view
-            CategoryPillsView(appData: appData, events: appData.events, selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme)
-                .padding(.vertical, 10)
-            
+            CategoryPillsView(
+                appData: appData, events: appData.events,
+                selectedCategoryFilter: $selectedCategoryFilter, colorScheme: colorScheme
+            )
+            .padding(.vertical, 10)
+
             Spacer()
             if let category = selectedCategoryFilter {
                 Text("No events in \(category)")
@@ -320,26 +345,36 @@ struct ContentView: View {
                 self.newEventDate = Date()
                 self.newEventEndDate = Date()
                 self.showEndDate = false
-                self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
+                self.selectedCategory =
+                    self.selectedCategoryFilter
+                    ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
                 self.showAddEventSheet = true
             }
         }
     }
-    
+
     // Filter events based on selected category and date range
     func filteredEvents() -> [Event] {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
-        let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
+        let endDate = Calendar.current.date(
+            byAdding: .month, value: monthsToLoad, to: startOfToday)!
         var allEvents = [Event]()
 
         for event in appData.events {
             if let filter = selectedCategoryFilter {
-                if event.category == filter && (event.date >= startOfToday && event.date <= endDate || (event.endDate != nil && event.endDate! >= startOfToday && event.endDate! <= endDate)) {
+                if event.category == filter
+                    && (event.date >= startOfToday && event.date <= endDate
+                        || (event.endDate != nil && event.endDate! >= startOfToday
+                            && event.endDate! <= endDate))
+                {
                     allEvents.append(event)
                 }
             } else {
-                if event.date >= startOfToday && event.date <= endDate || (event.endDate != nil && event.endDate! >= startOfToday && event.endDate! <= endDate) {
+                if event.date >= startOfToday && event.date <= endDate
+                    || (event.endDate != nil && event.endDate! >= startOfToday
+                        && event.endDate! <= endDate)
+                {
                     allEvents.append(event)
                 }
             }
@@ -355,12 +390,13 @@ struct ContentView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
         WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
-    
+
     // Check if there are more events to load
     func hasMoreEventsToLoad() -> Bool {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
-        let endDate = Calendar.current.date(byAdding: .month, value: monthsToLoad, to: startOfToday)!
+        let endDate = Calendar.current.date(
+            byAdding: .month, value: monthsToLoad, to: startOfToday)!
         return appData.events.contains { event in
             let eventDate = event.endDate ?? event.date
             if let filter = selectedCategoryFilter {

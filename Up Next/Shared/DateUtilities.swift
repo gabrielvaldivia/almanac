@@ -50,7 +50,7 @@ extension Date {
             case 1:
                 return "Tomorrow"
             case let x where x > 1:
-                return "in \(x) days"
+                return "In \(x) days"
             case -1:
                 return "Yesterday"
             case let x where x < -1:

@@ -207,24 +207,11 @@ struct UpNextWidgetEntryView: View {
                                             .font(.caption)
                                         }
                                     }
-                                    .frame(
-                                        maxWidth: .infinity, maxHeight: 40, alignment: .leading
-                                    )  // Set max height
+                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
                                     .padding(.bottom, 6)
                                 }
                             }
                         }
-                    }
-                    Spacer()
-                    let remainingEventsCount = getRemainingEventsCount(
-                        events: filteredEvents, visibleCount: 2)
-                    if remainingEventsCount > 0 {
-                        Spacer()
-                        Text(
-                            "\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")"
-                        )
-                        .foregroundColor(.gray)
-                        .font(.caption)
                     }
 
                 // Large widget
@@ -261,47 +248,34 @@ struct UpNextWidgetEntryView: View {
                             VStack(alignment: .leading) {
                                 ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) {
                                     index, event in
-                                    VStack(alignment: .leading) {
-                                        HStack {
-                                            RoundedRectangle(cornerRadius: 4)
-                                                .fill(
-                                                    event.category != nil
-                                                        ? (categoryColors[event.category ?? ""]
-                                                            ?? .gray) : defaultCategoryColor
-                                                )
-                                                .frame(width: 4)
-                                                .padding(.vertical, 1)
-                                            VStack(alignment: .leading) {
-                                                Text(event.title)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.medium)
-                                                    .lineLimit(2)
-                                                    .padding(.bottom, 1)
-                                                Text(
-                                                    calculateTimeRemaining(
-                                                        from: event.date, to: event.endDate)
-                                                )
-                                                .foregroundColor(.gray)
-                                                .font(.caption)
-                                            }
+                                    HStack {
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(
+                                                event.category != nil
+                                                    ? (categoryColors[event.category ?? ""] ?? .gray)
+                                                    : defaultCategoryColor
+                                            )
+                                            .frame(width: 4)
+                                            .padding(.vertical, 1)
+                                        VStack(alignment: .leading) {
+                                            Text(event.title)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .lineLimit(2)
+                                                .padding(.bottom, 1)
+                                            Text(
+                                                calculateTimeRemaining(
+                                                    from: event.date, to: event.endDate)
+                                            )
+                                            .foregroundColor(.gray)
+                                            .font(.caption)
                                         }
-                                        .frame(
-                                            maxWidth: .infinity, maxHeight: 40, alignment: .leading)  // Set max height
                                     }
+                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
+                                    .padding(.bottom, 6)
                                 }
-                            }.padding(.bottom, 10)
-                        }
-                    }
-                    Spacer()
-                    let remainingEventsCount = getRemainingEventsCount(
-                        events: filteredEvents, visibleCount: 5)
-                    if remainingEventsCount > 0 {
-                        Spacer()
-                        Text(
-                            "\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")"
-                        )
-                        .foregroundColor(.gray)
-                        .font(.caption)
+                            }
+                        }.padding(.bottom, 10)
                     }
 
                 // Next Event widget
@@ -352,7 +326,7 @@ struct UpNextWidgetEntryView: View {
     // Remove widget-specific implementation and use the shared one from Utilities
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
         guard let endDate = endDate else {
-            return startDate.relativeDate()
+            return dateFormatter.string(from: startDate)
         }
         let now = Date()
         let calendar = Calendar.current
@@ -468,7 +442,7 @@ struct NextEventWidgetEntryView: View {
                     .font(.caption)
                 Spacer()
             } else {
-                Text(entry.event.date.relativeDate(to: entry.event.endDate).capitalized)
+                Text(dateFormatter.string(from: entry.event.date))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.red)
@@ -490,7 +464,7 @@ struct NextEventWidgetEntryView: View {
 
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
         guard let endDate = endDate else {
-            return startDate.relativeDate()
+            return dateFormatter.string(from: startDate)
         }
         let daysRemaining =
             Calendar.current.dateComponents([.day], from: Date(), to: endDate).day! + 1

@@ -167,7 +167,7 @@ struct EventRow: View {
 
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
         guard let endDate = endDate else {
-            return startDate.relativeDate()
+            return dateFormatter.string(from: startDate)
         }
         let now = Date()
         let calendar = Calendar.current
