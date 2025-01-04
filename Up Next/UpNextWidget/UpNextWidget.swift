@@ -349,23 +349,24 @@ struct UpNextWidgetEntryView: View {
         return max(0, futureEvents.count - visibleCount)
     }
 
+    // Remove widget-specific implementation and use the shared one from Utilities
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        let startDateString = dateFormatter.string(from: startDate)
-        
-        // For single-day events
         guard let endDate = endDate else {
-            return startDateString
+            return startDate.relativeDate()
         }
-        
-        // For multi-day events
-        let today = Calendar.current.startOfDay(for: Date())
-        let isActive = startDate <= today && endDate >= today
-        
-        let daysRemaining = Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1
+        let now = Date()
+        let calendar = Calendar.current
+        let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
         let dayText = daysRemaining == 1 ? "day" : "days"
+
+        let startDateString = dateFormatter.string(from: startDate)
         let endDateString = dateFormatter.string(from: endDate)
-        
-        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText)\(isActive ? " left" : ""))"
+
+        if calendar.isDate(startDate, inSameDayAs: endDate) {
+            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
+        } else {
+            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
+        }
     }
 }
 

@@ -4,16 +4,16 @@ import WidgetKit
 struct EventForm: View {
     @EnvironmentObject var appData: AppData
     @FocusState var isTitleFocused: Bool
-    
+
     @Binding var eventDetails: EventDetails
     @Binding var dateOptions: DateOptions
     @Binding var categoryOptions: CategoryOptions
     @Binding var viewState: ViewState
     @Binding var useCustomRepeatOptions: Bool
-    
+
     var deleteEvent: () -> Void
     var deleteSeries: () -> Void
-    
+
     @State private var showingAddCategorySheet = false
     @State private var showCustomStartDatePicker = false
     @State private var showCustomEndDatePicker = false
@@ -25,14 +25,25 @@ struct EventForm: View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
                 .edgesIgnoringSafeArea(.all)
-            
+
             ScrollView {
                 VStack(spacing: 16) {
-                    TitleSection(newEventTitle: $eventDetails.title, isTitleFocused: _isTitleFocused)
-                    DateSection(dateOptions: $dateOptions, showCustomStartDatePicker: $showCustomStartDatePicker, showCustomEndDatePicker: $showCustomEndDatePicker, tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
-                    CategoryAndColorSection(categoryOptions: $categoryOptions, showingAddCategorySheet: $showingAddCategorySheet, showColorPickerSheet: $showColorPickerSheet, appData: appData)
+                    TitleSection(
+                        newEventTitle: $eventDetails.title, isTitleFocused: _isTitleFocused)
+                    DateSection(
+                        dateOptions: $dateOptions,
+                        showCustomStartDatePicker: $showCustomStartDatePicker,
+                        showCustomEndDatePicker: $showCustomEndDatePicker,
+                        tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
+                    CategoryAndColorSection(
+                        categoryOptions: $categoryOptions,
+                        showingAddCategorySheet: $showingAddCategorySheet,
+                        showColorPickerSheet: $showColorPickerSheet, appData: appData)
                     if viewState.showDeleteButtons {
-                        DeleteSection(selectedEvent: eventDetails.selectedEvent, showDeleteActionSheet: $viewState.showDeleteActionSheet, deleteEvent: deleteEvent, deleteSeries: deleteSeries)
+                        DeleteSection(
+                            selectedEvent: eventDetails.selectedEvent,
+                            showDeleteActionSheet: $viewState.showDeleteActionSheet,
+                            deleteEvent: deleteEvent, deleteSeries: deleteSeries)
                     }
                 }
                 .padding()
@@ -41,17 +52,20 @@ struct EventForm: View {
         .onAppear(perform: setupInitialState)
         .onDisappear(perform: cleanupState)
     }
-    
+
     private func setupInitialState() {
         if categoryOptions.selectedCategory == nil {
-            categoryOptions.selectedCategory = appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
+            categoryOptions.selectedCategory =
+                appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
             categoryOptions.selectedColor = CodableColor(color: .blue)
-        } else if let category = appData.categories.first(where: { $0.name == categoryOptions.selectedCategory }) {
+        } else if let category = appData.categories.first(where: {
+            $0.name == categoryOptions.selectedCategory
+        }) {
             categoryOptions.selectedColor = CodableColor(color: category.color)
         }
         predefinedColors = CustomColorPickerSheet.predefinedColors
     }
-    
+
     private func cleanupState() {
         isTitleFocused = false
         tempEndDate = nil
@@ -63,7 +77,7 @@ struct EventForm: View {
 struct TitleSection: View {
     @Binding var newEventTitle: String
     @FocusState var isTitleFocused: Bool
-    
+
     var body: some View {
         VStack {
             TextField("Title", text: $newEventTitle)
@@ -82,7 +96,7 @@ struct DateSection: View {
     @Binding var showCustomEndDatePicker: Bool
     @Binding var tempEndDate: Date?
     @Binding var categoryOptions: CategoryOptions
-    
+
     var body: some View {
         VStack {
             HStack(alignment: .center, spacing: 0) {
@@ -96,8 +110,13 @@ struct DateSection: View {
                 }
                 .padding(.horizontal, 6)
                 .sheet(isPresented: $showCustomStartDatePicker) {
-                    CustomDatePicker(selectedDate: $dateOptions.date, showCustomDatePicker: $showCustomStartDatePicker, minimumDate: nil, onDateSelected: {}, onRemoveEndDate: nil, isEndDatePicker: false, showEndDate: dateOptions.showEndDate)
-                        .presentationDetents([.medium])
+                    CustomDatePicker(
+                        selectedDate: $dateOptions.date,
+                        showCustomDatePicker: $showCustomStartDatePicker, minimumDate: nil,
+                        onDateSelected: {}, onRemoveEndDate: nil, isEndDatePicker: false,
+                        showEndDate: dateOptions.showEndDate
+                    )
+                    .presentationDetents([.medium])
                 }
 
                 if dateOptions.showEndDate {
@@ -116,20 +135,26 @@ struct DateSection: View {
                             .cornerRadius(8)
                     }
                     .sheet(isPresented: $showCustomEndDatePicker) {
-                        CustomDatePicker(selectedDate: Binding(
-                            get: { self.tempEndDate ?? Date() },
-                            set: { self.tempEndDate = $0 }
-                        ), showCustomDatePicker: $showCustomEndDatePicker, minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date, onDateSelected: {
-                            if let tempEndDate = tempEndDate {
-                                dateOptions.endDate = tempEndDate
-                                dateOptions.showEndDate = true
-                            }
-                        }, onRemoveEndDate: {
-                            dateOptions.showEndDate = false
-                            dateOptions.endDate = dateOptions.date
-                            tempEndDate = nil
-                            showCustomEndDatePicker = false
-                        }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate)
+                        CustomDatePicker(
+                            selectedDate: Binding(
+                                get: { self.tempEndDate ?? Date() },
+                                set: { self.tempEndDate = $0 }
+                            ), showCustomDatePicker: $showCustomEndDatePicker,
+                            minimumDate: Calendar.current.date(
+                                byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date,
+                            onDateSelected: {
+                                if let tempEndDate = tempEndDate {
+                                    dateOptions.endDate = tempEndDate
+                                    dateOptions.showEndDate = true
+                                }
+                            },
+                            onRemoveEndDate: {
+                                dateOptions.showEndDate = false
+                                dateOptions.endDate = dateOptions.date
+                                tempEndDate = nil
+                                showCustomEndDatePicker = false
+                            }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate
+                        )
                         .presentationDetents([.medium])
                     }
                     Spacer()
@@ -139,29 +164,37 @@ struct DateSection: View {
                         tempEndDate = nil
                         showCustomEndDatePicker = true
                     }) {
-                        Image(systemName: "point.topleft.down.to.point.bottomright.filled.curvepath")
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
+                        Image(
+                            systemName: "point.topleft.down.to.point.bottomright.filled.curvepath"
+                        )
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(8)
                     }
                     .padding(.trailing, 6)
                     .sheet(isPresented: $showCustomEndDatePicker) {
-                        CustomDatePicker(selectedDate: Binding(
-                            get: { self.tempEndDate ?? Date() },
-                            set: { self.tempEndDate = $0 }
-                        ), showCustomDatePicker: $showCustomEndDatePicker, minimumDate: Calendar.current.date(byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date, onDateSelected: {
-                            if let tempEndDate = tempEndDate {
-                                dateOptions.endDate = tempEndDate
-                                dateOptions.showEndDate = true
-                            }
-                        }, onRemoveEndDate: {
-                            dateOptions.showEndDate = false
-                            dateOptions.endDate = dateOptions.date
-                            tempEndDate = nil
-                            showCustomEndDatePicker = false
-                        }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate)
+                        CustomDatePicker(
+                            selectedDate: Binding(
+                                get: { self.tempEndDate ?? Date() },
+                                set: { self.tempEndDate = $0 }
+                            ), showCustomDatePicker: $showCustomEndDatePicker,
+                            minimumDate: Calendar.current.date(
+                                byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date,
+                            onDateSelected: {
+                                if let tempEndDate = tempEndDate {
+                                    dateOptions.endDate = tempEndDate
+                                    dateOptions.showEndDate = true
+                                }
+                            },
+                            onRemoveEndDate: {
+                                dateOptions.showEndDate = false
+                                dateOptions.endDate = dateOptions.date
+                                tempEndDate = nil
+                                showCustomEndDatePicker = false
+                            }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate
+                        )
                         .presentationDetents([.medium])
                     }
                 }
@@ -178,8 +211,8 @@ struct DateSection: View {
                         .padding(8)
                         .background(
                             dateOptions.repeatOption != .never
-                            ? categoryOptions.selectedColor.color
-                            : Color.gray.opacity(0.2)
+                                ? categoryOptions.selectedColor.color
+                                : Color.gray.opacity(0.2)
                         )
                         .cornerRadius(8)
                 }
@@ -229,7 +262,7 @@ struct CategoryAndColorSection: View {
     @Binding var showingAddCategorySheet: Bool
     @Binding var showColorPickerSheet: Bool
     @ObservedObject var appData: AppData
-    
+
     var body: some View {
         VStack {
             HStack {
@@ -292,16 +325,17 @@ struct CategoryAndColorSection: View {
                 onSave: { newCategory in
                     categoryOptions.selectedCategory = newCategory.name
                     categoryOptions.selectedColor = CodableColor(color: newCategory.color)
-                    appData.categories.append((
-                        name: newCategory.name,
-                        color: newCategory.color,
-                        repeatOption: newCategory.repeatOption,
-                        customRepeatCount: newCategory.customRepeatCount,
-                        repeatUnit: newCategory.repeatUnit,
-                        repeatUntilOption: newCategory.repeatUntilOption,
-                        repeatUntilCount: newCategory.repeatUntilCount,
-                        repeatUntil: newCategory.repeatUntil
-                    ))
+                    appData.categories.append(
+                        (
+                            name: newCategory.name,
+                            color: newCategory.color,
+                            repeatOption: newCategory.repeatOption,
+                            customRepeatCount: newCategory.customRepeatCount,
+                            repeatUnit: newCategory.repeatUnit,
+                            repeatUntilOption: newCategory.repeatUntilOption,
+                            repeatUntilCount: newCategory.repeatUntilCount,
+                            repeatUntil: newCategory.repeatUntil
+                        ))
                     appData.saveCategories()
                 }
             )
@@ -323,7 +357,7 @@ struct DeleteSection: View {
     @Binding var showDeleteActionSheet: Bool
     var deleteEvent: () -> Void
     var deleteSeries: () -> Void
-    
+
     var body: some View {
         VStack {
             if let event = selectedEvent {
@@ -344,7 +378,7 @@ struct DeleteSection: View {
                     .padding(.bottom, 6)
 
                     Divider()
-                    
+
                     Button("Delete Series") {
                         deleteSeries()
                     }
@@ -372,7 +406,11 @@ struct CustomDatePicker: View {
 
     @State private var tempDate: Date
 
-    init(selectedDate: Binding<Date>, showCustomDatePicker: Binding<Bool>, minimumDate: Date?, onDateSelected: @escaping () -> Void, onRemoveEndDate: (() -> Void)?, isEndDatePicker: Bool, showEndDate: Bool) {
+    init(
+        selectedDate: Binding<Date>, showCustomDatePicker: Binding<Bool>, minimumDate: Date?,
+        onDateSelected: @escaping () -> Void, onRemoveEndDate: (() -> Void)?, isEndDatePicker: Bool,
+        showEndDate: Bool
+    ) {
         self._selectedDate = selectedDate
         self._showCustomDatePicker = showCustomDatePicker
         self.minimumDate = minimumDate
@@ -392,7 +430,7 @@ struct CustomDatePicker: View {
                     .foregroundColor(.primary)
                     .padding(.top, 20)
             }
-            
+
             DatePicker(
                 "Date",
                 selection: $tempDate,
@@ -401,15 +439,11 @@ struct CustomDatePicker: View {
             )
             .datePickerStyle(GraphicalDatePickerStyle())
             .onChange(of: tempDate) { oldValue, newValue in
-                if Calendar.current.component(.month, from: oldValue) == Calendar.current.component(.month, from: newValue) &&
-                   Calendar.current.component(.year, from: oldValue) == Calendar.current.component(.year, from: newValue) &&
-                   !Calendar.current.isDate(oldValue, inSameDayAs: newValue) {
-                    selectedDate = newValue
-                    onDateSelected()
-                    showCustomDatePicker = false
-                }
+                selectedDate = newValue
+                onDateSelected()
+                showCustomDatePicker = false
             }
-            
+
             if isEndDatePicker && showEndDate, let onRemoveEndDate = onRemoveEndDate {
                 Button(action: onRemoveEndDate) {
                     Text("Remove End Date")
@@ -421,7 +455,7 @@ struct CustomDatePicker: View {
         }
         .padding(.horizontal)
     }
-    
+
     private func dateRange() -> ClosedRange<Date> {
         if let minimumDate = minimumDate {
             return minimumDate...Date.distantFuture

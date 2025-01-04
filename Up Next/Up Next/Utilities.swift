@@ -17,7 +17,9 @@ extension Date {
         let startOfNow = calendar.startOfDay(for: now)
         let startOfSelf = calendar.startOfDay(for: self)
 
-        if let endDate = endDate, startOfSelf <= startOfNow, calendar.startOfDay(for: endDate) >= startOfNow {
+        if let endDate = endDate, startOfSelf <= startOfNow,
+            calendar.startOfDay(for: endDate) >= startOfNow
+        {
             return "Today"
         } else {
             let components = calendar.dateComponents([.day], from: startOfNow, to: startOfSelf)
@@ -52,7 +54,8 @@ extension UIColor {
         getRed(&r, green: &g, blue: &b, alpha: &a)
 
         if alpha {
-            return String(format: "#%02X%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255), Int(a * 255))
+            return String(
+                format: "#%02X%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255), Int(a * 255))
         } else {
             return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
         }
@@ -60,7 +63,10 @@ extension UIColor {
 
     // Initializes UIColor from a hexadecimal string representation
     convenience init?(hex: String) {
-        let r, g, b, a: CGFloat
+        let r: CGFloat
+        let g: CGFloat
+        let b: CGFloat
+        let a: CGFloat
         let start = hex.index(hex.startIndex, offsetBy: hex.hasPrefix("#") ? 1 : 0)
         let hexColor = String(hex[start...])
 
@@ -94,7 +100,10 @@ func daysFromRelativeDate(_ relativeDate: String) -> Int {
     case let otherDay where otherDay.contains(" day ago"):
         return -1
     case let otherDay where otherDay.starts(with: "in ") && otherDay.hasSuffix(" days"):
-        let days = Int(otherDay.replacingOccurrences(of: "in ", with: "").replacingOccurrences(of: " days", with: "")) ?? 0
+        let days =
+            Int(
+                otherDay.replacingOccurrences(of: "in ", with: "").replacingOccurrences(
+                    of: " days", with: "")) ?? 0
         return days
     default:
         return 0
@@ -116,7 +125,9 @@ func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, suiteNam
 }
 
 // Decodes a decodable object from UserDefaults
-func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, suiteName: String? = nil) -> T? {
+func decodeFromUserDefaults<T: Decodable>(
+    _ type: T.Type, forKey key: String, suiteName: String? = nil
+) -> T? {
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
     let defaults = suiteName != nil ? UserDefaults(suiteName: suiteName) : UserDefaults.standard
@@ -135,9 +146,11 @@ func decodeFromUserDefaults<T: Decodable>(_ type: T.Type, forKey key: String, su
 }
 
 // Generates a series of repeating events based on the given event and repeat options
-func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOption, showEndDate: Bool) -> [Event] {
+func generateRepeatingEvents(
+    for event: Event, repeatUntilOption: RepeatUntilOption, showEndDate: Bool
+) -> [Event] {
     var repeatingEvents = [Event]()
-    
+
     // If no repetition is needed, return just the original event
     if !event.useCustomRepeatOptions || event.repeatOption == .never {
         var singleEvent = event
@@ -145,13 +158,13 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
         repeatingEvents.append(singleEvent)
         return repeatingEvents
     }
-    
+
     // Create initial event with series ID
     var currentEvent = event
     let seriesID = UUID()
     currentEvent.seriesID = seriesID
     repeatingEvents.append(currentEvent)
-    
+
     // Set maximum number of repetitions to prevent infinite loops
     let maxRepetitions: Int
     switch repeatUntilOption {
@@ -162,30 +175,33 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
     case .after:
         maxRepetitions = event.repeatUntilCount ?? 1
     }
-    
+
     // Calculate event duration for end date
-    let duration = Calendar.current.dateComponents(
-        [.day], 
-        from: event.date, 
-        to: event.endDate ?? event.date
-    ).day ?? 0
-    
+    let duration =
+        Calendar.current.dateComponents(
+            [.day],
+            from: event.date,
+            to: event.endDate ?? event.date
+        ).day ?? 0
+
     var currentDate = event.date
     var repetitionCount = 1
-    
+
     while repetitionCount < maxRepetitions {
         // Calculate next date based on repeat option
         let nextDate: Date?
-        
+
         if case .custom = event.repeatOption,
-           let count = event.customRepeatCount,
-           let unit = event.repeatUnit?.lowercased() {
+            let count = event.customRepeatCount,
+            let unit = event.repeatUnit?.lowercased()
+        {
             // Handle custom repeat interval
             switch unit {
             case "days":
                 nextDate = Calendar.current.date(byAdding: .day, value: count, to: currentDate)
             case "weeks":
-                nextDate = Calendar.current.date(byAdding: .weekOfYear, value: count, to: currentDate)
+                nextDate = Calendar.current.date(
+                    byAdding: .weekOfYear, value: count, to: currentDate)
             case "months":
                 nextDate = Calendar.current.date(byAdding: .month, value: count, to: currentDate)
             case "years":
@@ -208,21 +224,23 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
                 nextDate = nil
             }
         }
-        
+
         guard let validNextDate = nextDate else { break }
-        
+
         // Check if we've reached the until date
         if case .onDate = repeatUntilOption,
-           let untilDate = event.repeatUntil,
-           validNextDate > untilDate {
+            let untilDate = event.repeatUntil,
+            validNextDate > untilDate
+        {
             break
         }
-        
+
         // Create the next event
         let nextEvent = Event(
             title: event.title,
             date: validNextDate,
-            endDate: showEndDate ? Calendar.current.date(byAdding: .day, value: duration, to: validNextDate) : nil,
+            endDate: showEndDate
+                ? Calendar.current.date(byAdding: .day, value: duration, to: validNextDate) : nil,
             color: event.color,
             category: event.category,
             repeatOption: event.repeatOption,
@@ -233,12 +251,12 @@ func generateRepeatingEvents(for event: Event, repeatUntilOption: RepeatUntilOpt
             repeatUntilCount: event.repeatUntilCount,
             useCustomRepeatOptions: event.useCustomRepeatOptions
         )
-        
+
         repeatingEvents.append(nextEvent)
         currentDate = validNextDate
         repetitionCount += 1
     }
-    
+
     return repeatingEvents
 }
 
@@ -254,16 +272,18 @@ func getNextRepeatDate(for event: Event) -> Date? {
     case .yearly:
         return Calendar.current.date(byAdding: .year, value: 1, to: event.date)
     case .custom:
-        guard let repeatUnit = event.repeatUnit, 
-              let customRepeatCount = event.customRepeatCount else {
+        guard let repeatUnit = event.repeatUnit,
+            let customRepeatCount = event.customRepeatCount
+        else {
             return nil
         }
-        
+
         switch repeatUnit.lowercased() {
         case "days":
             return Calendar.current.date(byAdding: .day, value: customRepeatCount, to: event.date)
         case "weeks":
-            return Calendar.current.date(byAdding: .weekOfYear, value: customRepeatCount, to: event.date)
+            return Calendar.current.date(
+                byAdding: .weekOfYear, value: customRepeatCount, to: event.date)
         case "months":
             return Calendar.current.date(byAdding: .month, value: customRepeatCount, to: event.date)
         case "years":
@@ -284,9 +304,11 @@ func getNextRepeatDate(for event: Event) -> Date? {
 // }
 
 // Calculates the repeat until date based on the repeat option, start date, count, and repeat unit
-func calculateRepeatUntilDate(for repeatOption: RepeatOption, from startDate: Date, count: Int, repeatUnit: String) -> Date {
+func calculateRepeatUntilDate(
+    for repeatOption: RepeatOption, from startDate: Date, count: Int, repeatUnit: String
+) -> Date {
     let calendar = Calendar.current
-    
+
     switch repeatOption {
     case .daily:
         return calendar.date(byAdding: .day, value: count, to: startDate) ?? startDate
@@ -320,21 +342,23 @@ private let dateFormatter: DateFormatter = {
     return formatter
 }()
 
-func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-    guard let endDate = endDate else {
-        return startDate.relativeDate()
-    }
-    let now = Date()
-    let calendar = Calendar.current
-    let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
-    let dayText = daysRemaining == 1 ? "day" : "days"
-    
-    let startDateString = dateFormatter.string(from: startDate)
-    let endDateString = dateFormatter.string(from: endDate)
-    
-    if calendar.isDate(startDate, inSameDayAs: endDate) {
-        return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-    } else {
-        return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
+enum DateFormatting {
+    static func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
+        guard let endDate = endDate else {
+            return startDate.relativeDate()
+        }
+        let now = Date()
+        let calendar = Calendar.current
+        let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
+        let dayText = daysRemaining == 1 ? "day" : "days"
+
+        let startDateString = dateFormatter.string(from: startDate)
+        let endDateString = dateFormatter.string(from: endDate)
+
+        if calendar.isDate(startDate, inSameDayAs: endDate) {
+            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
+        } else {
+            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
+        }
     }
 }
