@@ -86,7 +86,7 @@ struct EventRow: View {
                 // Event Title
                 HStack {
                     Text(event.title)
-                        .roundedFont(.headline)
+                        .font(.headline)
                         .fontWeight(.medium)
                         .foregroundColor(
                             colorScheme == .dark
@@ -99,7 +99,7 @@ struct EventRow: View {
 
                 // Event Date(s) and Repeat Information
                 Text(eventDateAndRepeatText)
-                    .roundedFont(.footnote)
+                    .font(.footnote)
                     .foregroundColor(
                         colorScheme == .dark
                             ? Color.white.opacity(0.5)

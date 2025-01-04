@@ -16,7 +16,7 @@ struct EventTimelineView: View {
     let numberOfDays: Int = 365  // Show a full year
     @Environment(\.colorScheme) var colorScheme
 
-    private let dayWidth: CGFloat = 80
+    private let dayWidth: CGFloat = 120
     private let eventHeight: CGFloat = 24
 
     private var startDate: Date {
@@ -104,12 +104,22 @@ struct EventTimelineView: View {
                         let level = eventLevel(for: event)
                         EventPill(event: event)
                             .frame(width: width)
-                            .offset(x: xOffset, y: 20 + CGFloat(level) * (eventHeight + 4))  // Reduced from 32 to 16
+                            .offset(x: xOffset, y: 24 + CGFloat(level) * (eventHeight + 4))
                     }
                 }
             }
         }
-        .frame(height: 60 + CGFloat(maxEventLevels) * eventHeight)
+        .frame(height: calculateTimelineHeight())
+    }
+
+    private func calculateTimelineHeight() -> CGFloat {
+        let headerHeight: CGFloat = 20  // Height for day header (changed from 32)
+        let spacing: CGFloat = 4  // Spacing between events
+        let levels = maxEventLevels + 1  // Add 1 to account for 0-based index
+        let eventsHeight = CGFloat(levels) * (eventHeight + spacing)
+        let bottomPadding: CGFloat = 8  // Padding at the bottom
+
+        return headerHeight + eventsHeight + bottomPadding
     }
 
     private func eventLevel(for event: Event) -> Int {
@@ -262,24 +272,20 @@ struct ContentView: View {
             if sortedEvents.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
+                // Timeline view fixed at the top
+                EventTimelineView(events: sortedEvents)
+                    .padding(.top, 16)  // Changed from [.top, .bottom] to just .top
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+
+                Divider()
+
+                // Scrollable content below
                 ScrollView {
                     VStack(spacing: 0) {
-                        CategoryPillsView(
-                            appData: appData, events: appData.events,
-                            selectedCategoryFilter: $selectedCategoryFilter,
-                            colorScheme: colorScheme
-                        )
-                        .padding([.top, .bottom], 10)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-
-                        // Timeline view
-                        EventTimelineView(events: sortedEvents)
-                            .padding([.top, .bottom], 16)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground))
-
                         ForEach(sortedMonths, id: \.self) { month in
                             monthSection(month: month, events: groupedEventsByMonth[month]!)
                         }
+                        .padding(.top, 8)  // Reduced from 16 to 8
 
                         viewMoreButton
 
@@ -294,8 +300,46 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Up Next")
-        .navigationBarItems(leading: pastEventsButton, trailing: settingsButton)
+        .navigationTitle("Almanac")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(
+            leading: settingsButton,
+            trailing: Menu {
+                Button(action: {
+                    selectedCategoryFilter = nil
+                }) {
+                    HStack {
+                        Text("All Events")
+                        if selectedCategoryFilter == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                ForEach(appData.categories, id: \.name) { category in
+                    Button(action: {
+                        selectedCategoryFilter = category.name
+                    }) {
+                        HStack {
+                            Circle()
+                                .fill(category.color)
+                                .frame(width: 8, height: 8)
+                            Text(category.name)
+                            if selectedCategoryFilter == category.name {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Image(
+                    systemName: selectedCategoryFilter == nil
+                        ? "line.3.horizontal.decrease.circle"
+                        : "line.3.horizontal.decrease.circle.fill"
+                )
+                .imageScale(.large)
+            }
+        )
         .onAppear {
             print("ContentView appeared")
             appData.loadEvents()
@@ -303,29 +347,6 @@ struct ContentView: View {
         }
         .onOpenURL { url in
             handleOpenURL(url)
-        }
-    }
-
-    private var pastEventsButton: some View {
-        NavigationLink(
-            destination: PastEventsView(
-                events: $appData.events,
-                selectedEvent: $selectedEvent,
-                newEventTitle: $newEventTitle,
-                newEventDate: $newEventDate,
-                newEventEndDate: $newEventEndDate,
-                showEndDate: $showEndDate,
-                selectedCategory: $selectedCategory,
-                showEditSheet: $showEditSheet,
-                selectedColor: $selectedColor,
-                categories: simplifiedCategories,
-                itemDateFormatter: itemDateFormatter,
-                saveEvents: appData.saveEvents
-            ).environmentObject(appData), isActive: $showPastEventsView
-        ) {
-            Image(systemName: "clock.arrow.circlepath")
-                .imageScale(.large)
-                .fontWeight(.bold)
         }
     }
 
@@ -366,7 +387,7 @@ struct ContentView: View {
     private func monthSection(month: Date, events: [Event]) -> some View {
         VStack(alignment: .leading) {
             Text(itemDateFormatter.string(from: month))
-                .roundedFont(.headline)
+                .font(.headline)
                 .padding(.horizontal)
                 .padding(.top, 10)
 
@@ -391,7 +412,7 @@ struct ContentView: View {
                         appData.loadEvents()
                     }) {
                         Text("View More")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13, weight: .medium))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                             .background(Color.gray.opacity(0.2))
@@ -481,15 +502,15 @@ struct ContentView: View {
             Spacer()
             if let category = selectedCategoryFilter {
                 Text("No events in \(category)")
-                    .roundedFont(.headline)
+                    .font(.headline)
                 Text("Add an event to this category")
-                    .roundedFont(.subheadline)
+                    .font(.subheadline)
                     .foregroundColor(.gray)
             } else {
                 Text("No upcoming events")
-                    .roundedFont(.headline)
+                    .font(.headline)
                 Text("Add something you're looking forward to")
-                    .roundedFont(.subheadline)
+                    .font(.subheadline)
                     .foregroundColor(.gray)
             }
             Spacer()
