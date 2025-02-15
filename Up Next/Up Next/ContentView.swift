@@ -16,7 +16,7 @@ struct EventTimelineView: View {
     let numberOfDays: Int = 365  // Show a full year
     @Environment(\.colorScheme) var colorScheme
 
-    private let dayWidth: CGFloat = 120
+    private let dayWidth: CGFloat = 40
     private let eventHeight: CGFloat = 24
 
     private var startDate: Date {
@@ -76,16 +76,22 @@ struct EventTimelineView: View {
                 LazyHStack(alignment: .top, spacing: 4) {
                     ForEach(dateRange, id: \.self) { date in
                         VStack(alignment: .center, spacing: 4) {
-                            // Day and number
-                            HStack(spacing: 4) {
-                                Text(date.formatted(.dateTime.weekday(.abbreviated)))
-                                    .font(.caption.weight(.medium))
-                                    .foregroundColor(.gray)
+                            // Day abbreviated name
+                            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.gray)
+                            // Day number in circle
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        Calendar.current.isDateInToday(date)
+                                            ? Color.accentColor : Color.clear
+                                    )
+                                    .frame(width: 24, height: 24)
                                 Text("\(Calendar.current.component(.day, from: date))")
                                     .font(.caption.weight(.medium))
                                     .foregroundColor(
-                                        Calendar.current.isDateInToday(date)
-                                            ? .accentColor : .primary)
+                                        Calendar.current.isDateInToday(date) ? .white : .primary)
                             }
                         }
                         .frame(width: dayWidth)
@@ -103,8 +109,8 @@ struct EventTimelineView: View {
                         let width = calculateEventWidth(event)
                         let level = eventLevel(for: event)
                         EventPill(event: event)
-                            .frame(width: width)
-                            .offset(x: xOffset, y: 24 + CGFloat(level) * (eventHeight + 4))
+                            .frame(width: width, height: eventHeight)
+                            .offset(x: xOffset, y: 48 + CGFloat(level) * (eventHeight + 4))
                     }
                 }
             }
@@ -113,7 +119,7 @@ struct EventTimelineView: View {
     }
 
     private func calculateTimelineHeight() -> CGFloat {
-        let headerHeight: CGFloat = 20  // Height for day header (changed from 32)
+        let headerHeight: CGFloat = 48  // Height for stacked day header
         let spacing: CGFloat = 4  // Spacing between events
         let levels = maxEventLevels + 1  // Add 1 to account for 0-based index
         let eventsHeight = CGFloat(levels) * (eventHeight + spacing)
@@ -165,18 +171,24 @@ struct EventPill: View {
     var event: Event
 
     var body: some View {
-        HStack {
-            Text(event.title)
-                .lineLimit(1)
-                .font(.system(size: 11))
-            Spacer(minLength: 0)
+        let isMultiDay =
+            event.endDate != nil
+            && Calendar.current.dateComponents([.day], from: event.date, to: event.endDate!).day!
+                > 0
+
+        Group {
+            if isMultiDay {
+                // Multi-day pill with rounded ends
+                Rectangle()
+                    .fill(event.color.color.opacity(0.2))
+                    .cornerRadius(12)
+            } else {
+                // Single-day circular pill
+                Circle()
+                    .fill(event.color.color.opacity(0.2))
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity)
-        .background(event.color.color.opacity(0.2))
         .foregroundColor(event.color.color)
-        .cornerRadius(12)
     }
 }
 
