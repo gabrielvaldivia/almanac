@@ -57,11 +57,15 @@ struct EventForm: View {
         if categoryOptions.selectedCategory == nil {
             categoryOptions.selectedCategory =
                 appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
-            categoryOptions.selectedColor = CodableColor(color: .blue)
+            if categoryOptions.selectedColor.color == .blue {
+                categoryOptions.selectedColor = CodableColor(color: .blue)
+            }
         } else if let category = appData.categories.first(where: {
             $0.name == categoryOptions.selectedCategory
         }) {
-            categoryOptions.selectedColor = CodableColor(color: category.color)
+            if categoryOptions.selectedColor.color == .blue {
+                categoryOptions.selectedColor = CodableColor(color: category.color)
+            }
         }
         predefinedColors = CustomColorPickerSheet.predefinedColors
     }
