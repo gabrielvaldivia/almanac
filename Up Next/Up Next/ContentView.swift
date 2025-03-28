@@ -15,6 +15,7 @@ struct EventTimelineView: View {
     var events: [Event]
     let numberOfDays: Int = 365  // Show a full year
     @Environment(\.colorScheme) var colorScheme
+    var selectedCategoryFilter: String?
 
     private let dayWidth: CGFloat = 40
     private let eventHeight: CGFloat = 24
@@ -108,9 +109,18 @@ struct EventTimelineView: View {
                         let xOffset = CGFloat(startIndex) * (dayWidth + 4) + 16  // Account for day spacing
                         let width = calculateEventWidth(event)
                         let level = eventLevel(for: event)
+
+                        // For multi-day events, add more padding to the left
+                        let isMultiDay =
+                            event.endDate != nil
+                            && Calendar.current.dateComponents(
+                                [.day], from: event.date, to: event.endDate!
+                            ).day! > 0
+                        let adjustedXOffset = isMultiDay ? xOffset + (dayWidth * 0.2) : xOffset
+
                         EventPill(event: event)
                             .frame(width: width, height: eventHeight)
-                            .offset(x: xOffset, y: 48 + CGFloat(level) * (eventHeight + 4))
+                            .offset(x: adjustedXOffset, y: 48 + CGFloat(level) * (eventHeight + 4))
                     }
                 }
             }
@@ -163,7 +173,7 @@ struct EventTimelineView: View {
         let eventStart = Calendar.current.startOfDay(for: event.date)
         let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
         let days = Calendar.current.dateComponents([.day], from: eventStart, to: eventEnd).day ?? 0
-        return CGFloat(days + 1) * dayWidth + CGFloat(days) * 4  // Add spacing for gaps between days
+        return CGFloat(days + 1) * dayWidth  // Remove the extra spacing between days
     }
 }
 
@@ -285,9 +295,11 @@ struct ContentView: View {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
                 // Timeline view fixed at the top
-                EventTimelineView(events: sortedEvents)
-                    .padding(.top, 16)  // Changed from [.top, .bottom] to just .top
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                EventTimelineView(
+                    events: sortedEvents, selectedCategoryFilter: selectedCategoryFilter
+                )
+                .padding(.top, 16)  // Changed from [.top, .bottom] to just .top
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
 
                 Divider()
 

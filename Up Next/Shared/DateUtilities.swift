@@ -11,13 +11,32 @@ public enum DateUtilities {
         guard let endDate = endDate else {
             return startDate.relativeDate()
         }
-        let now = Date()
+
         let calendar = Calendar.current
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
+        let now = calendar.startOfDay(for: Date())
+        let startOfStartDate = calendar.startOfDay(for: startDate)
+        let startOfEndDate = calendar.startOfDay(for: endDate)
 
         let startDateString = dateFormatter.string(from: startDate)
         let endDateString = dateFormatter.string(from: endDate)
+
+        // Calculate total duration of the event (using start of days)
+        let duration =
+            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
+        let durationText = duration == 1 ? "day" : "days"
+
+        // If start date is after today, show duration
+        if startOfStartDate > now {
+            if calendar.isDate(startDate, inSameDayAs: endDate) {
+                return "\(startDateString) (\(duration) \(durationText))"
+            } else {
+                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
+            }
+        }
+
+        // For ongoing or past events, show days remaining
+        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
+        let dayText = daysRemaining == 1 ? "day" : "days"
 
         if calendar.isDate(startDate, inSameDayAs: endDate) {
             return "\(startDateString) (\(daysRemaining) \(dayText) left)"

@@ -7,6 +7,8 @@
 
 import Foundation
 import SwiftUI
+import UIKit
+import Up_Next
 
 // EVENT ROW
 struct EventRow: View {
@@ -110,40 +112,13 @@ struct EventRow: View {
             }
             .padding(.vertical, appData.eventStyle == "naked" ? 4 : 12)
             .padding(.horizontal, appData.eventStyle == "naked" ? 0 : 16)
-            .background(
-                Group {
-                    // Background Style
-                    if appData.eventStyle == "bubbly" {
-                        event.color.color.opacity(colorScheme == .light ? 0.1 : 0.3)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(event.color.color.opacity(0.2), lineWidth: 1)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(event.color.color.opacity(0.4), lineWidth: 4)
-                                    .blur(radius: 4)
-                                    .mask(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [.black, .clear]),
-                                                    startPoint: .bottom,
-                                                    endPoint: .top
-                                                )
-                                            )
-                                    )
-                            )
-                    } else if appData.eventStyle == "flat" {
-                        event.color.color.opacity(colorScheme == .light ? 0.1 : 0.3)
-                    } else {
-                        Color.clear
-                    }
-                }
-            )
-            .cornerRadius(appData.eventStyle == "naked" ? 0 : 12)
         }
-        .clipShape(RoundedRectangle(cornerRadius: appData.eventStyle == "naked" ? 0 : 12))
+        .background(
+            appData.eventStyle == "naked"
+                ? Color.clear
+                : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
+        )
+        .cornerRadius(8)
         .onTapGesture {
             selectedEvent = event
             newEventTitle = event.title
@@ -169,13 +144,32 @@ struct EventRow: View {
         guard let endDate = endDate else {
             return dateFormatter.string(from: startDate)
         }
-        let now = Date()
+
         let calendar = Calendar.current
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
+        let now = calendar.startOfDay(for: Date())
+        let startOfStartDate = calendar.startOfDay(for: startDate)
+        let startOfEndDate = calendar.startOfDay(for: endDate)
 
         let startDateString = dateFormatter.string(from: startDate)
         let endDateString = dateFormatter.string(from: endDate)
+
+        // Calculate total duration of the event (using start of days)
+        let duration =
+            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
+        let durationText = duration == 1 ? "day" : "days"
+
+        // If start date is after today, show duration
+        if startOfStartDate > now {
+            if calendar.isDate(startDate, inSameDayAs: endDate) {
+                return "\(startDateString) (\(duration) \(durationText))"
+            } else {
+                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
+            }
+        }
+
+        // For ongoing or past events, show days remaining
+        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
+        let dayText = daysRemaining == 1 ? "day" : "days"
 
         if calendar.isDate(startDate, inSameDayAs: endDate) {
             return "\(startDateString) (\(daysRemaining) \(dayText) left)"
