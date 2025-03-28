@@ -279,7 +279,7 @@ struct ContentView: View {
         .sheet(isPresented: $showEditSheet) {
             editEventSheet
         }
-        .onChange(of: appData.events) { _ in
+        .onChange(of: appData.events) { oldValue, newValue in
             // Force view update
             appData.objectWillChange.send()
         }

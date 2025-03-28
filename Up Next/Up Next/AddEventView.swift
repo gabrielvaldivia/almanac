@@ -138,8 +138,8 @@ struct AddEventView: View {
             // Clear focus when view disappears
             isTitleFocused = false
         }
-        .onChange(of: categoryOptions.selectedCategory) { newCategory in
-            if let category = appData.categories.first(where: { $0.name == newCategory }) {
+        .onChange(of: categoryOptions.selectedCategory) { oldValue, newValue in
+            if let category = appData.categories.first(where: { $0.name == newValue }) {
                 if !useCustomRepeatOptions {
                     dateOptions.repeatOption = category.repeatOption
                     dateOptions.showRepeatOptions = category.repeatOption != .never
@@ -195,7 +195,7 @@ struct AddEventView: View {
         } else {
             events.append(newEvent)
         }
-        
+
         saveEvents()
         appData.loadEvents()
         WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")

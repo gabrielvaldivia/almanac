@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import UIKit
-import Up_Next
 
 // EVENT ROW
 struct EventRow: View {

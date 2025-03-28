@@ -8,8 +8,8 @@
 import Foundation
 import SwiftUI
 import UIKit
-import WidgetKit
 import UserNotifications
+import WidgetKit
 
 extension Color {
     func toHex() -> String? {
@@ -17,7 +17,9 @@ extension Color {
         let r: CGFloat = components?[0] ?? 0
         let g: CGFloat = components?[1] ?? 0
         let b: CGFloat = components?[2] ?? 0
-        return String(format: "#%02lX%02lX%02lX", lroundf(Float(r * 255)), lroundf(Float(g * 255)), lroundf(Float(b * 255)))
+        return String(
+            format: "#%02lX%02lX%02lX", lroundf(Float(r * 255)), lroundf(Float(g * 255)),
+            lroundf(Float(b * 255)))
     }
 }
 
@@ -46,7 +48,12 @@ struct CategoriesView: View {
     @State private var tempCategoryNames: [String] = []
     @Environment(\.editMode) private var editMode
     @State private var showingEditCategorySheet = false
-    @State private var categoryToEdit: (name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int, repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int, repeatUntil: Date)?
+    @State private var categoryToEdit:
+        (
+            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
+            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
+            repeatUntil: Date
+        )?
     @State private var showColorPickerSheet = false
     @State private var dailyNotificationTime = Date()
     @State private var isNotificationEnabled = false
@@ -58,19 +65,21 @@ struct CategoriesView: View {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
                         if editMode?.wrappedValue == .active {
-                            TextField("Category Name", text: Binding(
-                                get: {
-                                    if self.tempCategoryNames.indices.contains(index) {
-                                        return self.tempCategoryNames[index]
+                            TextField(
+                                "Category Name",
+                                text: Binding(
+                                    get: {
+                                        if self.tempCategoryNames.indices.contains(index) {
+                                            return self.tempCategoryNames[index]
+                                        }
+                                        return ""
+                                    },
+                                    set: {
+                                        if self.tempCategoryNames.indices.contains(index) {
+                                            self.tempCategoryNames[index] = $0
+                                        }
                                     }
-                                    return ""
-                                },
-                                set: {
-                                    if self.tempCategoryNames.indices.contains(index) {
-                                        self.tempCategoryNames[index] = $0
-                                    }
-                                }
-                            ))
+                                ))
                         } else {
                             HStack {
                                 Text(self.appData.categories[index].name)
@@ -78,7 +87,10 @@ struct CategoriesView: View {
                         }
                         Spacer()
                         Circle()
-                            .fill(self.appData.categories.indices.contains(index) ? self.appData.categories[index].color : .clear)
+                            .fill(
+                                self.appData.categories.indices.contains(index)
+                                    ? self.appData.categories[index].color : .clear
+                            )
                             .frame(width: 24, height: 24)
                     }
                     .contentShape(Rectangle())
@@ -98,7 +110,9 @@ struct CategoriesView: View {
                 Button(action: {
                     showingAddCategorySheet = true
                     newCategoryName = ""
-                    newCategoryColor = Color(red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9), blue: Double.random(in: 0.1...0.9))
+                    newCategoryColor = Color(
+                        red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9),
+                        blue: Double.random(in: 0.1...0.9))
                 }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -116,16 +130,17 @@ struct CategoriesView: View {
             CategoryForm(
                 showingSheet: $showingAddCategorySheet,
                 onSave: { newCategory in
-                    appData.categories.append((
-                        name: newCategory.name,
-                        color: newCategory.color,
-                        repeatOption: newCategory.repeatOption,
-                        customRepeatCount: newCategory.customRepeatCount,
-                        repeatUnit: newCategory.repeatUnit,
-                        repeatUntilOption: newCategory.repeatUntilOption,
-                        repeatUntilCount: newCategory.repeatUntilCount,
-                        repeatUntil: newCategory.repeatUntil
-                    ))
+                    appData.categories.append(
+                        (
+                            name: newCategory.name,
+                            color: newCategory.color,
+                            repeatOption: newCategory.repeatOption,
+                            customRepeatCount: newCategory.customRepeatCount,
+                            repeatUnit: newCategory.repeatUnit,
+                            repeatUntilOption: newCategory.repeatUntilOption,
+                            repeatUntilCount: newCategory.repeatUntilCount,
+                            repeatUntil: newCategory.repeatUntil
+                        ))
                     appData.saveCategories()
                 }
             )
@@ -140,20 +155,24 @@ struct CategoriesView: View {
                     isEditing: true,
                     editingCategory: category,
                     onSave: { updatedCategory in
-                        if let index = appData.categories.firstIndex(where: { $0.name == category.name }) {
+                        if let index = appData.categories.firstIndex(where: {
+                            $0.name == category.name
+                        }) {
                             appData.categories[index] = updatedCategory
                             appData.saveCategories()
-                            appData.updateEventsForCategoryChange(oldName: category.name, newName: updatedCategory.name, newColor: updatedCategory.color)
+                            appData.updateEventsForCategoryChange(
+                                oldName: category.name, newName: updatedCategory.name,
+                                newColor: updatedCategory.color)
                         }
-                        categoryToEdit = nil // Reset categoryToEdit after saving
+                        categoryToEdit = nil  // Reset categoryToEdit after saving
                     }
                 )
                 .environmentObject(appData)
             }
         }
-        .onChange(of: showingEditCategorySheet) { newValue in
+        .onChange(of: showingEditCategorySheet) { oldValue, newValue in
             if !newValue {
-                categoryToEdit = nil // Reset categoryToEdit when sheet is dismissed
+                categoryToEdit = nil  // Reset categoryToEdit when sheet is dismissed
             }
         }
 
@@ -173,7 +192,9 @@ struct CategoriesView: View {
                         let newName = tempCategoryNames[index]
                         if oldName != newName {
                             appData.categories[index].name = newName
-                            updateEventsForCategoryChange(oldName: oldName, newName: newName, newColor: appData.categories[index].color)
+                            updateEventsForCategoryChange(
+                                oldName: oldName, newName: newName,
+                                newColor: appData.categories[index].color)
                         }
                     }
                 }
@@ -214,7 +235,8 @@ struct CategoriesView: View {
         let dateComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
 
-        let request = UNNotificationRequest(identifier: "dailyNotification", content: content, trigger: trigger)
+        let request = UNNotificationRequest(
+            identifier: "dailyNotification", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Error scheduling notification: \(error)")
