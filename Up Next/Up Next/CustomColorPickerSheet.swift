@@ -18,8 +18,7 @@ struct CustomColorPickerSheet: View {
     ]
 
     var contrastColor: Color {
-        let components = UIColor(selectedColor.color).cgColor.components ?? [0, 0, 0, 0]
-        let brightness = ((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000
+        let brightness = (selectedColor.red * 299 + selectedColor.green * 587 + selectedColor.blue * 114) / 1000
         return brightness > 0.7 ? .black : .white
     }
 

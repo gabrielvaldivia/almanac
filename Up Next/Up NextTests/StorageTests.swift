@@ -2,6 +2,22 @@ import XCTest
 @testable import Up_Next
 
 final class StorageTests: XCTestCase {
+    func testCategoryCodecMigratesNumericDatesAndPreservesUnreadablePayloads() throws {
+        let name = "test.categories.\(UUID())"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let category = CategoryData(name: "Work", color: CodableColor(color: .blue), repeatOption: .never,
+            showRepeatOptions: false, customRepeatCount: 1, repeatUnit: "Days", repeatUntilOption: .indefinitely,
+            repeatUntilCount: 1, repeatUntil: Date())
+        let legacy = try JSONEncoder().encode([category])
+        XCTAssertEqual(try CategoryStorage.decode(legacy).first?.name, "Work")
+        try CategoryStorage.save([category], defaults: defaults)
+        XCTAssertEqual(try CategoryStorage.decode(defaults.data(forKey: "categories")!).first?.name, "Work")
+        let bad = Data("broken".utf8); defaults.set(bad, forKey: "categories")
+        XCTAssertThrowsError(try CategoryStorage.save([], defaults: defaults))
+        XCTAssertEqual(defaults.data(forKey: "categories"), bad)
+    }
+
     func testUnreadableEventsArePreservedAndCannotBeOverwritten() throws {
         let name = "test.storage.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!

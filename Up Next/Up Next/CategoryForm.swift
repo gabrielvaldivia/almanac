@@ -78,6 +78,10 @@ struct CategoryForm: View {
                         .padding(.horizontal)
                         .padding(.vertical, 12)
 
+                    if !categoryName.isEmpty && !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName) {
+                        Text("Choose a unique category name. All Categories is reserved for widget filters.")
+                            .font(.footnote).foregroundStyle(.red).padding(.horizontal)
+                    }
                     Divider()
                         .padding(.leading)
 
@@ -135,7 +139,7 @@ struct CategoryForm: View {
                             ))
                         showingSheet = false
                     }
-                    .disabled(!CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName))
+                    .disabled(appData.categoryStorageError != nil || !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName))
                 }
             }
         }

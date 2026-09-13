@@ -13,7 +13,7 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var description = IntentDescription("Choose which category appears in this widget.")
 
     @Parameter(title: "Category", optionsProvider: CategoryOptionsProvider())
-    var category: String
+    var category: String?
 
     init() { category = "All Categories" }
 
@@ -27,7 +27,7 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
         var categories = ["All Categories"]
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
            let data = sharedDefaults.data(forKey: "categories"),
-           let decoded = try? JSONDecoder().decode([CategoryData].self, from: data) {
+           let decoded = try? CategoryStorage.decode(data) {
             categories.append(contentsOf: decoded.map { $0.name })
         }
         return categories

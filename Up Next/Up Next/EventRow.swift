@@ -30,7 +30,7 @@ struct EventRow: View {
     }()
 
     private func getDurationText(start: Date, end: Date?) -> String {
-        return calculateTimeRemaining(from: start, to: end)
+        return rangeDescription(from: start, to: end)
     }
 
     private func getRepeatText() -> String {
@@ -118,7 +118,7 @@ struct EventRow: View {
                 ? Color.clear
                 : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
         )
-        .cornerRadius(8)
+        .cornerRadius(appData.eventStyle == "bubbly" ? 24 : 8)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -137,49 +137,15 @@ struct EventRow: View {
     }
 
     private var eventDateAndRepeatText: String {
-        var text = calculateTimeRemaining(from: event.date, to: event.endDate)
+        var text = rangeDescription(from: event.date, to: event.endDate)
         if event.repeatOption != .never {
             text += " • \(getRepeatText())"
         }
         return text
     }
 
-    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return dateFormatter.string(from: startDate)
-        }
-
-        let calendar = Calendar.current
-        let now = calendar.startOfDay(for: Date())
-        let startOfStartDate = calendar.startOfDay(for: startDate)
-        let startOfEndDate = calendar.startOfDay(for: endDate)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate)
-
-        // Calculate total duration of the event (using start of days)
-        let duration =
-            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
-        let durationText = duration == 1 ? "day" : "days"
-
-        // If start date is after today, show duration
-        if startOfStartDate > now {
-            if calendar.isDate(startDate, inSameDayAs: endDate) {
-                return "\(startDateString) (\(duration) \(durationText))"
-            } else {
-                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
-            }
-        }
-
-        // For ongoing or past events, show days remaining
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
-
-        if calendar.isDate(startDate, inSameDayAs: endDate) {
-            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-        } else {
-            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
-        }
+    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
+        EventDateText.range(start: startDate, end: endDate, reference: Date())
     }
 }
 

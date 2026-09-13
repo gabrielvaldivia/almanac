@@ -227,7 +227,6 @@ struct SettingsView: View {
             }
         }
         .onAppear {
-            print("SettingsView appeared")
             appData.scheduleDailyNotification()
             selectedAppIcon = AppIconSelectionView.appIcons.first { $0.2 == UIApplication.shared.alternateIconName }?.1 ?? "Default"
         }
@@ -331,10 +330,8 @@ struct SettingsView: View {
             UIApplication.shared.setAlternateIconName(iconName) { error in
                 DispatchQueue.main.async {
                     if let error = error {
-                        print("Error changing app icon: \(error.localizedDescription)")
                         self.iconError = error.localizedDescription
                     } else {
-                        print("App icon successfully changed to: \(displayName)")
                         self.selectedAppIcon = displayName
                         UserDefaults.standard.set(displayName, forKey: "selectedAppIcon")
                         self.iconError = nil

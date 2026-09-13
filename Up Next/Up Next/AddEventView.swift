@@ -173,11 +173,7 @@ struct AddEventView: View {
         case .indefinitely:
             repeatUntilDate = nil
         case .after:
-            repeatUntilDate = calculateRepeatUntilDate(
-                for: dateOptions.repeatOption,
-                from: dateOptions.date,
-                count: dateOptions.repeatUntilCount,
-                repeatUnit: dateOptions.repeatUnit)
+            repeatUntilDate = nil
         case .onDate:
             repeatUntilDate = dateOptions.repeatUntil
         }

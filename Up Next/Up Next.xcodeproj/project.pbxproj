@@ -17,7 +17,6 @@
 		405920DD2C23B862008A9CF2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 405920A72C236123008A9CF2 /* WidgetKit.framework */; };
 		405920DE2C23B862008A9CF2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 405920A92C236123008A9CF2 /* SwiftUI.framework */; };
 		405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405920E02C23B862008A9CF2 /* UpNextWidgetBundle.swift */; };
-		405920E32C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405920E22C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift */; };
 		405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405920E42C23B862008A9CF2 /* UpNextWidget.swift */; };
 		405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405920E62C23B862008A9CF2 /* AppIntent.swift */; };
 		405920E92C23B863008A9CF2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 405920E82C23B863008A9CF2 /* Assets.xcassets */; };
@@ -67,6 +66,12 @@
 		9219A87CFE584617073DD910 /* CalendarDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */; };
 		6CCF9EA38B2B4B3C85DB7DA1 /* CalendarDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */; };
 		8C7DC69CE3A57680D6D442D0 /* CalendarDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FAD892E28928223EEDD471 /* CalendarDayTests.swift */; };
+		BCF7D80A4425E9276FE64049 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487029ABA0C58EE21B5F45AD /* Models.swift */; };
+		517DA08CD6454F1482740071 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487029ABA0C58EE21B5F45AD /* Models.swift */; };
+		C5750AEAC09F93CEE7CEBD3A /* EventDateText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F15DB237CB7B3AB52AB908 /* EventDateText.swift */; };
+		725322D05AE2D1288128E6C3 /* EventDateText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F15DB237CB7B3AB52AB908 /* EventDateText.swift */; };
+		CC9182531D1738A24CDA3558 /* CategoryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB6BE45AB276B462452E4155 /* CategoryStorage.swift */; };
+		50D2E8E2C2E8878372D99DD4 /* CategoryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB6BE45AB276B462452E4155 /* CategoryStorage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,7 +122,6 @@
 		405920A92C236123008A9CF2 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		405920DC2C23B862008A9CF2 /* UpNextWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UpNextWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		405920E02C23B862008A9CF2 /* UpNextWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpNextWidgetBundle.swift; sourceTree = "<group>"; };
-		405920E22C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpNextWidgetLiveActivity.swift; sourceTree = "<group>"; };
 		405920E42C23B862008A9CF2 /* UpNextWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpNextWidget.swift; sourceTree = "<group>"; };
 		405920E62C23B862008A9CF2 /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		405920E82C23B863008A9CF2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -159,6 +163,9 @@
 		52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/WidgetEvents.swift"; sourceTree = SOURCE_ROOT; };
 		B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/CalendarDay.swift"; sourceTree = SOURCE_ROOT; };
 		94FAD892E28928223EEDD471 /* CalendarDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/CalendarDayTests.swift"; sourceTree = SOURCE_ROOT; };
+		487029ABA0C58EE21B5F45AD /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/Models.swift"; sourceTree = SOURCE_ROOT; };
+		A2F15DB237CB7B3AB52AB908 /* EventDateText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/EventDateText.swift"; sourceTree = SOURCE_ROOT; };
+		EB6BE45AB276B462452E4155 /* CategoryStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/CategoryStorage.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,7 +217,6 @@
 			isa = PBXGroup;
 			children = (
 				405920E02C23B862008A9CF2 /* UpNextWidgetBundle.swift */,
-				405920E22C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift */,
 				405920E42C23B862008A9CF2 /* UpNextWidget.swift */,
 				4038EA9D2C33832400E0CE8E /* EventLoader.swift */,
 				405920E62C23B862008A9CF2 /* AppIntent.swift */,
@@ -224,6 +230,9 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				EB6BE45AB276B462452E4155 /* CategoryStorage.swift */,
+				A2F15DB237CB7B3AB52AB908 /* EventDateText.swift */,
+				487029ABA0C58EE21B5F45AD /* Models.swift */,
 				94FAD892E28928223EEDD471 /* CalendarDayTests.swift */,
 				B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */,
 				52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */,
@@ -408,8 +417,6 @@
 			);
 			mainGroup = 40790D652C23286B005DDC65;
 			packageReferences = (
-				402F757D2C4B383900036431 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
 			);
 			productRefGroup = 40790D6F2C23286B005DDC65 /* Products */;
 			projectDirPath = "";
@@ -464,6 +471,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50D2E8E2C2E8878372D99DD4 /* CategoryStorage.swift in Sources */,
+				725322D05AE2D1288128E6C3 /* EventDateText.swift in Sources */,
+				517DA08CD6454F1482740071 /* Models.swift in Sources */,
 				6CCF9EA38B2B4B3C85DB7DA1 /* CalendarDay.swift in Sources */,
 				62712D3B52A48220B59D8B89 /* WidgetEvents.swift in Sources */,
 				333981FF51AAA8898779B9EE /* Recurrence.swift in Sources */,
@@ -471,18 +481,10 @@
 				254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */,
 				A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */,
 				768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */,
-				21DC314ACD79AB19AFBCBC78 /* NotificationPlan.swift in Sources */,
-				40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */,
-				40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */,
-				405920E32C23B862008A9CF2 /* UpNextWidgetLiveActivity.swift in Sources */,
 				405920E72C23B862008A9CF2 /* AppIntent.swift in Sources */,
 				405920E52C23B862008A9CF2 /* UpNextWidget.swift in Sources */,
 				4038EA9F2C33832400E0CE8E /* EventLoader.swift in Sources */,
-				40109BFF2CBB6CA800962D7C /* CategoryForm.swift in Sources */,
 				405920E12C23B862008A9CF2 /* UpNextWidgetBundle.swift in Sources */,
-				40B4AEAB2CBB999B00E4719E /* RepeatOptions.swift in Sources */,
-				40595AFA2C4EB33A007CE39E /* CustomColorPickerSheet.swift in Sources */,
-				40595AFE2C4EBA8D007CE39E /* AppData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -490,6 +492,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC9182531D1738A24CDA3558 /* CategoryStorage.swift in Sources */,
+				C5750AEAC09F93CEE7CEBD3A /* EventDateText.swift in Sources */,
+				BCF7D80A4425E9276FE64049 /* Models.swift in Sources */,
 				9219A87CFE584617073DD910 /* CalendarDay.swift in Sources */,
 				023A9D682703DB452C78D9D9 /* WidgetEvents.swift in Sources */,
 				57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */,
@@ -941,24 +946,7 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		402F757D2C4B383900036431 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 7.1.0;
-			};
-		};
-		402F75842C4B394700036431 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/google-api-objectivec-client-for-rest.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
+
 	};
 	rootObject = 40790D662C23286B005DDC65 /* Project object */;
 }

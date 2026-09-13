@@ -256,7 +256,6 @@ struct ContentView: View {
             }
         )
         .onAppear {
-            print("ContentView appeared")
             appData.loadEvents()
             appData.loadCategories()
         }

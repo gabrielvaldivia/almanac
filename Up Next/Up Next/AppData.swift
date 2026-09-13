@@ -11,273 +11,6 @@ import SwiftUI
 import UserNotifications
 import WidgetKit
 
-// Model for an event
-struct Event: Identifiable, Codable, Equatable {
-    var id = UUID()
-    var title: String
-    var date: Date { didSet { calendarDay = CalendarDay(date) } }
-    var endDate: Date? { didSet { calendarEndDay = endDate.map { CalendarDay($0) } } }
-    var calendarDay: CalendarDay?
-    var calendarEndDay: CalendarDay?
-    var calendarSchemaVersion = 1
-    var color: CodableColor
-    var category: String?
-    var notificationsEnabled: Bool = true
-    var repeatOption: RepeatOption = .never
-    var repeatUntil: Date?
-    var seriesID: UUID?
-    var customRepeatCount: Int?
-    var repeatUnit: String?
-    var repeatUntilCount: Int?  // Added this line
-    var useCustomRepeatOptions: Bool = false
-    var recurrence: RecurrenceRule?
-    var occurrenceIndex: Int?
-    var isRecurrenceException = false
-
-    // Initializer for Event
-    init(
-        id: UUID = UUID(),
-        title: String,
-        date: Date,
-        endDate: Date? = nil,
-        color: CodableColor,
-        category: String? = nil,
-        notificationsEnabled: Bool = true,
-        repeatOption: RepeatOption = .never,
-        repeatUntil: Date? = nil,
-        seriesID: UUID? = nil,
-        customRepeatCount: Int? = nil,
-        repeatUnit: String? = nil,
-        repeatUntilCount: Int? = nil,
-        useCustomRepeatOptions: Bool = false
-    ) {
-        self.id = id
-        self.title = title
-        self.date = date
-        self.endDate = endDate
-        self.calendarDay = CalendarDay(date)
-        self.calendarEndDay = endDate.map { CalendarDay($0) }
-        self.color = color
-        self.category = category
-        self.notificationsEnabled = notificationsEnabled
-        self.repeatOption = repeatOption
-        self.repeatUntil = repeatUntil
-        self.seriesID = repeatOption == .never ? nil : seriesID
-        self.customRepeatCount = customRepeatCount
-        self.repeatUnit = repeatUnit
-        self.repeatUntilCount = repeatUntilCount
-        self.useCustomRepeatOptions = useCustomRepeatOptions
-        print("Event initialized: \(self)")
-    }
-
-    // Custom decoding to provide default values for new properties
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        title = try container.decode(String.self, forKey: .title)
-        let calendar = decoder.userInfo[.eventCalendar] as? Calendar ?? .current
-        let legacyDate = try container.decode(Date.self, forKey: .date)
-        let legacyEnd = try container.decodeIfPresent(Date.self, forKey: .endDate)
-        calendarDay = try container.decodeIfPresent(CalendarDay.self, forKey: .calendarDay) ?? CalendarDay(legacyDate, calendar: calendar)
-        calendarEndDay = try container.decodeIfPresent(CalendarDay.self, forKey: .calendarEndDay) ?? legacyEnd.map { CalendarDay($0, calendar: calendar) }
-        guard let resolved = calendarDay?.date(in: calendar) else {
-            throw DecodingError.dataCorruptedError(forKey: .calendarDay, in: container, debugDescription: "Invalid calendar date")
-        }
-        date = resolved
-        endDate = calendarEndDay?.date(in: calendar)
-        if calendarEndDay != nil && endDate == nil {
-            throw DecodingError.dataCorruptedError(forKey: .calendarEndDay, in: container, debugDescription: "Invalid end calendar date")
-        }
-        calendarSchemaVersion = try container.decodeIfPresent(Int.self, forKey: .calendarSchemaVersion) ?? 0
-        color = try container.decode(CodableColor.self, forKey: .color)
-        category = try container.decodeIfPresent(String.self, forKey: .category)
-        notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
-        repeatOption = try container.decodeIfPresent(RepeatOption.self, forKey: .repeatOption) ?? .never
-        repeatUntil = try container.decodeIfPresent(Date.self, forKey: .repeatUntil)
-        seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
-        customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1  // Default value
-        repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days"  // Default value
-        repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1  // Default value
-        useCustomRepeatOptions = try container.decodeIfPresent(Bool.self, forKey: .useCustomRepeatOptions) ?? false
-        recurrence = try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrence)
-        occurrenceIndex = try container.decodeIfPresent(Int.self, forKey: .occurrenceIndex)
-        isRecurrenceException = try container.decodeIfPresent(Bool.self, forKey: .isRecurrenceException) ?? false
-    }
-
-    // Coding keys for encoding and decoding
-    enum CodingKeys: String, CodingKey {
-        case id, title, date, endDate, color, category, notificationsEnabled, repeatOption,
-            repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount,
-            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException, calendarDay, calendarEndDay, calendarSchemaVersion
-    }
-
-    static func == (lhs: Event, rhs: Event) -> Bool {
-        return lhs.id == rhs.id
-    }
-}
-
-// A missing series ID must never match unrelated standalone events.
-enum CategoryName {
-    static func isValid(_ name: String, existing: [String], excluding original: String? = nil) -> Bool {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && !existing.contains {
-            $0 != original && $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
-        }
-    }
-}
-
-enum EventSeries {
-    static func members(of event: Event, in events: [Event]) -> [Event] {
-        guard let seriesID = event.seriesID else { return [] }
-        return events.filter { $0.seriesID == seriesID }
-    }
-
-    static func updating(_ selected: Event, with replacement: Event, in events: [Event], calendar: Calendar = .current) -> [Event] {
-        if selected.recurrence != nil { return Recurrence.updatingSeries(selected, with: replacement, in: events, calendar: calendar) }
-        return updatingLegacy(selected, with: replacement, in: events, calendar: calendar)
-    }
-
-    static func updatingLegacy(_ selected: Event, with replacement: Event, in events: [Event],
-                         calendar: Calendar = .current) -> [Event] {
-        guard let seriesID = selected.seriesID else { return events }
-        let members = self.members(of: selected, in: events).sorted {
-            $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date
-        }
-        guard let anchor = members.firstIndex(where: { $0.id == selected.id }) else { return events }
-        if replacement.repeatOption == .never {
-            var single = replacement
-            single.seriesID = nil
-            return events.compactMap { event in
-                event.id == selected.id ? single : (event.seriesID == seriesID ? nil : event)
-            }
-        }
-        let sameInterval = selected.repeatOption == replacement.repeatOption
-            && selected.customRepeatCount == replacement.customRepeatCount
-            && selected.repeatUnit == replacement.repeatUnit
-        let shift = calendar.dateComponents([.day], from: calendar.startOfDay(for: selected.date),
-                                             to: calendar.startOfDay(for: replacement.date)).day ?? 0
-        let duration = replacement.endDate.map {
-            calendar.dateComponents([.day], from: calendar.startOfDay(for: replacement.date),
-                                    to: calendar.startOfDay(for: $0)).day ?? 0
-        }
-        let component: Calendar.Component
-        let interval: Int
-        switch replacement.repeatOption {
-        case .daily: component = .day; interval = 1
-        case .weekly: component = .weekOfYear; interval = 1
-        case .monthly: component = .month; interval = 1
-        case .yearly: component = .year; interval = 1
-        case .custom:
-            interval = max(1, replacement.customRepeatCount ?? 1)
-            switch replacement.repeatUnit?.lowercased() {
-            case "weeks": component = .weekOfYear
-            case "months": component = .month
-            case "years": component = .year
-            default: component = .day
-            }
-        case .never: return events
-        }
-        var updates: [UUID: Event] = [:]
-        for (index, event) in members.enumerated() {
-            var updated = replacement
-            updated.id = event.id
-            updated.seriesID = seriesID
-            updated.date = sameInterval
-                ? calendar.date(byAdding: .day, value: shift, to: event.date) ?? event.date
-                : calendar.date(byAdding: component, value: (index - anchor) * interval,
-                                to: replacement.date) ?? event.date
-            updated.endDate = duration.flatMap { calendar.date(byAdding: .day, value: $0, to: updated.date) }
-            updates[event.id] = updated
-        }
-        return events.map { updates[$0.id] ?? $0 }
-    }
-
-    static func removing(_ event: Event, from events: [Event]) -> [Event] {
-        guard let seriesID = event.seriesID else { return events }
-        return events.filter { $0.seriesID != seriesID }
-    }
-}
-
-// Enum for repeat options
-enum RepeatOption: String, Codable, CaseIterable {
-    case never = "Never"
-    case daily = "Daily"
-    case weekly = "Weekly"
-    case monthly = "Monthly"
-    case yearly = "Yearly"
-    case custom = "Custom"
-}
-
-// Enum for repeat until options
-enum RepeatUntilOption: String, Codable {
-    case indefinitely = "Indefinitely"
-    case after = "After"
-    case onDate = "On Date"
-}
-
-// Model for category data
-struct CategoryData: Codable {
-    let name: String
-    let color: CodableColor
-    let repeatOption: RepeatOption
-    let showRepeatOptions: Bool
-    let customRepeatCount: Int
-    let repeatUnit: String
-    let repeatUntilOption: RepeatUntilOption
-    let repeatUntilCount: Int
-    let repeatUntil: Date
-}
-
-// Model for a color that can be encoded and decoded
-struct CodableColor: Codable {
-    var red: Double
-    var green: Double
-    var blue: Double
-    var opacity: Double
-
-    var color: Color {
-        Color(red: red, green: green, blue: blue, opacity: opacity)
-    }
-
-    // Initializer for CodableColor
-    init(color: Color) {
-        if let components = UIColor(color).cgColor.components {
-            self.red = Double(components[0])
-            self.green = Double(components[1])
-            self.blue = Double(components[2])
-            self.opacity = Double(components[3])
-        } else {
-            self.red = 0
-            self.green = 0
-            self.blue = 0
-            self.opacity = 1
-        }
-    }
-
-    // Custom decoding for CodableColor
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        red = try container.decode(Double.self, forKey: .red)
-        green = try container.decode(Double.self, forKey: .green)
-        blue = try container.decode(Double.self, forKey: .blue)
-        opacity = try container.decode(Double.self, forKey: .opacity)
-    }
-
-    // Custom encoding for CodableColor
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(red, forKey: .red)
-        try container.encode(green, forKey: .green)
-        try container.encode(blue, forKey: .blue)
-        try container.encode(opacity, forKey: .opacity)
-    }
-
-    // Coding keys for encoding and decoding
-    enum CodingKeys: String, CodingKey {
-        case red, green, blue, opacity
-    }
-}
-
 // Main class for managing app data
 class AppData: NSObject, ObservableObject {
     static let shared = AppData()  // Singleton instance
@@ -297,7 +30,7 @@ class AppData: NSObject, ObservableObject {
     {
         didSet {
             if isDataLoaded {
-                saveCategories()
+                if !isLoadingCategories { saveCategories() }
             }
         }
     }
@@ -314,7 +47,6 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 AppPreferences.saveReminderTime(notificationTime)
-                saveState()
                 scheduleDailyNotification()
             }
         }
@@ -387,8 +119,12 @@ class AppData: NSObject, ObservableObject {
         loadSubscriptionProduct()
     }
 
+    @Published var categoryStorageError: String?
+    private var isLoadingCategories = false
+
     // Function to save categories to UserDefaults
     func saveCategories() {
+        guard categoryStorageError == nil else { return }
         let categoryData = categories.map {
             CategoryData(
                 name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption,
@@ -396,16 +132,20 @@ class AppData: NSObject, ObservableObject {
                 repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption,
                 repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil)
         }
-        encodeToUserDefaults(
-            categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
-        WidgetCenter.shared.reloadAllTimelines()
+        do {
+            try CategoryStorage.save(categoryData)
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch { categoryStorageError = "Categories could not be saved. The original data is preserved. \(error.localizedDescription)" }
     }
 
     // Function to load categories from UserDefaults
     func loadCategories() {
-        if let decoded: [CategoryData] = decodeFromUserDefaults(
-            [CategoryData].self, forKey: "categories", suiteName: "group.UpNextIdentifier")
-        {
+        isLoadingCategories = true
+        defer { isLoadingCategories = false }
+        guard let data = AppPreferences.shared.data(forKey: "categories") else { return }
+        do {
+            let decoded = try CategoryStorage.decode(data)
+            categoryStorageError = nil
             self.categories = decoded.map { categoryData in
                 return (
                     name: categoryData.name, color: categoryData.color.color,
@@ -417,43 +157,16 @@ class AppData: NSObject, ObservableObject {
                     repeatUntil: categoryData.repeatUntil
                 )
             }
-        } else {
-            self.categories = [
-                ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
-                ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
-                ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
-                ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date()),
-            ]
+        } catch {
+            if AppPreferences.shared.data(forKey: "categories.preservedOriginal") == nil {
+                AppPreferences.shared.set(data, forKey: "categories.preservedOriginal")
+            }
+            categoryStorageError = "Categories could not be read. Editing is paused and the original data is preserved. \(error.localizedDescription)"
         }
-
-        notificationTime = AppPreferences.reminderTime()
     }
 
     // Function to filter events based on selected category
-    func filteredEvents(selectedCategoryFilter: String?) -> [Event] {
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        var allEvents = [Event]()
 
-        for event in events {
-            if let filter = selectedCategoryFilter {
-                if event.category == filter
-                    && (event.date >= startOfToday
-                        || (event.endDate != nil && event.endDate! >= startOfToday))
-                {
-                    allEvents.append(event)
-                }
-            } else {
-                if event.date >= startOfToday
-                    || (event.endDate != nil && event.endDate! >= startOfToday)
-                {
-                    allEvents.append(event)
-                }
-            }
-        }
-
-        return allEvents.sorted { $0.date < $1.date }
-    }
 
     @Published var storageError: String?
     private let eventStore = EventStore()
@@ -529,32 +242,13 @@ class AppData: NSObject, ObservableObject {
     func waitForNotifications() async { await notificationTask?.value }
 
     // Function to get today's events
-    func getTodayEvents() -> [Event] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
 
-        let todayEvents = events.filter { event in
-            let eventStartOfDay = calendar.startOfDay(for: event.date)
-            return eventStartOfDay >= today && eventStartOfDay < tomorrow
-        }
-
-        return todayEvents
-    }
 
     // Function to save state to UserDefaults
-    func saveState() {
-        AppPreferences.saveReminderTime(notificationTime)
-    }
+
 
     // Function to remove notification for an event
-    func removeNotification(for event: Event) {
-        let center = UNUserNotificationCenter.current()
-        let identifier = event.id.uuidString
-        print("Removing notification for event ID: \(identifier)")
-        center.removePendingNotificationRequests(withIdentifiers: [identifier])
-        center.removeDeliveredNotifications(withIdentifiers: [identifier])
-    }
+
 
     // Function to add a new event
     func addEvent(_ event: Event) {
@@ -571,36 +265,22 @@ class AppData: NSObject, ObservableObject {
     }
 
     // Function to update event colors when a category color is changed
-    func updateEventColors(forCategory category: String, from oldColor: Color, to newColor: Color) {
-        for index in events.indices {
-            if events[index].category == category {
-                events[index].color = CodableColor(color: newColor)
-            }
-        }
-        saveEvents()
-    }
+
 
     // Function to update events when a category is edited
     func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
         if defaultCategory == oldName { defaultCategory = newName }
         var eventsUpdated = false
-        print("Total events: \(events.count)")
-        print("Searching for events with category: \(oldName)")
         for i in 0..<events.count {
-            print(
-                "Event \(i): title = \(events[i].title), category = \(events[i].category ?? "nil")")
             if events[i].category == oldName {
                 events[i].category = newName
                 events[i].color = CodableColor(color: newColor)
                 eventsUpdated = true
-                print("Updated event: \(events[i])")
             }
         }
         if eventsUpdated {
             saveEvents()
-            print("Events updated and saved.")
         } else {
-            print("No events updated.")
         }
     }
 
@@ -697,7 +377,6 @@ extension AppData: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) ->
             Void
     ) {
-        print("Notification will present: \(notification.request.content.body)")
         completionHandler([.banner, .sound])
     }
 
@@ -706,32 +385,8 @@ extension AppData: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if response.actionIdentifier == "VIEW_ACTION" {
-            print("Notification action triggered: \(response.actionIdentifier)")
         }
         completionHandler()
-    }
-}
-
-// Helper function to decode from UserDefaults
-private func decodeFromUserDefaults<T: Decodable>(
-    _ type: T.Type, forKey key: String, suiteName: String
-) -> T? {
-    if let sharedDefaults = UserDefaults(suiteName: suiteName),
-        let data = sharedDefaults.data(forKey: key)
-    {
-        let decoder = JSONDecoder()
-        return try? decoder.decode(type, from: data)
-    }
-    return nil
-}
-
-// Helper function to encode to UserDefaults
-private func encodeToUserDefaults<T: Encodable>(_ value: T, forKey key: String, suiteName: String) {
-    if let sharedDefaults = UserDefaults(suiteName: suiteName) {
-        let encoder = JSONEncoder()
-        if let encoded = try? encoder.encode(value) {
-            sharedDefaults.set(encoded, forKey: key)
-        }
     }
 }
 
@@ -746,7 +401,6 @@ func migrateUserDefaults() {
     {
         sharedDefaults?.set(oldEventsData, forKey: "events")
         defaults.removeObject(forKey: "events")
-        print("Migrated events to shared UserDefaults.")
     }
 
     // Migrate categories
@@ -755,15 +409,7 @@ func migrateUserDefaults() {
     {
         sharedDefaults?.set(oldCategoriesData, forKey: "categories")
         defaults.removeObject(forKey: "categories")
-        print("Migrated categories to shared UserDefaults.")
     }
 
     AppPreferences.migrate()
-}
-
-enum RepeatUnit: String, Codable {
-    case day = "day"
-    case week = "week"
-    case month = "month"
-    case year = "year"
 }

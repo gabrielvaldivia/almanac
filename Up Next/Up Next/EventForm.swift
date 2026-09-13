@@ -339,7 +339,6 @@ struct CategoryAndColorSection: View {
                             repeatUntilCount: newCategory.repeatUntilCount,
                             repeatUntil: newCategory.repeatUntil
                         ))
-                    appData.saveCategories()
                 }
             )
             .environmentObject(appData)

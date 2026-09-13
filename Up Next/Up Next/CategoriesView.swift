@@ -11,32 +11,6 @@ import UIKit
 import UserNotifications
 import WidgetKit
 
-extension Color {
-    func toHex() -> String? {
-        let components = UIColor(self).cgColor.components
-        let r: CGFloat = components?[0] ?? 0
-        let g: CGFloat = components?[1] ?? 0
-        let b: CGFloat = components?[2] ?? 0
-        return String(
-            format: "#%02lX%02lX%02lX", lroundf(Float(r * 255)), lroundf(Float(g * 255)),
-            lroundf(Float(b * 255)))
-    }
-}
-
-struct PresentingViewController: UIViewControllerRepresentable {
-    var onPresent: (UIViewController) -> Void
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        let viewController = UIViewController()
-        DispatchQueue.main.async {
-            self.onPresent(viewController)
-        }
-        return viewController
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
-
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingAddCategorySheet = false
@@ -59,6 +33,12 @@ struct CategoriesView: View {
 
     var body: some View {
         Form {
+            if let error = appData.categoryStorageError {
+                Section {
+                    Text(error).font(.footnote)
+                    Button("Retry Loading Categories") { appData.loadCategories() }
+                }
+            }
             // Categories section
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
@@ -113,7 +93,6 @@ struct CategoriesView: View {
                             repeatUntilCount: newCategory.repeatUntilCount,
                             repeatUntil: newCategory.repeatUntil
                         ))
-                    appData.saveCategories()
                 }
             )
             .environmentObject(appData)
@@ -131,7 +110,6 @@ struct CategoriesView: View {
                             $0.name == category.name
                         }) {
                             appData.categories[index] = updatedCategory
-                            appData.saveCategories()
                             appData.updateEventsForCategoryChange(
                                 oldName: category.name, newName: updatedCategory.name,
                                 newColor: updatedCategory.color)
@@ -151,6 +129,7 @@ struct CategoriesView: View {
     }
 
     private func removeCategory(at offsets: IndexSet) {
+        guard appData.categoryStorageError == nil else { return }
         let names = Set(offsets.compactMap { appData.categories.indices.contains($0) ? appData.categories[$0].name : nil })
         appData.categories.remove(atOffsets: offsets)
         for index in appData.events.indices where names.contains(appData.events[index].category ?? "") {
@@ -161,6 +140,7 @@ struct CategoriesView: View {
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
+        guard appData.categoryStorageError == nil else { return }
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }

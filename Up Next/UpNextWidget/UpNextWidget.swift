@@ -51,7 +51,7 @@ struct UpNextWidgetEntryView: View {
         var categoryColors: [String: Color] = [:]
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
             let data = sharedDefaults.data(forKey: "categories"),
-            let decoded = try? JSONDecoder().decode([CategoryData].self, from: data)
+            let decoded = try? CategoryStorage.decode(data)
         {
             for category in decoded {
                 categoryColors[category.name] = category.color.color
@@ -110,7 +110,7 @@ struct UpNextWidgetEntryView: View {
                                         .padding(.vertical, 1)
                                     VStack(alignment: .leading) {
                                         Text(
-                                            calculateTimeRemaining(
+                                            rangeDescription(
                                                 from: event.date, to: event.endDate)
                                         )
                                         .font(.caption)
@@ -187,7 +187,7 @@ struct UpNextWidgetEntryView: View {
                                                 .lineLimit(2)
                                                 .padding(.bottom, 0)
                                             Text(
-                                                calculateTimeRemaining(
+                                                rangeDescription(
                                                     from: event.date, to: event.endDate)
                                             )
                                             .foregroundColor(.gray)
@@ -249,7 +249,7 @@ struct UpNextWidgetEntryView: View {
                                                 .lineLimit(2)
                                                 .padding(.bottom, 1)
                                             Text(
-                                                calculateTimeRemaining(
+                                                rangeDescription(
                                                     from: event.date, to: event.endDate)
                                             )
                                             .foregroundColor(.gray)
@@ -272,7 +272,7 @@ struct UpNextWidgetEntryView: View {
                                 .font(.subheadline)
                                 .lineLimit(1)
                                 .padding(.bottom, 1)
-                            Text(calculateTimeRemaining(from: event.date, to: event.endDate))
+                            Text(rangeDescription(from: event.date, to: event.endDate))
                                 .foregroundColor(.gray)
                                 .font(.caption)
                         }
@@ -309,42 +309,8 @@ struct UpNextWidgetEntryView: View {
     }
 
     // Remove widget-specific implementation and use the shared one from Utilities
-    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return dateFormatter.string(from: startDate)
-        }
-
-        let calendar = Calendar.current
-        let now = calendar.startOfDay(for: entry.date)
-        let startOfStartDate = calendar.startOfDay(for: startDate)
-        let startOfEndDate = calendar.startOfDay(for: endDate)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate)
-
-        // Calculate total duration of the event (using start of days)
-        let duration =
-            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
-        let durationText = duration == 1 ? "day" : "days"
-
-        // If start date is after today, show duration
-        if startOfStartDate > now {
-            if calendar.isDate(startDate, inSameDayAs: endDate) {
-                return "\(startDateString) (\(duration) \(durationText))"
-            } else {
-                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
-            }
-        }
-
-        // For ongoing or past events, show days remaining
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
-
-        if calendar.isDate(startDate, inSameDayAs: endDate) {
-            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-        } else {
-            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
-        }
+    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
+        EventDateText.range(start: startDate, end: endDate, reference: entry.date)
     }
 }
 
@@ -409,7 +375,7 @@ struct NextEventWidgetEntryView: View {
                     .font(.subheadline.weight(.semibold)).foregroundStyle(event.color.color)
                 Spacer()
                 Text(event.title).font(.headline).lineLimit(3)
-                Text(calculateTimeRemaining(from: event.date, to: event.endDate))
+                Text(rangeDescription(from: event.date, to: event.endDate))
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Spacer()
@@ -421,42 +387,8 @@ struct NextEventWidgetEntryView: View {
         .widgetURL(entry.event.map { DeepLink.eventURL($0.id) } ?? URL(string: "upnext://home"))
     }
 
-    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return dateFormatter.string(from: startDate)
-        }
-
-        let calendar = Calendar.current
-        let now = calendar.startOfDay(for: entry.date)
-        let startOfStartDate = calendar.startOfDay(for: startDate)
-        let startOfEndDate = calendar.startOfDay(for: endDate)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate)
-
-        // Calculate total duration of the event (using start of days)
-        let duration =
-            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
-        let durationText = duration == 1 ? "day" : "days"
-
-        // If start date is after today, show duration
-        if startOfStartDate > now {
-            if calendar.isDate(startDate, inSameDayAs: endDate) {
-                return "\(startDateString) (\(duration) \(durationText))"
-            } else {
-                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
-            }
-        }
-
-        // For ongoing or past events, show days remaining
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
-
-        if calendar.isDate(startDate, inSameDayAs: endDate) {
-            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-        } else {
-            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
-        }
+    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
+        EventDateText.range(start: startDate, end: endDate, reference: entry.date)
     }
 }
 
