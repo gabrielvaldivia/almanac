@@ -46,9 +46,6 @@ struct SettingsView: View {
                     if let status = appData.notificationStatus {
                         Text(status).font(.footnote).foregroundStyle(.secondary)
                     }
-                    Button("Notification Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                    }
                 }
             }
 
