@@ -70,7 +70,7 @@ struct RepeatOptions: View {
                     HStack {
                         Text("Every")
                         Spacer()
-                        TextField("", value: $customRepeatCount, formatter: NumberFormatter())
+                        TextField("Interval", value: bounded($customRepeatCount, to: 1...1000), formatter: NumberFormatter())
                             .keyboardType(.numberPad)
                             .frame(width: 40)
                             .multilineTextAlignment(.center)
@@ -156,18 +156,18 @@ struct RepeatOptions: View {
                     
                     HStack {
                         HStack(spacing: 4) {
-                            TextField("", value: $repeatUntilCount, formatter: NumberFormatter())
+                            TextField("Occurrences", value: bounded($repeatUntilCount, to: 1...10000), formatter: NumberFormatter())
                                 .keyboardType(.numberPad)
                                 .frame(width: 20)
                                 .multilineTextAlignment(.leading)
                                 .foregroundColor(.primary)
-                            Text(repeatUntilCount > 1 ? repeatUnit : String(repeatUnit.dropLast()))
+                            Text(repeatUntilCount == 1 ? "occurrence" : "occurrences")
                         }
                         .foregroundColor(.gray)
                         
                         Spacer()
                         
-                        Stepper("", value: $repeatUntilCount, in: 1...100)
+                        Stepper("", value: $repeatUntilCount, in: 1...10000)
                             .labelsHidden()
                     }
                     .padding(.bottom, 6)
@@ -182,4 +182,8 @@ struct RepeatOptions: View {
                         }
         // .padding(.horizontal)
     }
+    private func bounded(_ binding: Binding<Int>, to range: ClosedRange<Int>) -> Binding<Int> {
+        Binding(get: { binding.wrappedValue }, set: { binding.wrappedValue = min(range.upperBound, max(range.lowerBound, $0)) })
+    }
+
 }

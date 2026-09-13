@@ -8,6 +8,17 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testInvalidRepeatIntervalsCannotCreateDuplicates() {
+        var event = makeEvent()
+        event.repeatOption = .custom
+        event.repeatUnit = "Days"
+        event.useCustomRepeatOptions = true
+        for interval in [0, -1, Int.max] {
+            event.customRepeatCount = interval
+            XCTAssertTrue(generateRepeatingEvents(for: event, repeatUntilOption: .indefinitely, showEndDate: false).isEmpty)
+        }
+    }
+
     func testWidgetLinksHaveValidatedRoutes() {
         let id = UUID()
         XCTAssertEqual(DeepLink(url: DeepLink.eventURL(id)), .event(id))

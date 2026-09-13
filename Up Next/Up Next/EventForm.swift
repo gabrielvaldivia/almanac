@@ -35,6 +35,9 @@ struct EventForm: View {
                         showCustomStartDatePicker: $showCustomStartDatePicker,
                         showCustomEndDatePicker: $showCustomEndDatePicker,
                         tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
+                    if let message = dateOptions.validationMessage {
+                        Text(message).font(.footnote).foregroundStyle(.red)
+                    }
                     CategoryAndColorSection(
                         categoryOptions: $categoryOptions,
                         showingAddCategorySheet: $showingAddCategorySheet,
@@ -105,7 +108,7 @@ struct DateSection: View {
                     CustomDatePicker(
                         selectedDate: $dateOptions.date,
                         showCustomDatePicker: $showCustomStartDatePicker, minimumDate: nil,
-                        onDateSelected: {}, onRemoveEndDate: nil, isEndDatePicker: false,
+                        onDateSelected: { dateOptions.endDate = max(dateOptions.date, dateOptions.endDate) }, onRemoveEndDate: nil, isEndDatePicker: false,
                         showEndDate: dateOptions.showEndDate
                     )
                     .presentationDetents([.medium])
@@ -129,11 +132,10 @@ struct DateSection: View {
                     .sheet(isPresented: $showCustomEndDatePicker) {
                         CustomDatePicker(
                             selectedDate: Binding(
-                                get: { self.tempEndDate ?? Date() },
+                                get: { self.tempEndDate ?? dateOptions.date },
                                 set: { self.tempEndDate = $0 }
                             ), showCustomDatePicker: $showCustomEndDatePicker,
-                            minimumDate: Calendar.current.date(
-                                byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date,
+                            minimumDate: dateOptions.date,
                             onDateSelected: {
                                 if let tempEndDate = tempEndDate {
                                     dateOptions.endDate = tempEndDate
@@ -169,11 +171,10 @@ struct DateSection: View {
                     .sheet(isPresented: $showCustomEndDatePicker) {
                         CustomDatePicker(
                             selectedDate: Binding(
-                                get: { self.tempEndDate ?? Date() },
+                                get: { self.tempEndDate ?? dateOptions.date },
                                 set: { self.tempEndDate = $0 }
                             ), showCustomDatePicker: $showCustomEndDatePicker,
-                            minimumDate: Calendar.current.date(
-                                byAdding: .day, value: 1, to: dateOptions.date) ?? dateOptions.date,
+                            minimumDate: dateOptions.date,
                             onDateSelected: {
                                 if let tempEndDate = tempEndDate {
                                     dateOptions.endDate = tempEndDate
@@ -416,7 +417,7 @@ struct CustomDatePicker: View {
         self.onRemoveEndDate = onRemoveEndDate
         self.isEndDatePicker = isEndDatePicker
         self.showEndDate = showEndDate
-        self._tempDate = State(initialValue: selectedDate.wrappedValue)
+        self._tempDate = State(initialValue: max(selectedDate.wrappedValue, minimumDate ?? Date.distantPast))
     }
 
     var body: some View {

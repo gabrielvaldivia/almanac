@@ -149,6 +149,8 @@ func decodeFromUserDefaults<T: Decodable>(
 func generateRepeatingEvents(
     for event: Event, repeatUntilOption: RepeatUntilOption, showEndDate: Bool
 ) -> [Event] {
+    guard event.repeatOption != .custom || (1...1000).contains(event.customRepeatCount ?? 1),
+          repeatUntilOption != .after || (1...10000).contains(event.repeatUntilCount ?? 1) else { return [] }
     var repeatingEvents = [Event]()
 
     // If no repetition is needed, return just the original event
@@ -225,7 +227,7 @@ func generateRepeatingEvents(
             }
         }
 
-        guard let validNextDate = nextDate else { break }
+        guard let validNextDate = nextDate, validNextDate > currentDate else { break }
 
         // Check if we've reached the until date
         if case .onDate = repeatUntilOption,

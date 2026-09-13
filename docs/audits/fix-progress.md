@@ -9,4 +9,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 5: Preferences use one shared store; migration preserves the latest settings and explicit None. Removed launch reset. Nine tests pass.
 - 6: Add form initializes once from its incoming category/date; shared form no longer overwrites None or colors on appearance. Explicit repeat edits preserve custom choices. App and widget build pass.
 - 7: Registered the widget URL scheme, validated routes, and wired Next Event to its event ID. Ten tests pass; simulator successfully opens upnext://addEvent.
-- 8–20: In progress.
+- 8: Bounded repeat inputs and generator guards prevent duplicate/nonadvancing loops; date ranges and whitespace titles are validated. Eleven tests pass.
+- 9–20: In progress.

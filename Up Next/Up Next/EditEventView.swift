@@ -34,6 +34,15 @@ public struct DateOptions {
     var showRepeatOptions: Bool
     var repeatUnit: String
     var customRepeatCount: Int
+
+    var validationMessage: String? {
+        let calendar = Calendar.current
+        if showEndDate && calendar.startOfDay(for: endDate) < calendar.startOfDay(for: date) { return "End date must be on or after the start date." }
+        if repeatOption == .custom && !(1...1000).contains(customRepeatCount) { return "Repeat interval must be between 1 and 1,000." }
+        if repeatOption != .never && repeatUntilOption == .after && !(1...10000).contains(repeatUntilCount) { return "Repeat count must be between 1 and 10,000." }
+        if repeatOption != .never && repeatUntilOption == .onDate && calendar.startOfDay(for: repeatUntil) < calendar.startOfDay(for: date) { return "Repeat end date must be on or after the start date." }
+        return nil
+    }
 }
 
 // Struct for category options
@@ -167,7 +176,7 @@ struct EditEventView: View {
                         }
                         .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
-                    .disabled(eventDetails.title.isEmpty)
+                    .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil)
                 }
             }
             .alert(isPresented: $viewState.showDeleteActionSheet) {
