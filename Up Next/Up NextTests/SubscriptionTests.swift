@@ -20,6 +20,7 @@ final class SubscriptionTests: XCTestCase {
         let product = try XCTUnwrap(products.first)
         guard case .success(let verification) = try await product.purchase(),
               case .verified(let transaction) = verification else { return XCTFail("Expected a verified test purchase") }
+        await transaction.finish()
         await appData.refreshSubscriptionStatus()
         XCTAssertTrue(appData.isSubscribed)
         let refundObserved = expectation(description: "The transaction listener removes the refunded entitlement")

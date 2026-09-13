@@ -32,6 +32,7 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 - The edit sheet could display the selected event but save using a placeholder event ID, silently leaving the original unchanged. Presentation and editing now use the selected event's identity. Category edit sheets also derive presentation from their selected category.
 - A failed notification request no longer prevents the remaining requests from being scheduled.
 - Failed event loading preserves existing reminders instead of replacing them with an empty plan. Preference refresh happens after successful loading.
+- A fresh CI run exposed stale refund entitlements. Verified revocations now override cached entitlement records, expired transactions are excluded, and older overlapping refreshes cannot overwrite newer state. The StoreKit test also finishes its purchase before requesting a refund, matching the app purchase lifecycle.
 - Category date decoding accepts legacy numeric dates and newer calendar-day values; unreadable category data is preserved and editing pauses.
 
 ## Verification
@@ -39,7 +40,7 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 - **26 unit/integration tests passed, zero failures**, including series deletion/editing, recurrence anchoring/refill/exceptions, storage recovery, preference migration, time zones, DST, notification capacity/reconciliation, timeline overlap, and widget boundaries.
 - The StoreKit test purchases a verified test subscription, confirms the entitlement, refunds it, and observes the app's transaction listener remove the entitlement. StoreKit changes are asynchronous; the test waits for the observed state change.
 - **Two UI tests passed, zero failures** on iOS 18.5 and again after final navigation changes on iOS 26.5: create/edit/relaunch/delete an event; create/rename/relaunch/reopen/delete a category.
-- **Release device build passed** for the app and widget extension, with no source warnings. This is an unsigned build, not a distribution archive.
+- **Release device builds passed** for the app and widget extension, including signing with the existing developer team. The signed update was installed in place and launched successfully on the connected iPhone (iOS 26.7); no uninstall was performed. This is a development-signed installation, not an App Store release.
 - All 16 alternate-icon identifiers were checked against the built Info.plist. The registered widget URL scheme was opened successfully in the simulator.
 - `git diff --check` passes. Tests use dedicated simulators and test-created records.
 
@@ -61,6 +62,6 @@ These are local iOS notifications. Each event day receives one nonrepeating summ
 
 Up to 64 upcoming event days are queued. Launch, activation, significant time changes, and best-effort background refresh replenish coverage; Settings displays the final scheduled date. iOS controls [background refresh timing](https://developer.apple.com/documentation/backgroundtasks/bgtaskrequest/earliestbegindate), so indefinite personalized delivery cannot be guaranteed when the app never opens and background execution is withheld.
 
-Physical-device delivery with the app closed, travel on a real device, VoiceOver, and production App Store purchases still need device verification. Install the updated build, open Almanac, enable notifications if needed, and check the scheduled-through date in Settings. The regression tests prove scheduling and state behavior; they do not prove delivery on the user's phone.
+Physical-device delivery with the app closed, travel on a real device, VoiceOver, and production App Store purchases still need device verification. The updated build has been installed and launched on the connected iPhone. Enable notifications if needed and check the scheduled-through date in Settings. The regression tests prove scheduling and state behavior; they do not prove delivery on the user's phone.
 
 All-day events retain their calendar day while traveling. Legacy timestamps migrate using the current device timezone because the old format did not save the original timezone. Legacy recurrence end dates are preserved unless existing occurrences prove the old end was ignored; ambiguous old data is not guessed. Pro is described as a supporter subscription, with existing app features remaining available.

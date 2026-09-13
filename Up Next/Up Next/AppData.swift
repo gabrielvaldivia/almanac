@@ -81,6 +81,8 @@ class AppData: NSObject, ObservableObject {
     @Published var isLoadingSubscription = false
     @Published var isPurchasing = false
     private var transactionListener: Task<Void, Never>?
+    private var revokedTransactionIDs: Set<UInt64> = []
+    private var entitlementRefreshRevision = 0
 
     var subscriptionPrice: String? {
         guard let product = subscriptionProduct else { return nil }
@@ -288,13 +290,17 @@ class AppData: NSObject, ObservableObject {
 
     @MainActor
     func refreshSubscriptionStatus() async {
+        entitlementRefreshRevision += 1
+        let revision = entitlementRefreshRevision
         var active = false
         for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result, transaction.productID == "AP0001", transaction.revocationDate == nil {
+            if case .verified(let transaction) = result, transaction.productID == "AP0001",
+               transaction.revocationDate == nil, !revokedTransactionIDs.contains(transaction.id),
+               transaction.expirationDate.map({ $0 > Date() }) ?? true {
                 active = true
             }
         }
-        isSubscribed = active
+        if revision == entitlementRefreshRevision { isSubscribed = active }
     }
 
     @MainActor
@@ -304,9 +310,11 @@ class AppData: NSObject, ObservableObject {
             for await result in Transaction.updates {
                 guard let self else { return }
                 if case .verified(let transaction) = result, transaction.productID == "AP0001" {
-                    await transaction.finish()
+                    // StoreKit's entitlement cache can lag behind a verified refund update.
+                    if transaction.revocationDate != nil { self.revokedTransactionIDs.insert(transaction.id) }
                     await self.refreshSubscriptionStatus()
                     self.subscriptionMessage = nil
+                    await transaction.finish()
                 }
             }
         }

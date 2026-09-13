@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, codex/audit-fixes]
 concurrency:
-  group: ios-${{ github.ref }}
+  group: ios-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   test:
