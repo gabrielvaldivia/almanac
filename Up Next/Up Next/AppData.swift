@@ -93,6 +93,19 @@ struct Event: Identifiable, Codable, Equatable {
     }
 }
 
+// A missing series ID must never match unrelated standalone events.
+enum EventSeries {
+    static func members(of event: Event, in events: [Event]) -> [Event] {
+        guard let seriesID = event.seriesID else { return [] }
+        return events.filter { $0.seriesID == seriesID }
+    }
+
+    static func removing(_ event: Event, from events: [Event]) -> [Event] {
+        guard let seriesID = event.seriesID else { return events }
+        return events.filter { $0.seriesID != seriesID }
+    }
+}
+
 // Enum for repeat options
 enum RepeatOption: String, Codable, CaseIterable {
     case never = "Never"

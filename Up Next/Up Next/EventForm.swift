@@ -365,7 +365,7 @@ struct DeleteSection: View {
     var body: some View {
         VStack {
             if let event = selectedEvent {
-                if event.repeatOption == .never {
+                if event.seriesID == nil {
                     Button("Delete Event") {
                         showDeleteActionSheet = true
                     }

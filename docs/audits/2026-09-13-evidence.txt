@@ -1,0 +1,55 @@
+Almanac audit evidence — 2026-09-13
+Commit: 2d24e8330d3ce122c6a5cbe6d8d52fe68f164943
+
+BUILD
+xcodebuild -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -configuration Debug -destination "generic/platform=iOS Simulator" -derivedDataPath /tmp/almanac-audit/DerivedData CODE_SIGNING_ALLOWED=NO build
+Result: BUILD SUCCEEDED (app and widget); no warning: or error: lines in successful build log.
+First attempt failed to resolve GitHub DNS in the sandbox; retry with network access succeeded.
+
+LOGIC REPRODUCTIONS
+CONFIRMED 1: Indefinite daily repeats materialize only 365 records, with no continuation
+CONFIRMED 2: Renaming a 365-event series from its first occurrence deletes 265 occurrences
+CONFIRMED 3: Converting a single event to daily creates no occurrences or series ID
+CONFIRMED 4: Delete Series on that converted event also removes unrelated events with nil series IDs
+CONFIRMED 5: Changing End Repeat to After 1 neither removes extra occurrences nor persists the count
+CONFIRMED 6: A noncontiguous series takes its next date from an unrelated adjacent event
+CONFIRMED 7: Every 0 days creates 365 duplicate occurrences on the same date
+CONFIRMED 8: Monthly January 31 repeats drift to March 28 after February clamping
+CONFIRMED 9: After 3 persists a termination date later than the third occurrence
+CONFIRMED 10: Reordering Work and Social then finishing edit merges both events into Social
+CONFIRMED 11: The initial list is empty despite later events; View More is inside the nonempty branch
+CONFIRMED 12: An ongoing event spanning the entire visible date window is excluded
+CONFIRMED 13: One malformed record prevents loading the whole event collection
+CONFIRMED 14: A subsequent save overwrites the failed collection with only the new event
+Completed 14 audit reproductions using extracted production methods and in-memory boundaries.
+
+SUPPLEMENTAL REPRODUCTIONS
+CONFIRMED: Overlapping B and C are both assigned lane 1, so their pills collide
+CONFIRMED: Ongoing events have no start index in the timeline and are never drawn
+CONFIRMED: A seven-day pill is 280 points wide while its seven day columns span 304
+CONFIRMED: Opening Add from Work selects its color but never copies Work into the category being saved
+CONFIRMED: A date-only event stored at New York midnight displays on the previous date in Los Angeles
+CONFIRMED: Migration moves the notification time out of the store still read by initialization
+CONFIRMED: Migration also removes the standard default-category preference; initialization never restores the shared value
+Completed 7 supplemental reproductions.
+
+IOS 26.5 SIMULATOR
+Fresh, isolated iPhone 16 simulator created under /tmp. App installed and launched successfully. No existing user simulator data used.
+Widget URL failure:
+An error was encountered processing the command (domain=LSApplicationWorkspaceErrorDomain, code=115):
+Simulator device failed to open upnext://addEvent.
+Underlying error (domain=LSApplicationWorkspaceErrorDomain, code=115):
+	The operation couldn’t be completed. (LSApplicationWorkspaceErrorDomain error 115.)
+
+COLOR PROBE
+UIColor(Color) returned four components for all 13 palette colors tested on iOS 26.5: black, white, gray, blue, indigo, purple, red, pink, yellow, orange, brown, green, teal. The suspected palette crash was not reproduced and is excluded from confirmed defects.
+
+BUILT CONFIGURATION
+Bundle identifier: ValdiviaWorks.Up-Next
+Registered URL schemes: only the Google OAuth callback; upnext is absent.
+Alternate-icon keys include TimeBotAppIcon and TimePieceAppIcon. Settings uses TimebotAppIcon and TimepieceAppIcon.
+
+SCOPE
+26 Swift files, approximately 5,900 lines. 18 Swift sources in the app target and 11 in the widget target, with overlap. Unit-test and UI-test target source lists are both empty.
+Production methods were extracted into standalone Swift harnesses, with in-memory event/default/widget boundaries and a fixed clock. These verify algorithms, not every UI gesture or physical-device delivery.
+Earlier notification review separately reproduced nine scheduling behaviors; see the main audit report for their combined recommendation.

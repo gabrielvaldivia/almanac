@@ -144,7 +144,7 @@ struct EditEventView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        if eventDetails.selectedEvent?.repeatOption == .never {
+                        if eventDetails.selectedEvent?.seriesID == nil {
                             applyChanges(to: .thisEvent)
                             showEditSheet = false
                         } else {
@@ -182,7 +182,7 @@ struct EditEventView: View {
                 )
             }
             .actionSheet(isPresented: $showUpdateActionSheet) {
-                if eventDetails.selectedEvent?.repeatOption != .never {
+                if eventDetails.selectedEvent?.seriesID != nil {
                     return ActionSheet(
                         title: Text("Update Event"),
                         message: Text(
@@ -237,7 +237,7 @@ struct EditEventView: View {
     // Function to delete a series of events
     func deleteSeries() {
         guard let event = eventDetails.selectedEvent else { return }
-        events.removeAll { $0.seriesID == event.seriesID }
+        events = EventSeries.removing(event, from: events)
         saveEvents()
         showEditSheet = false
     }
@@ -344,7 +344,11 @@ struct EditEventView: View {
                 events[index].repeatUnit = dateOptions.repeatUnit
             }
         case .allEvents:
-            let repeatingEvents = events.filter { $0.seriesID == event.seriesID }
+            guard event.seriesID != nil else {
+                applyChanges(to: .thisEvent)
+                return
+            }
+            let repeatingEvents = EventSeries.members(of: event, in: events)
             let repeatOption = dateOptions.repeatOption
 
             // Update the selected event

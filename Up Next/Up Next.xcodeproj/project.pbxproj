@@ -45,6 +45,7 @@
 		40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4C2C291BA0008AA61D /* EventRow.swift */; };
 		40FEEC512C292612008AA61D /* AddEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC502C292612008AA61D /* AddEventView.swift */; };
 		40FEEC532C292617008AA61D /* EditEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC522C292617008AA61D /* EditEventView.swift */; };
+		3300964BAEB5833E280B7B48 /* RegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D72B9A22B982535A34BD94F /* RegressionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +124,7 @@
 		40FEEC4C2C291BA0008AA61D /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
 		40FEEC502C292612008AA61D /* AddEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventView.swift; sourceTree = "<group>"; };
 		40FEEC522C292617008AA61D /* EditEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditEventView.swift; sourceTree = "<group>"; };
+		7D72B9A22B982535A34BD94F /* RegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RegressionTests.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,6 +190,7 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				7D72B9A22B982535A34BD94F /* RegressionTests.swift */,
 				40790D702C23286B005DDC65 /* Up Next */,
 				405920DF2C23B862008A9CF2 /* UpNextWidget */,
 				405920A62C236123008A9CF2 /* Frameworks */,
@@ -457,6 +460,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3300964BAEB5833E280B7B48 /* RegressionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
