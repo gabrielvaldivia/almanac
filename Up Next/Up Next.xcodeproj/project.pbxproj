@@ -62,6 +62,8 @@
 		333981FF51AAA8898779B9EE /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */; };
 		94B239855355F36008D77FAD /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */; };
 		57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B32FC648A00425681AAD1B /* TimelineLayout.swift */; };
+		023A9D682703DB452C78D9D9 /* WidgetEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */; };
+		62712D3B52A48220B59D8B89 /* WidgetEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -151,6 +153,7 @@
 		526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/Recurrence.swift"; sourceTree = SOURCE_ROOT; };
 		0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RecurrenceTests.swift"; sourceTree = SOURCE_ROOT; };
 		53B32FC648A00425681AAD1B /* TimelineLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/TimelineLayout.swift"; sourceTree = SOURCE_ROOT; };
+		52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/WidgetEvents.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -216,6 +219,7 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */,
 				53B32FC648A00425681AAD1B /* TimelineLayout.swift */,
 				0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */,
 				526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */,
@@ -453,6 +457,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				62712D3B52A48220B59D8B89 /* WidgetEvents.swift in Sources */,
 				333981FF51AAA8898779B9EE /* Recurrence.swift in Sources */,
 				799C08E9F4947E56A02212B7 /* EventStore.swift in Sources */,
 				254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */,
@@ -477,6 +482,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				023A9D682703DB452C78D9D9 /* WidgetEvents.swift in Sources */,
 				57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */,
 				375D6F82F4943D3207D9A79A /* Recurrence.swift in Sources */,
 				787B0AAD2805E72D9B040DFC /* EventStore.swift in Sources */,

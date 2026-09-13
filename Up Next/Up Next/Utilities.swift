@@ -11,9 +11,8 @@ import SwiftUI
 // Date Extensions
 extension Date {
     // Returns a relative date string compared to the current date or an optional end date
-    func relativeDate(to endDate: Date? = nil) -> String {
+    func relativeDate(to endDate: Date? = nil, now: Date = Date()) -> String {
         let calendar = Calendar.current
-        let now = Date()
         let startOfNow = calendar.startOfDay(for: now)
         let startOfSelf = calendar.startOfDay(for: self)
 

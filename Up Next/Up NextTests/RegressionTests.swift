@@ -8,6 +8,14 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testWidgetKeepsEventsThroughTheirLastCalendarDay() {
+        var event = makeEvent(day: 1); event.endDate = makeEvent(day: 2).date
+        let midday = makeEvent(day: 2).date.addingTimeInterval(12 * 3600)
+        XCTAssertEqual(WidgetEvents.upcoming([event], at: midday).count, 1)
+        XCTAssertTrue(WidgetEvents.upcoming([event], at: makeEvent(day: 3).date).isEmpty)
+        XCTAssertEqual(Calendar.current.component(.hour, from: WidgetEvents.entryDates(now: midday)[1]), 0)
+    }
+
     func testTimelineReusesOnlyNonoverlappingLanesAndClipsOngoingEvents() {
         var a = makeEvent("A", day: 1); a.endDate = makeEvent(day: 3).date
         var b = makeEvent("B", day: 2); b.endDate = makeEvent(day: 4).date

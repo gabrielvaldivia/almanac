@@ -17,4 +17,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 13: Saved recurrence rules distinguish end modes, anchor month/year dates, refill the horizon, and preserve occurrence IDs, exceptions, and deletions. Legacy end dates are preserved unless existing occurrences prove the old end was ignored. Added four recurrence tests; syntax check passes. Simulator validation pending while Xcode is being reinstalled.
 - 14: Timeline uses one deterministic interval layout, clips ongoing events at today, reuses only free lanes, and includes column spacing in widths. Added overlap regression; syntax check passes. Simulator validation pending Xcode reinstall.
 - 15: Native add/event/category/icon buttons, accessible names and color choices, bounded form sizing, and Reduce Motion support. Applied fixing-accessibility skill. Syntax check passes; device/VoiceOver validation pending Xcode reinstall.
-- 16–20: In progress.
+- 16: Widget entries advance at midnight, filter against their entry date, retain final-day events, use event colors, expose dynamic category options, and represent no event explicitly. Xcode reinstalled; all 20 tests pass, including items 13–15.
+- 17–20: In progress.

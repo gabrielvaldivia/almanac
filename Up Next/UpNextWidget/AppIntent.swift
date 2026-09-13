@@ -10,10 +10,12 @@ import AppIntents
 
 struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Configuration"
-    static var description = IntentDescription("This is an example widget.")
+    static var description = IntentDescription("Choose which category appears in this widget.")
 
-    @Parameter(title: "Category", default: "All Categories")
+    @Parameter(title: "Category", optionsProvider: CategoryOptionsProvider())
     var category: String
+
+    init() { category = "All Categories" }
 
     static var parameterSummary: some ParameterSummary {
         Summary("Show events for \(\.$category)") {
@@ -30,4 +32,8 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
         }
         return categories
     }
+}
+
+struct CategoryOptionsProvider: DynamicOptionsProvider {
+    func results() async throws -> [String] { ConfigurationAppIntent.options }
 }
