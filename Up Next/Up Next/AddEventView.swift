@@ -58,6 +58,7 @@ struct AddEventView: View {
         showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: false)
 
     @State private var useCustomRepeatOptions: Bool = false
+    @State private var hasInitialized = false
 
     var body: some View {
         NavigationView {
@@ -124,14 +125,24 @@ struct AddEventView: View {
             .presentationDetents([.medium, .large], selection: .constant(.medium))
         }
         .onAppear {
+            guard !hasInitialized else { return }
+            hasInitialized = true
             isTitleFocused = true
-            categoryOptions.selectedColor = CodableColor(color: .blue)
-            if selectedCategory == nil {
-                categoryOptions.selectedCategory =
-                    appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
-            } else if let category = appData.categories.first(where: { $0.name == selectedCategory }
-            ) {
+            eventDetails.title = newEventTitle
+            dateOptions.date = newEventDate
+            dateOptions.endDate = max(newEventDate, newEventEndDate)
+            dateOptions.showEndDate = showEndDate
+            categoryOptions.selectedCategory = selectedCategory ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
+            categoryOptions.selectedColor = selectedColor
+            if let category = appData.categories.first(where: { $0.name == categoryOptions.selectedCategory }) {
                 categoryOptions.selectedColor = CodableColor(color: category.color)
+                dateOptions.repeatOption = category.repeatOption
+                dateOptions.showRepeatOptions = category.repeatOption != .never
+                dateOptions.customRepeatCount = category.customRepeatCount
+                dateOptions.repeatUnit = category.repeatUnit
+                dateOptions.repeatUntilOption = category.repeatUntilOption
+                dateOptions.repeatUntilCount = category.repeatUntilCount
+                dateOptions.repeatUntil = category.repeatUntil
             }
         }
         .onDisappear {

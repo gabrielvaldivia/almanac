@@ -31,7 +31,7 @@ struct EventForm: View {
                     TitleSection(
                         newEventTitle: $eventDetails.title, isTitleFocused: _isTitleFocused)
                     DateSection(
-                        dateOptions: $dateOptions,
+                        dateOptions: $dateOptions, useCustomRepeatOptions: $useCustomRepeatOptions,
                         showCustomStartDatePicker: $showCustomStartDatePicker,
                         showCustomEndDatePicker: $showCustomEndDatePicker,
                         tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
@@ -54,19 +54,6 @@ struct EventForm: View {
     }
 
     private func setupInitialState() {
-        if categoryOptions.selectedCategory == nil {
-            categoryOptions.selectedCategory =
-                appData.defaultCategory.isEmpty ? nil : appData.defaultCategory
-            if categoryOptions.selectedColor.color == .blue {
-                categoryOptions.selectedColor = CodableColor(color: .blue)
-            }
-        } else if let category = appData.categories.first(where: {
-            $0.name == categoryOptions.selectedCategory
-        }) {
-            if categoryOptions.selectedColor.color == .blue {
-                categoryOptions.selectedColor = CodableColor(color: category.color)
-            }
-        }
         predefinedColors = CustomColorPickerSheet.predefinedColors
     }
 
@@ -96,6 +83,7 @@ struct TitleSection: View {
 
 struct DateSection: View {
     @Binding var dateOptions: DateOptions
+    @Binding var useCustomRepeatOptions: Bool
     @Binding var showCustomStartDatePicker: Bool
     @Binding var showCustomEndDatePicker: Bool
     @Binding var tempEndDate: Date?
@@ -206,6 +194,7 @@ struct DateSection: View {
                 // Repeat Button
                 Button(action: {
                     if dateOptions.showRepeatOptions {
+                        useCustomRepeatOptions = true
                         dateOptions.repeatOption = .never
                         dateOptions.showRepeatOptions = false
                     }
@@ -226,6 +215,7 @@ struct DateSection: View {
                             Menu {
                                 ForEach(RepeatOption.allCases, id: \.self) { option in
                                     Button(action: {
+                                        useCustomRepeatOptions = true
                                         dateOptions.repeatOption = option
                                         dateOptions.showRepeatOptions = option != .never
                                     }) {
@@ -245,13 +235,13 @@ struct DateSection: View {
 
             if dateOptions.showRepeatOptions {
                 RepeatOptions(
-                    repeatOption: $dateOptions.repeatOption,
-                    showRepeatOptions: $dateOptions.showRepeatOptions,
-                    customRepeatCount: $dateOptions.customRepeatCount,
-                    repeatUnit: $dateOptions.repeatUnit,
-                    repeatUntilOption: $dateOptions.repeatUntilOption,
-                    repeatUntilCount: $dateOptions.repeatUntilCount,
-                    repeatUntil: $dateOptions.repeatUntil
+                    repeatOption: manual(\.repeatOption),
+                    showRepeatOptions: manual(\.showRepeatOptions),
+                    customRepeatCount: manual(\.customRepeatCount),
+                    repeatUnit: manual(\.repeatUnit),
+                    repeatUntilOption: manual(\.repeatUntilOption),
+                    repeatUntilCount: manual(\.repeatUntilCount),
+                    repeatUntil: manual(\.repeatUntil)
                 )
                 // .padding(.horizontal)
             }
@@ -259,6 +249,10 @@ struct DateSection: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)
     }
+    private func manual<T>(_ key: WritableKeyPath<DateOptions, T>) -> Binding<T> {
+        Binding(get: { dateOptions[keyPath: key] }, set: { dateOptions[keyPath: key] = $0; useCustomRepeatOptions = true })
+    }
+
 }
 
 struct CategoryAndColorSection: View {
