@@ -327,7 +327,25 @@ class AppData: NSObject, ObservableObject {
 
     private var isDataLoaded = false
 
-    private var subscriptionProduct: Product?
+    @Published private(set) var subscriptionProduct: Product?
+    @Published var subscriptionMessage: String?
+    @Published var isLoadingSubscription = false
+    @Published var isPurchasing = false
+    private var transactionListener: Task<Void, Never>?
+
+    var subscriptionPrice: String? {
+        guard let product = subscriptionProduct else { return nil }
+        guard let period = product.subscription?.subscriptionPeriod else { return product.displayPrice }
+        let unit: String
+        switch period.unit {
+        case .day: unit = "day"
+        case .week: unit = "week"
+        case .month: unit = "month"
+        case .year: unit = "year"
+        @unknown default: return product.displayPrice
+        }
+        return "\(product.displayPrice) / \(period.value == 1 ? unit : "\(period.value) \(unit)s")"
+    }
 
     // Computed property for default category color
     var defaultCategoryColor: Color {
@@ -571,42 +589,80 @@ class AppData: NSObject, ObservableObject {
     }
 
     func loadSubscriptionProduct() {
-        Task {
+        Task { @MainActor in
+            guard !isLoadingSubscription else { return }
+            isLoadingSubscription = true
+            defer { isLoadingSubscription = false }
+            startTransactionListener()
+            await refreshSubscriptionStatus()
             do {
-                let products = try await Product.products(for: ["AP0001"])
-                if let product = products.first {
-                    self.subscriptionProduct = product
+                subscriptionProduct = try await Product.products(for: ["AP0001"]).first
+                subscriptionMessage = subscriptionProduct == nil ? "Subscription information is unavailable. Please try again." : nil
+            } catch { subscriptionMessage = error.localizedDescription }
+        }
+    }
+
+    @MainActor
+    func refreshSubscriptionStatus() async {
+        var active = false
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result, transaction.productID == "AP0001", transaction.revocationDate == nil {
+                active = true
+            }
+        }
+        isSubscribed = active
+    }
+
+    @MainActor
+    private func startTransactionListener() {
+        guard transactionListener == nil else { return }
+        transactionListener = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard let self else { return }
+                if case .verified(let transaction) = result, transaction.productID == "AP0001" {
+                    await transaction.finish()
+                    await self.refreshSubscriptionStatus()
+                    self.subscriptionMessage = nil
                 }
-            } catch {
-                print("Failed to load subscription product: \(error)")
             }
         }
     }
 
     func purchase() {
-        guard let product = subscriptionProduct else { return }
-        Task {
-            do {
-                let result = try await product.purchase()
-                switch result {
-                case .success(let verificationResult):
-                    switch verificationResult {
-                    case .verified(let transaction):
-                        await transaction.finish()
-                        isSubscribed = true
-                    case .unverified:
-                        print("Transaction unverified")
-                    }
-                case .userCancelled:
-                    print("User cancelled")
-                case .pending:
-                    print("Transaction pending")
-                @unknown default:
-                    break
-                }
-            } catch {
-                print("Failed to purchase: \(error)")
+        Task { @MainActor in
+            guard !isPurchasing else { return }
+            guard let product = subscriptionProduct else {
+                subscriptionMessage = "Load subscription information before purchasing."
+                return
             }
+            isPurchasing = true
+            subscriptionMessage = nil
+            defer { isPurchasing = false }
+            do {
+                switch try await product.purchase() {
+                case .success(let result):
+                    if case .verified(let transaction) = result {
+                        await transaction.finish()
+                        await refreshSubscriptionStatus()
+                    } else { subscriptionMessage = "The App Store could not verify this purchase. Please try restoring purchases." }
+                case .pending: subscriptionMessage = "Your purchase is awaiting approval. Your subscription will update automatically when approved."
+                case .userCancelled: break
+                @unknown default: subscriptionMessage = "The purchase could not be completed. Please try again."
+                }
+            } catch { subscriptionMessage = error.localizedDescription }
+        }
+    }
+
+    func restorePurchases() {
+        Task { @MainActor in
+            guard !isPurchasing else { return }
+            isPurchasing = true
+            defer { isPurchasing = false }
+            do {
+                try await AppStore.sync()
+                await refreshSubscriptionStatus()
+                subscriptionMessage = isSubscribed ? "Subscription restored." : "No active subscription was found."
+            } catch { subscriptionMessage = error.localizedDescription }
         }
     }
 

@@ -18,4 +18,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 14: Timeline uses one deterministic interval layout, clips ongoing events at today, reuses only free lanes, and includes column spacing in widths. Added overlap regression; syntax check passes. Simulator validation pending Xcode reinstall.
 - 15: Native add/event/category/icon buttons, accessible names and color choices, bounded form sizing, and Reduce Motion support. Applied fixing-accessibility skill. Syntax check passes; device/VoiceOver validation pending Xcode reinstall.
 - 16: Widget entries advance at midnight, filter against their entry date, retain final-day events, use event colors, expose dynamic category options, and represent no event explicitly. Xcode reinstalled; all 20 tests pass, including items 13–15.
-- 17–20: In progress.
+- 17: StoreKit observes verified transaction updates, refreshes entitlements, handles pending/cancel/error states, shows live price/period, supports restore and the native management sheet. Pro is described as supporter funding. App/widget build pass; StoreKit test transactions are covered in final validation.
+- 18–20: In progress.
