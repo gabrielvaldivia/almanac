@@ -27,6 +27,9 @@ struct Event: Identifiable, Codable, Equatable {
     var repeatUnit: String?
     var repeatUntilCount: Int?  // Added this line
     var useCustomRepeatOptions: Bool = false
+    var recurrence: RecurrenceRule?
+    var occurrenceIndex: Int?
+    var isRecurrenceException = false
 
     // Initializer for Event
     init(
@@ -79,13 +82,16 @@ struct Event: Identifiable, Codable, Equatable {
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days"  // Default value
         repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1  // Default value
         useCustomRepeatOptions = try container.decodeIfPresent(Bool.self, forKey: .useCustomRepeatOptions) ?? false
+        recurrence = try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrence)
+        occurrenceIndex = try container.decodeIfPresent(Int.self, forKey: .occurrenceIndex)
+        isRecurrenceException = try container.decodeIfPresent(Bool.self, forKey: .isRecurrenceException) ?? false
     }
 
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
         case id, title, date, endDate, color, category, notificationsEnabled, repeatOption,
             repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount,
-            useCustomRepeatOptions  // Added repeatUntilCount
+            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException
     }
 
     static func == (lhs: Event, rhs: Event) -> Bool {
@@ -109,7 +115,12 @@ enum EventSeries {
         return events.filter { $0.seriesID == seriesID }
     }
 
-    static func updating(_ selected: Event, with replacement: Event, in events: [Event],
+    static func updating(_ selected: Event, with replacement: Event, in events: [Event], calendar: Calendar = .current) -> [Event] {
+        if selected.recurrence != nil { return Recurrence.updatingSeries(selected, with: replacement, in: events, calendar: calendar) }
+        return updatingLegacy(selected, with: replacement, in: events, calendar: calendar)
+    }
+
+    static func updatingLegacy(_ selected: Event, with replacement: Event, in events: [Event],
                          calendar: Calendar = .current) -> [Event] {
         guard let seriesID = selected.seriesID else { return events }
         let members = self.members(of: selected, in: events).sorted {
@@ -418,7 +429,11 @@ class AppData: NSObject, ObservableObject {
 
     func loadEvents() {
         do {
-            events = try eventStore.load()
+            let loaded = try eventStore.load()
+            events = Recurrence.replenishing(loaded)
+            if events.count != loaded.count || loaded.contains(where: { $0.seriesID != nil && $0.recurrence == nil }) {
+                try eventStore.save(events)
+            }
             storageError = nil
         } catch {
             storageError = "Your saved events could not be read. The original data is preserved and saving is paused. \(error.localizedDescription)"
@@ -597,7 +612,7 @@ class AppData: NSObject, ObservableObject {
 
     func deleteEvent(_ event: Event) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
+            events = Recurrence.removingOccurrence(events[index], from: events)
             saveEvents()
         }
     }

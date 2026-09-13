@@ -19,7 +19,7 @@ struct Up_NextApp: App {
             ContentView()
                 .environmentObject(appData)
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { appData.scheduleDailyNotification() }
+                    if phase == .active { appData.loadEvents(); appData.scheduleDailyNotification() }
                     if phase == .background { scheduleRefresh() }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
@@ -31,7 +31,7 @@ struct Up_NextApp: App {
                 }
         }
         .backgroundTask(.appRefresh("com.almanac.reminders")) {
-            await MainActor.run { appData.scheduleDailyNotification(); scheduleRefresh() }
+            await MainActor.run { appData.loadEvents(); appData.scheduleDailyNotification(); scheduleRefresh() }
             await appData.waitForNotifications()
         }
     }

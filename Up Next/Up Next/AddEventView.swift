@@ -170,7 +170,7 @@ struct AddEventView: View {
         let repeatUntilDate: Date?
         switch dateOptions.repeatUntilOption {
         case .indefinitely:
-            repeatUntilDate = Calendar.current.date(byAdding: .year, value: 1, to: dateOptions.date)
+            repeatUntilDate = nil
         case .after:
             repeatUntilDate = calculateRepeatUntilDate(
                 for: dateOptions.repeatOption,
