@@ -1,6 +1,6 @@
 # Audit fixes and validation
 
-All 20 areas from the [ranked September 13 audit](2026-09-13.md) are implemented. The order below preserves the audit's impact-versus-effort ranking. Each area was committed and pushed separately; final integration fixes and regression coverage complete item 20.
+All 20 areas from the [ranked September 13 audit](2026-09-13.md) are implemented and merged into `main` through [PR #1](https://github.com/gabrielvaldivia/almanac/pull/1), merge commit `09764d4`. The order below preserves the audit's impact-versus-effort ranking. Each area was committed and pushed separately; final integration fixes and regression coverage complete item 20.
 
 The audit branch incorporates main’s concurrent quick-entry, timeline, and form changes from `3ad3cbc`. Merge resolutions retain that UI, including the removal of subscription controls, while preserving notification scheduling, storage protection, calendar-day recurrence, and identity-based editing. Work was isolated in `/private/tmp/almanac-fixes`; the original checkout was not modified.
 
@@ -25,7 +25,7 @@ The audit branch incorporates main’s concurrent quick-entry, timeline, and for
 | 17 | StoreKit tracks verified purchases/refunds and refreshes entitlements. Subscription controls remain removed, matching the concurrent main change. | `8a28a8f` |
 | 18 | Event and recurrence dates preserve calendar days while traveling; reminder preferences preserve local hour/minute. | `495afc7` |
 | 19 | Shared models/date formatting replace duplicate implementations; removed inactive code, Google dependencies, sample live activity, event-content logs, and widget app-form/StoreKit dependencies. | `e8e0a08` |
-| 20 | Activated unit/UI targets, added StoreKit configuration and CI, tested asynchronous scheduling and real editing flows, and fixed issues found during integration. | Final regression commit |
+| 20 | Activated unit/UI targets, added StoreKit configuration and CI, tested asynchronous scheduling and real editing flows, and fixed issues found during integration. | `2c916de` and integration follow-ups |
 
 ## Additional fixes found by regression tests
 
@@ -41,11 +41,12 @@ The audit branch incorporates main’s concurrent quick-entry, timeline, and for
 - **50 unit/integration tests passed, zero failures after merging main’s changes**, including quick-entry parsing/defaults, scrolling timeline layout, series deletion/editing, recurrence anchoring/refill/exceptions, storage recovery, preference migration, time zones, DST, notification capacity/reconciliation, and widget boundaries.
 - The StoreKit test purchases a verified test subscription, confirms the entitlement, refunds it, and observes the app's transaction listener remove the entitlement. StoreKit changes are asynchronous; the test waits for the observed state change.
 - **Two UI tests passed, zero failures** on iOS 18.5 after the combined merge (and before that on iOS 26.5): create/edit/relaunch/delete an event; create/rename/relaunch/reopen/delete a category.
-- **Release device builds passed** for the app and widget extension, including signing with the existing developer team. The signed update was installed in place and launched successfully on the connected iPhone (iOS 26.7); no uninstall was performed. This is a development-signed installation, not an App Store release.
+- **Release device builds passed** for the final app and widget extension, including signing with the existing developer team. The audit build through `73f2da4`, including the notification fixes, was installed in place and launched successfully on the connected iPhone (iOS 26.7); no uninstall was performed. The final combined build through `fc8e6bd` is signed and ready, but the phone disconnected before that additional update could be installed. These are development-signed builds, not App Store releases.
+- **All 16 quick-entry tests also passed with the test host explicitly set to UTC**, including the New York recurrence case across daylight saving.
 - All 16 alternate-icon identifiers were checked against the built Info.plist. The registered widget URL scheme was opened successfully in the simulator.
 - `git diff --check` passes. Tests use dedicated simulators and test-created records.
 
-Xcode 26.6's iOS 26.5 simulator rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. CI on Xcode 16.4 and 26.3 also exceeded the original state-change timeouts; downloaded diagnostics show delayed receipt synchronization and AppleMediaServices network timeouts. CI validation is pending the longer, bounded StoreKit waits. CI explicitly uses Xcode 26.3 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
+Xcode 26.6's iOS 26.4.1 and 26.5 simulators rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. CI on Xcode 16.4 and 26.3 also exceeded the original state-change timeouts; downloaded diagnostics show delayed receipt synchronization and AppleMediaServices network timeouts. The hosted StoreKit check remains an unresolved validation limitation. The final [CI run for `fc8e6bd`](https://github.com/gabrielvaldivia/almanac/actions/runs/34779732125) was still stalled at merge time, despite the full local suite passing. The test and its purchase/refund assertions remain enabled; a green hosted check is not claimed. CI explicitly uses Xcode 26.3 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
 
 Reproduce the complete suite with an available iOS 18.5 iPhone simulator:
 
@@ -63,6 +64,6 @@ These are local iOS notifications. Each event day receives one nonrepeating summ
 
 Up to 64 upcoming event days are queued. Launch, activation, significant time changes, and best-effort background refresh replenish coverage; Settings displays the final scheduled date. iOS controls [background refresh timing](https://developer.apple.com/documentation/backgroundtasks/bgtaskrequest/earliestbegindate), so indefinite personalized delivery cannot be guaranteed when the app never opens and background execution is withheld.
 
-Physical-device delivery with the app closed, travel on a real device, VoiceOver, and production App Store purchases still need device verification. The updated build has been installed and launched on the connected iPhone. Enable notifications if needed and check the scheduled-through date in Settings. The regression tests prove scheduling and state behavior; they do not prove delivery on the user's phone.
+Physical-device delivery with the app closed, travel on a real device, VoiceOver, and production App Store purchases still need device verification. The notification-fix audit build has been installed and launched on the iPhone; the later combined UI update awaits reconnection. Enable notifications if needed and check the scheduled-through date in Settings. The regression tests prove scheduling and state behavior; they do not prove delivery on the user's phone.
 
 All-day events retain their calendar day while traveling. Legacy timestamps migrate using the current device timezone because the old format did not save the original timezone. Legacy recurrence end dates are preserved unless existing occurrences prove the old end was ignored; ambiguous old data is not guessed. The concurrent main change removes subscription controls; existing app features remain available.
