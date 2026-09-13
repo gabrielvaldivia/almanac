@@ -8,6 +8,21 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testPreferencesMigrationPreservesLatestSettingsAndNone() {
+        let oldName = "test.legacy.\(UUID())", newName = "test.shared.\(UUID())"
+        let old = UserDefaults(suiteName: oldName)!, shared = UserDefaults(suiteName: newName)!
+        defer { old.removePersistentDomain(forName: oldName); shared.removePersistentDomain(forName: newName) }
+        shared.set("Work", forKey: "defaultCategory")
+        old.set("", forKey: "defaultCategory")
+        old.set(true, forKey: "dailyNotificationEnabled")
+        AppPreferences.migrate(from: old, to: shared)
+        XCTAssertEqual(shared.string(forKey: "defaultCategory"), "")
+        XCTAssertTrue(shared.bool(forKey: "dailyNotificationEnabled"))
+        AppPreferences.migrate(from: old, to: shared)
+        XCTAssertEqual(shared.string(forKey: "defaultCategory"), "")
+        XCTAssertNil(old.object(forKey: "defaultCategory"))
+    }
+
     func testCategoryNamesCannotMergeOrBeEmpty() {
         XCTAssertFalse(CategoryName.isValid("  ", existing: []))
         XCTAssertFalse(CategoryName.isValid(" work ", existing: ["Work", "Home"]))

@@ -49,6 +49,8 @@
 		590233A1ECFCD0624510B31F /* NotificationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */; };
 		21DC314ACD79AB19AFBCBC78 /* NotificationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */; };
 		3FB7FDD1DAF38F55B98B55E4 /* NotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */; };
+		EE7E13646416A9F1AC2F2B03 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D779FBF97208130751AAF53A /* AppPreferences.swift */; };
+		768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D779FBF97208130751AAF53A /* AppPreferences.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -130,6 +132,7 @@
 		7D72B9A22B982535A34BD94F /* RegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RegressionTests.swift"; sourceTree = SOURCE_ROOT; };
 		69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/NotificationPlan.swift"; sourceTree = SOURCE_ROOT; };
 		D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/NotificationTests.swift"; sourceTree = SOURCE_ROOT; };
+		D779FBF97208130751AAF53A /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/AppPreferences.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +198,7 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				D779FBF97208130751AAF53A /* AppPreferences.swift */,
 				D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */,
 				69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */,
 				7D72B9A22B982535A34BD94F /* RegressionTests.swift */,
@@ -424,6 +428,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */,
 				21DC314ACD79AB19AFBCBC78 /* NotificationPlan.swift in Sources */,
 				40E9844F2C2A1A06007FE92D /* Utilities.swift in Sources */,
 				40E984502C2A1C6D007FE92D /* CategoriesView.swift in Sources */,
@@ -443,6 +448,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE7E13646416A9F1AC2F2B03 /* AppPreferences.swift in Sources */,
 				590233A1ECFCD0624510B31F /* NotificationPlan.swift in Sources */,
 				4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */,
 				4061918B2C38FAA100BC3D4A /* SettingsView.swift in Sources */,

@@ -276,7 +276,7 @@ class AppData: NSObject, ObservableObject {
     @Published var defaultCategory: String = "" {
         didSet {
             if isDataLoaded {
-                UserDefaults.standard.set(defaultCategory, forKey: "defaultCategory")
+                AppPreferences.shared.set(defaultCategory, forKey: "defaultCategory")
                 objectWillChange.send()  // Notify observers
             }
         }
@@ -286,28 +286,28 @@ class AppData: NSObject, ObservableObject {
     {
         didSet {
             if isDataLoaded {
-                UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+                AppPreferences.shared.set(notificationTime, forKey: "notificationTime")
                 saveState()
                 scheduleDailyNotification()
             }
         }
     }
-    @Published var dailyNotificationEnabled: Bool = UserDefaults.standard.bool(
+    @Published var dailyNotificationEnabled: Bool = AppPreferences.shared.bool(
         forKey: "dailyNotificationEnabled")
     {
         didSet {
             if isDataLoaded {
-                UserDefaults.standard.set(
+                AppPreferences.shared.set(
                     dailyNotificationEnabled, forKey: "dailyNotificationEnabled")
                 scheduleDailyNotification()
             }
         }
     }
-    @Published var eventStyle: String = UserDefaults.standard.string(forKey: "eventStyle") ?? "flat"
+    @Published var eventStyle: String = AppPreferences.shared.string(forKey: "eventStyle") ?? "flat"
     {
         didSet {
             if isDataLoaded {
-                UserDefaults.standard.set(eventStyle, forKey: "eventStyle")
+                AppPreferences.shared.set(eventStyle, forKey: "eventStyle")
             }
         }
     }
@@ -331,8 +331,10 @@ class AppData: NSObject, ObservableObject {
         super.init()
         migrateUserDefaults()  // Call the migration function
         loadCategories()
-        defaultCategory = ""  // Ensure no default category is set
-        if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
+        defaultCategory = AppPreferences.shared.string(forKey: "defaultCategory") ?? ""
+        dailyNotificationEnabled = AppPreferences.shared.bool(forKey: "dailyNotificationEnabled")
+        eventStyle = AppPreferences.shared.string(forKey: "eventStyle") ?? "flat"
+        if let savedTime = AppPreferences.shared.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
         }
         loadEvents()
@@ -379,7 +381,7 @@ class AppData: NSObject, ObservableObject {
             ]
         }
 
-        if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
+        if let savedTime = AppPreferences.shared.object(forKey: "notificationTime") as? Date {
             notificationTime = savedTime
         }
     }
@@ -576,7 +578,7 @@ class AppData: NSObject, ObservableObject {
 
     // Function to save state to UserDefaults
     func saveState() {
-        UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
+        AppPreferences.shared.set(notificationTime, forKey: "notificationTime")
     }
 
     // Function to remove notification for an event
@@ -757,23 +759,7 @@ func migrateUserDefaults() {
         print("Migrated categories to shared UserDefaults.")
     }
 
-    // Migrate notification time
-    if let oldNotificationTime = defaults.object(forKey: "notificationTime") as? Date,
-        sharedDefaults?.object(forKey: "notificationTime") == nil
-    {
-        sharedDefaults?.set(oldNotificationTime, forKey: "notificationTime")
-        defaults.removeObject(forKey: "notificationTime")
-        print("Migrated notification time to shared UserDefaults.")
-    }
-
-    // Migrate default category
-    if let oldDefaultCategory = defaults.string(forKey: "defaultCategory"),
-        sharedDefaults?.string(forKey: "defaultCategory") == nil
-    {
-        sharedDefaults?.set(oldDefaultCategory, forKey: "defaultCategory")
-        defaults.removeObject(forKey: "defaultCategory")
-        print("Migrated default category to shared UserDefaults.")
-    }
+    AppPreferences.migrate()
 }
 
 enum RepeatUnit: String, Codable {
