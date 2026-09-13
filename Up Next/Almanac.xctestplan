@@ -1,0 +1,39 @@
+{
+  "configurations": [
+    {
+      "id": "C9F3572C-2208-4972-909B-E5082C27497D",
+      "name": "Regression",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "targetForVariableExpansion": {
+      "containerPath": "container:Up Next.xcodeproj",
+      "identifier": "40790D6D2C23286B005DDC65",
+      "name": "Up Next"
+    },
+    "storeKitConfiguration": {
+      "path": "Up Next/Almanac Pro.storekit"
+    },
+    "testTimeoutsEnabled": true
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:Up Next.xcodeproj",
+        "identifier": "40790D7D2C23286C005DDC65",
+        "name": "Up NextTests"
+      },
+      "parallelizable": false
+    },
+    {
+      "target": {
+        "containerPath": "container:Up Next.xcodeproj",
+        "identifier": "40790D872C23286C005DDC65",
+        "name": "Up NextUITests"
+      },
+      "parallelizable": false
+    }
+  ],
+  "version": 1
+}

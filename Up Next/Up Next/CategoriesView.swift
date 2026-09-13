@@ -14,22 +14,11 @@ import WidgetKit
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingAddCategorySheet = false
-    @State private var newCategoryName = ""
-    @State private var newCategoryColor = Color.blue
-    @FocusState private var isCategoryNameFieldFocused: Bool
-    @State private var showingDeleteAllAlert = false
-    @State private var selectedCategory: String?
+    private struct CategorySelection: Identifiable {
+        let id: String
+    }
     @Environment(\.editMode) private var editMode
-    @State private var showingEditCategorySheet = false
-    @State private var categoryToEdit:
-        (
-            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-            repeatUntil: Date
-        )?
-    @State private var showColorPickerSheet = false
-    @State private var dailyNotificationTime = Date()
-    @State private var isNotificationEnabled = false
+    @State private var categoryToEdit: CategorySelection?
 
     var body: some View {
         Form {
@@ -43,8 +32,7 @@ struct CategoriesView: View {
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     Button {
-                        categoryToEdit = appData.categories[index]
-                        showingEditCategorySheet = true
+                        categoryToEdit = CategorySelection(id: appData.categories[index].name)
                     } label: {
                         HStack {
                             Text(appData.categories[index].name).foregroundStyle(.primary)
@@ -61,10 +49,6 @@ struct CategoriesView: View {
             HStack {
                 Button(action: {
                     showingAddCategorySheet = true
-                    newCategoryName = ""
-                    newCategoryColor = Color(
-                        red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9),
-                        blue: Double.random(in: 0.1...0.9))
                 }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -99,10 +83,10 @@ struct CategoriesView: View {
         }
 
         // Edit Category Sheet
-        .sheet(isPresented: $showingEditCategorySheet) {
-            if let category = categoryToEdit {
+        .sheet(item: $categoryToEdit) { selection in
+            if let category = appData.categories.first(where: { $0.name == selection.id }) {
                 CategoryForm(
-                    showingSheet: $showingEditCategorySheet,
+                    showingSheet: Binding(get: { categoryToEdit != nil }, set: { if !$0 { categoryToEdit = nil } }),
                     isEditing: true,
                     editingCategory: category,
                     onSave: { updatedCategory in
@@ -118,11 +102,6 @@ struct CategoriesView: View {
                     }
                 )
                 .environmentObject(appData)
-            }
-        }
-        .onChange(of: showingEditCategorySheet) { oldValue, newValue in
-            if !newValue {
-                categoryToEdit = nil  // Reset categoryToEdit when sheet is dismissed
             }
         }
 

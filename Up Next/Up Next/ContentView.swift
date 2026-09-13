@@ -92,8 +92,10 @@ struct ContentView: View {
     @State private var newEventDate: Date = Date()
     @State private var newEventEndDate: Date = Date()
     @State private var showAddEventSheet: Bool = false
-    @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
+    private var editSheetPresented: Binding<Bool> {
+        Binding(get: { selectedEvent != nil }, set: { if !$0 { selectedEvent = nil } })
+    }
     @State private var showEndDate: Bool = false
     @State private var showPastEventsView: Bool = false
     @State private var selectedCategoryFilter: String? = nil
@@ -159,8 +161,11 @@ struct ContentView: View {
         .sheet(isPresented: $showAddEventSheet) {
             addEventSheet
         }
-        .sheet(isPresented: $showEditSheet) {
-            editEventSheet
+        .sheet(item: $selectedEvent) { event in
+            EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
+                          showEditSheet: editSheetPresented,
+                          saveEvents: appData.saveEvents)
+                .id(event.id)
         }
     }
 
@@ -291,17 +296,6 @@ struct ContentView: View {
         .focused($isFocused)
     }
 
-    private var editEventSheet: some View {
-        EditEventView(
-            events: $appData.events,
-            selectedEvent: $selectedEvent,
-            showEditSheet: $showEditSheet,
-            saveEvents: appData.saveEvents
-        )
-        .environmentObject(appData)
-        .focused($isFocused)
-    }
-
     private func monthSection(month: Date, events: [Event]) -> some View {
         VStack(alignment: .leading) {
             Text(itemDateFormatter.string(from: month))
@@ -395,12 +389,9 @@ struct ContentView: View {
                         newEventEndDate: $newEventEndDate,
                         showEndDate: $showEndDate,
                         selectedCategory: $selectedCategory,
-                        showEditSheet: $showEditSheet,
+                        showEditSheet: editSheetPresented,
                         categories: simplifiedCategories
                     )
-                    .onTapGesture {
-                        selectEvent(event)
-                    }
                     .listRowSeparator(.hidden)
                 }
             }
@@ -440,7 +431,7 @@ struct ContentView: View {
     func handleOpenURL(_ url: URL) {
         guard let link = DeepLink(url: url) else { return }
         showAddEventSheet = false
-        showEditSheet = false
+        selectedEvent = nil
         switch link {
         case .addEvent:
             newEventTitle = ""
@@ -452,7 +443,6 @@ struct ContentView: View {
         case .event(let id):
             if let event = appData.events.first(where: { $0.id == id }) {
                 selectedEvent = event
-                showEditSheet = true
             }
         case .home: selectedCategoryFilter = nil
         }

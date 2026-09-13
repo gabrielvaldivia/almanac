@@ -165,14 +165,10 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
-    // Function to filter events based on selected category
-
-
     @Published var storageError: String?
     private let eventStore = EventStore()
 
     func loadEvents() {
-        notificationTime = AppPreferences.reminderTime()
         do {
             let loaded = try eventStore.load()
             events = Recurrence.replenishing(loaded).map { event in
@@ -182,6 +178,7 @@ class AppData: NSObject, ObservableObject {
                 try eventStore.save(events)
             }
             storageError = nil
+            notificationTime = AppPreferences.reminderTime()
         } catch {
             storageError = "Your saved events could not be read. The original data is preserved and saving is paused. \(error.localizedDescription)"
         }
@@ -227,6 +224,10 @@ class AppData: NSObject, ObservableObject {
         let previous = notificationTask
         notificationTask = Task { @MainActor in
             await previous?.value
+            guard !enabled || storageError == nil else {
+                notificationStatus = "Existing reminders are preserved until your saved events can be read."
+                return
+            }
             let settings = await UNUserNotificationCenter.current().notificationSettings()
             let allowed = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
             let plan = enabled && allowed ? NotificationPlan.make(events: snapshot, hour: time.hour ?? 8, minute: time.minute ?? 0) : []
@@ -240,15 +241,6 @@ class AppData: NSObject, ObservableObject {
     }
 
     func waitForNotifications() async { await notificationTask?.value }
-
-    // Function to get today's events
-
-
-    // Function to save state to UserDefaults
-
-
-    // Function to remove notification for an event
-
 
     // Function to add a new event
     func addEvent(_ event: Event) {
@@ -264,9 +256,6 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
-    // Function to update event colors when a category color is changed
-
-
     // Function to update events when a category is edited
     func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
         if defaultCategory == oldName { defaultCategory = newName }
@@ -280,7 +269,6 @@ class AppData: NSObject, ObservableObject {
         }
         if eventsUpdated {
             saveEvents()
-        } else {
         }
     }
 

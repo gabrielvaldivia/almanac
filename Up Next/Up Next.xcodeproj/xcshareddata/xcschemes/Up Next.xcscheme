@@ -28,12 +28,10 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
-      <Testables>
-         <TestableReference skipped="NO">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="40790D7D2C23286C005DDC65" BuildableName="Up NextTests.xctest" BlueprintName="Up NextTests" ReferencedContainer="container:Up Next.xcodeproj"/>
-         </TestableReference>
-      </Testables>
+      shouldAutocreateTestPlan = "NO">
+      <TestPlans>
+         <TestPlanReference reference="container:Almanac.xctestplan" default="YES"/>
+      </TestPlans>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

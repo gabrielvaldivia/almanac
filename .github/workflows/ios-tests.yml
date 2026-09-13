@@ -1,0 +1,38 @@
+name: iOS regression tests
+on:
+  pull_request:
+  push:
+    branches: [main, codex/audit-fixes]
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select an available iPhone simulator
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          inventory = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))
+          devices = [device for runtime, group in inventory['devices'].items() if runtime.endswith('iOS-18-5') for device in group if device['name'].startswith('iPhone')]
+          if not devices:
+              raise SystemExit('No iPhone simulator is installed on this runner')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('ALMANAC_SIMULATOR=' + devices[0]['udid'] + '\n')
+          PY
+      - name: Build app and widgets and run unit and UI tests
+        run: |
+          xcodebuild -project 'Up Next/Up Next.xcodeproj' -scheme 'Up Next' \
+            -destination "platform=iOS Simulator,id=$ALMANAC_SIMULATOR" \
+            -resultBundlePath "$RUNNER_TEMP/AlmanacTests.xcresult" \
+            CODE_SIGN_IDENTITY=- test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iOS-test-results
+          path: ${{ runner.temp }}/AlmanacTests.xcresult

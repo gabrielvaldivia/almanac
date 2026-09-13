@@ -38,24 +38,40 @@ enum NotificationPlan {
     }
 }
 
+@MainActor
+protocol NotificationCenterClient {
+    func pendingRequests() async -> [UNNotificationRequest]
+    func add(_ request: UNNotificationRequest) async throws
+    func remove(identifiers: [String])
+}
+
+@MainActor
+private struct SystemNotificationCenter: NotificationCenterClient {
+    func pendingRequests() async -> [UNNotificationRequest] { await UNUserNotificationCenter.current().pendingNotificationRequests() }
+    func add(_ request: UNNotificationRequest) async throws { try await UNUserNotificationCenter.current().add(request) }
+    func remove(identifiers: [String]) { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers) }
+}
+
 /// Chaining tasks prevents older saves from overwriting a newer schedule across suspension points.
 @MainActor
 final class NotificationScheduler {
-    static let shared = NotificationScheduler()
+    static let shared = NotificationScheduler(center: SystemNotificationCenter())
+    private let center: any NotificationCenterClient
+    init(center: any NotificationCenterClient) { self.center = center }
     private var tail: Task<String?, Never>?
 
     func replace(with plan: [DailyReminder], calendar: Calendar = .current) async -> String? {
         let previous = tail
         let work = Task { () -> String? in
             _ = await previous?.value
-            let center = UNUserNotificationCenter.current()
-            let pending = await center.pendingNotificationRequests()
+            let pending = await center.pendingRequests()
             let desired = Set(plan.map(\.id))
             let obsolete = pending.filter {
                 ($0.identifier.hasPrefix("almanac.day.") && !desired.contains($0.identifier)) ||
                 $0.identifier == "dailyNotification" || UUID(uuidString: $0.identifier) != nil
             }.map(\.identifier)
-            center.removePendingNotificationRequests(withIdentifiers: obsolete)
+            center.remove(identifiers: obsolete)
+            var failure: String?
             for reminder in plan {
                 let content = UNMutableNotificationContent()
                 content.title = "You have \(reminder.titles.count) event\(reminder.titles.count == 1 ? "" : "s") today"
@@ -67,9 +83,9 @@ final class NotificationScheduler {
                 let request = UNNotificationRequest(identifier: reminder.id, content: content,
                     trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false))
                 do { try await center.add(request) }
-                catch { return error.localizedDescription }
+                catch { failure = error.localizedDescription }
             }
-            return nil
+            return failure
         }
         tail = work
         return await work.value

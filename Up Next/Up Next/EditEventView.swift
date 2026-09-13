@@ -306,6 +306,7 @@ struct EditEventView: View {
 
     private func setupInitialState() {
         if let event = selectedEvent {
+            eventDetails.selectedEvent = event
             eventDetails.title = event.title
             dateOptions.date = event.date
             dateOptions.endDate = event.endDate ?? event.date
