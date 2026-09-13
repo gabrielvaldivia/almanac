@@ -219,7 +219,7 @@ struct SettingsView: View {
         .onAppear {
             print("SettingsView appeared")
             appData.scheduleDailyNotification()
-            selectedAppIcon = UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
+            selectedAppIcon = AppIconSelectionView.appIcons.first { $0.2 == UIApplication.shared.alternateIconName }?.1 ?? "Default"
         }
     }
 
@@ -239,12 +239,12 @@ struct SettingsView: View {
 
     struct AppIconSelectionView: View {
         @Binding var selectedAppIcon: String
-        @State private var iconChangeSuccess: Bool?
+        @State private var iconError: String?
         @Environment(\.openURL) var openURL
         @Environment(\.dismiss) var dismiss
 
         // Updated app icons array with tuples (previewName, displayName, iconName, author)
-        let appIcons: [(String, String, String?, (String, String)?)] = [
+        static let appIcons: [(String, String, String?, (String, String)?)] = [
             ("DefaultPreview", "Default", nil, nil),
             ("DarkPreview", "Dark", "DarkAppIcon", nil),
             ("MonochromePreview", "Monochrome", "MonochromeAppIcon", nil),
@@ -273,11 +273,11 @@ struct SettingsView: View {
                 ("Pablo Stanley", "https://twitter.com/pablostanley")
             ),
             (
-                "TimeBotPreview", "Time Bot", "TimebotAppIcon",
+                "TimeBotPreview", "Time Bot", "TimeBotAppIcon",
                 ("Pablo Stanley", "https://twitter.com/pablostanley")
             ),
             (
-                "TimePiecePreview", "Time Piece", "TimepieceAppIcon",
+                "TimePiecePreview", "Time Piece", "TimePieceAppIcon",
                 ("Pablo Stanley", "https://twitter.com/pablostanley")
             ),
         ]
@@ -290,7 +290,7 @@ struct SettingsView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 16) {
-                        ForEach(appIcons, id: \.1) { icon in
+                        ForEach(Self.appIcons, id: \.1) { icon in
                             VStack(alignment: .center, spacing: 4) {
                                 Image(icon.0)
                                     .resizable()
@@ -327,6 +327,9 @@ struct SettingsView: View {
                     .padding()
                 }
             }
+            .alert("Couldn’t Change Icon", isPresented: Binding(get: { iconError != nil }, set: { if !$0 { iconError = nil } })) {
+                Button("OK") { iconError = nil }
+            } message: { Text(iconError ?? "") }
         }
 
         private func changeAppIcon(to iconName: String?, displayName: String) {
@@ -334,12 +337,12 @@ struct SettingsView: View {
                 DispatchQueue.main.async {
                     if let error = error {
                         print("Error changing app icon: \(error.localizedDescription)")
-                        self.iconChangeSuccess = false
+                        self.iconError = error.localizedDescription
                     } else {
                         print("App icon successfully changed to: \(displayName)")
                         self.selectedAppIcon = displayName
                         UserDefaults.standard.set(displayName, forKey: "selectedAppIcon")
-                        self.iconChangeSuccess = true
+                        self.iconError = nil
                     }
                 }
             }

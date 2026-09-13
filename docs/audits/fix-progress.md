@@ -11,4 +11,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 7: Registered the widget URL scheme, validated routes, and wired Next Event to its event ID. Ten tests pass; simulator successfully opens upnext://addEvent.
 - 8: Bounded repeat inputs and generator guards prevent duplicate/nonadvancing loops; date ranges and whitespace titles are validated. Eleven tests pass.
 - 9: All event writes go through AppData; saves refresh both widgets and reminders once. Removed redundant reloads and manual change notifications. App/widget build pass.
-- 10–20: In progress.
+- 10: Corrected Time Bot/Time Piece icon identifiers, show system icon-change errors, and read the actual selected icon. Build passes; all 16 alternate icon identifiers exist in the built Info.plist.
+- 11–20: In progress.
