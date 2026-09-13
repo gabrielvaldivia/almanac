@@ -14,6 +14,8 @@ struct CategoryForm: View {
     @State private var repeatUntilCount: Int
     @State private var repeatUntil: Date
 
+    private let originalName: String?
+
     var isEditing: Bool
     var onSave:
         (
@@ -40,6 +42,7 @@ struct CategoryForm: View {
         ) -> Void
     ) {
         self._showingSheet = showingSheet
+        self.originalName = editingCategory?.name
         self.isEditing = isEditing
         self.onSave = onSave
 
@@ -123,7 +126,7 @@ struct CategoryForm: View {
                     Button("Save") {
                         onSave(
                             (
-                                name: categoryName,
+                                name: categoryName.trimmingCharacters(in: .whitespacesAndNewlines),
                                 color: categoryColor,
                                 repeatOption: repeatOption,
                                 customRepeatCount: customRepeatCount,
@@ -134,7 +137,7 @@ struct CategoryForm: View {
                             ))
                         showingSheet = false
                     }
-                    .disabled(categoryName.isEmpty)
+                    .disabled(!CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName))
                 }
             }
         }

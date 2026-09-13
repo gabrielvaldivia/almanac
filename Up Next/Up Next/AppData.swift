@@ -94,6 +94,15 @@ struct Event: Identifiable, Codable, Equatable {
 }
 
 // A missing series ID must never match unrelated standalone events.
+enum CategoryName {
+    static func isValid(_ name: String, existing: [String], excluding original: String? = nil) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !existing.contains {
+            $0 != original && $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+        }
+    }
+}
+
 enum EventSeries {
     static func members(of event: Event, in events: [Event]) -> [Event] {
         guard let seriesID = event.seriesID else { return [] }
@@ -665,6 +674,7 @@ class AppData: NSObject, ObservableObject {
 
     // Function to update events when a category is edited
     func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
+        if defaultCategory == oldName { defaultCategory = newName }
         var eventsUpdated = false
         print("Total events: \(events.count)")
         print("Searching for events with category: \(oldName)")

@@ -8,6 +8,13 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testCategoryNamesCannotMergeOrBeEmpty() {
+        XCTAssertFalse(CategoryName.isValid("  ", existing: []))
+        XCTAssertFalse(CategoryName.isValid(" work ", existing: ["Work", "Home"]))
+        XCTAssertTrue(CategoryName.isValid("Work", existing: ["Work", "Home"], excluding: "Work"))
+        XCTAssertFalse(CategoryName.isValid("Home", existing: ["Work", "Home"], excluding: "Work"))
+    }
+
     func testMissingSeriesDoesNotSelectOrDeleteOtherEvents() {
         var converted = makeEvent("Converted")
         converted.repeatOption = .daily

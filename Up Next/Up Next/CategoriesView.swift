@@ -45,7 +45,6 @@ struct CategoriesView: View {
     @FocusState private var isCategoryNameFieldFocused: Bool
     @State private var showingDeleteAllAlert = false
     @State private var selectedCategory: String?
-    @State private var tempCategoryNames: [String] = []
     @Environment(\.editMode) private var editMode
     @State private var showingEditCategorySheet = false
     @State private var categoryToEdit:
@@ -64,27 +63,7 @@ struct CategoriesView: View {
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
                     HStack {
-                        if editMode?.wrappedValue == .active {
-                            TextField(
-                                "Category Name",
-                                text: Binding(
-                                    get: {
-                                        if self.tempCategoryNames.indices.contains(index) {
-                                            return self.tempCategoryNames[index]
-                                        }
-                                        return ""
-                                    },
-                                    set: {
-                                        if self.tempCategoryNames.indices.contains(index) {
-                                            self.tempCategoryNames[index] = $0
-                                        }
-                                    }
-                                ))
-                        } else {
-                            HStack {
-                                Text(self.appData.categories[index].name)
-                            }
-                        }
+                        Text(appData.categories[index].name)
                         Spacer()
                         Circle()
                             .fill(
@@ -176,91 +155,19 @@ struct CategoriesView: View {
             }
         }
 
-        .onAppear {
-            appData.loadCategories()
-            if appData.defaultCategory.isEmpty, let firstCategory = appData.categories.first?.name {
-                appData.defaultCategory = firstCategory
-            }
-        }
-        .onChange(of: editMode?.wrappedValue) { oldValue, newValue in
-            if newValue == .active {
-                tempCategoryNames = appData.categories.map { $0.name }
-            } else {
-                for index in appData.categories.indices {
-                    if index < tempCategoryNames.count {
-                        let oldName = appData.categories[index].name
-                        let newName = tempCategoryNames[index]
-                        if oldName != newName {
-                            appData.categories[index].name = newName
-                            updateEventsForCategoryChange(
-                                oldName: oldName, newName: newName,
-                                newColor: appData.categories[index].color)
-                        }
-                    }
-                }
-                appData.saveCategories()
-            }
-        }
     }
 
     private func removeCategory(at offsets: IndexSet) {
-        DispatchQueue.main.async {
-            if let index = offsets.first, index < self.appData.categories.count {
-                let removedCategory = self.appData.categories[index].name
-                self.appData.categories.remove(at: index)
-                appData.saveCategories()
-
-                if appData.defaultCategory == removedCategory {
-                    appData.defaultCategory = appData.categories.first?.name ?? ""
-                }
-            }
+        let names = Set(offsets.compactMap { appData.categories.indices.contains($0) ? appData.categories[$0].name : nil })
+        appData.categories.remove(atOffsets: offsets)
+        for index in appData.events.indices where names.contains(appData.events[index].category ?? "") {
+            appData.events[index].category = nil
         }
+        if names.contains(appData.defaultCategory) { appData.defaultCategory = "" }
+        appData.saveEvents()
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
-        DispatchQueue.main.async {
-            appData.categories.move(fromOffsets: source, toOffset: destination)
-        }
-    }
-
-    private func updateDailyNotificationTime(_ time: Date) {
-        let content = UNMutableNotificationContent()
-        content.title = "Today's events"
-
-        let todayEvents = appData.getTodayEvents()
-        let eventTitles = todayEvents.map { $0.title }.joined(separator: ", ")
-        content.body = eventTitles.isEmpty ? "No events due today." : eventTitles
-        content.sound = .default
-
-        let dateComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-
-        let request = UNNotificationRequest(
-            identifier: "dailyNotification", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error)")
-            }
-        }
-    }
-
-    private func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
-        for i in 0..<appData.events.count {
-            if appData.events[i].category == oldName {
-                appData.events[i].category = newName
-                appData.events[i].color = CodableColor(color: newColor)
-            }
-        }
-        appData.objectWillChange.send()
-        appData.saveEvents()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
-    }
-
-    private func deleteAllEvents() {
-        appData.objectWillChange.send()
-        appData.events.removeAll()
-        appData.saveEvents()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
+        appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }
