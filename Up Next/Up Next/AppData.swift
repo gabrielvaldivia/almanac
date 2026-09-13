@@ -555,9 +555,7 @@ class AppData: NSObject, ObservableObject {
             let error = await NotificationScheduler.shared.replace(with: plan)
             if let error { notificationStatus = "Could not schedule reminders: \(error)" }
             else if enabled && !allowed { notificationStatus = "Notifications are blocked. Enable them in iOS Settings." }
-            else if enabled, let last = plan.last {
-                notificationStatus = "Reminders scheduled through \(last.date.formatted(date: .abbreviated, time: .omitted)). Open Almanac periodically to keep reminders current."
-            } else { notificationStatus = enabled ? "No upcoming reminders to schedule." : nil }
+            else { notificationStatus = enabled && plan.isEmpty ? "No upcoming reminders to schedule." : nil }
         }
     }
 

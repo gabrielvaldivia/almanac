@@ -55,6 +55,11 @@
 		A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */; };
 		25168B30958C3883582A3A8B /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
 		254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
+		A109BF600000000000000002 /* QuickEventParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000001 /* QuickEventParser.swift */; };
+		A109BF600000000000000004 /* NewEventDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000003 /* NewEventDraft.swift */; };
+		A109BF600000000000000006 /* QuickEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000005 /* QuickEventTests.swift */; };
+		D31E01000000000000000002 /* EventTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000001 /* EventTimelineView.swift */; };
+		D31E01000000000000000004 /* TimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000003 /* TimelineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -139,6 +144,11 @@
 		D779FBF97208130751AAF53A /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/AppPreferences.swift"; sourceTree = SOURCE_ROOT; };
 		9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/DeepLink.swift"; sourceTree = SOURCE_ROOT; };
 		AA4E2B1300420E0C57E87638 /* EventWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/EventWindow.swift"; sourceTree = SOURCE_ROOT; };
+		A109BF600000000000000001 /* QuickEventParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/QuickEventParser.swift"; sourceTree = SOURCE_ROOT; };
+		A109BF600000000000000003 /* NewEventDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/NewEventDraft.swift"; sourceTree = SOURCE_ROOT; };
+		A109BF600000000000000005 /* QuickEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/QuickEventTests.swift"; sourceTree = SOURCE_ROOT; };
+		D31E01000000000000000001 /* EventTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/EventTimelineView.swift"; sourceTree = SOURCE_ROOT; };
+		D31E01000000000000000003 /* TimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/TimelineTests.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,12 +214,16 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				A109BF600000000000000005 /* QuickEventTests.swift */,
+				A109BF600000000000000003 /* NewEventDraft.swift */,
+				A109BF600000000000000001 /* QuickEventParser.swift */,
 				AA4E2B1300420E0C57E87638 /* EventWindow.swift */,
 				9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */,
 				D779FBF97208130751AAF53A /* AppPreferences.swift */,
 				D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */,
 				69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */,
 				7D72B9A22B982535A34BD94F /* RegressionTests.swift */,
+				D31E01000000000000000003 /* TimelineTests.swift */,
 				40790D702C23286B005DDC65 /* Up Next */,
 				405920DF2C23B862008A9CF2 /* UpNextWidget */,
 				405920A62C236123008A9CF2 /* Frameworks */,
@@ -235,6 +249,7 @@
 				405920F12C23B87A008A9CF2 /* Up Next.entitlements */,
 				40790D712C23286B005DDC65 /* Up_NextApp.swift */,
 				40790D732C23286B005DDC65 /* ContentView.swift */,
+				D31E01000000000000000001 /* EventTimelineView.swift */,
 				40549BC12C290E9300DA0EB6 /* PastEventsView.swift */,
 				405F66782C33A5C4003C9DC4 /* AddEventButton.swift */,
 				40FEEC4C2C291BA0008AA61D /* EventRow.swift */,
@@ -458,6 +473,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A109BF600000000000000004 /* NewEventDraft.swift in Sources */,
+				A109BF600000000000000002 /* QuickEventParser.swift in Sources */,
 				25168B30958C3883582A3A8B /* EventWindow.swift in Sources */,
 				DCCB36AF7935BC806656C34E /* DeepLink.swift in Sources */,
 				EE7E13646416A9F1AC2F2B03 /* AppPreferences.swift in Sources */,
@@ -467,6 +484,7 @@
 				40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */,
 				40FEEC472C2911DD008AA61D /* CategoriesView.swift in Sources */,
 				40790D742C23286B005DDC65 /* ContentView.swift in Sources */,
+				D31E01000000000000000002 /* EventTimelineView.swift in Sources */,
 				403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */,
 				40FEEC532C292617008AA61D /* EditEventView.swift in Sources */,
 				40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */,
@@ -487,8 +505,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A109BF600000000000000006 /* QuickEventTests.swift in Sources */,
 				3FB7FDD1DAF38F55B98B55E4 /* NotificationTests.swift in Sources */,
 				3300964BAEB5833E280B7B48 /* RegressionTests.swift in Sources */,
+				D31E01000000000000000004 /* TimelineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

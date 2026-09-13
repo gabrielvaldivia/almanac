@@ -77,22 +77,14 @@ struct CategoryForm: View {
                     TextField("Category Name", text: $categoryName)
                         .padding(.horizontal)
                         .padding(.vertical, 12)
+                        .frame(minHeight: 44)
 
                     Divider()
                         .padding(.leading)
 
-                    HStack {
-                        Text("Color")
-                        Spacer()
-                        Circle()
-                            .fill(categoryColor)
-                            .frame(width: 29, height: 29)
-                            .onTapGesture {
-                                showColorPickerSheet = true
-                            }
+                    ColorSelectionRow(color: categoryColor) {
+                        showColorPickerSheet = true
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
 
                     Divider()
                         .padding(.leading)
@@ -106,7 +98,7 @@ struct CategoryForm: View {
                         repeatUntilCount: $repeatUntilCount,
                         repeatUntil: $repeatUntil
                     )
-                    .padding(.vertical, repeatOption == .never ? 12 : 6)
+                    .padding(.vertical, 6)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(12)

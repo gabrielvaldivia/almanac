@@ -8,6 +8,35 @@
 import Foundation
 import SwiftUI
 
+struct ColorSelectionRow: View {
+    let color: Color
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text("Color")
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 32)
+            }
+            .overlay(alignment: .trailing) {
+                // Keep the swatch from changing the standard text row height.
+                Circle()
+                    .fill(color)
+                    .frame(width: 24, height: 24)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Color")
+        .accessibilityHint("Choose a color")
+    }
+}
+
 struct CustomColorPickerSheet: View {
     @Binding var selectedColor: CodableColor
     @Binding var showColorPickerSheet: Bool

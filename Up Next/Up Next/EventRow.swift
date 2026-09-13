@@ -33,47 +33,6 @@ struct EventRow: View {
         return calculateTimeRemaining(from: start, to: end)
     }
 
-    private func getRepeatText() -> String {
-        switch event.repeatOption {
-        case .never:
-            return ""
-        case .daily:
-            return "Repeats daily"
-        case .weekly:
-            return "Repeats weekly"
-        case .monthly:
-            return "Repeats monthly"
-        case .yearly:
-            return "Repeats yearly"
-        case .custom:
-            if let count = event.customRepeatCount, let unit = event.repeatUnit {
-                let unitString = count == 1 ? singularForm(of: unit) : pluralForm(of: unit)
-                return "Repeats every \(count) \(unitString)"
-            }
-            return ""
-        }
-    }
-
-    private func singularForm(of unit: String) -> String {
-        switch unit.lowercased() {
-        case "day", "days": return "Day"
-        case "week", "weeks": return "Week"
-        case "month", "months": return "Month"
-        case "year", "years": return "Year"
-        default: return unit.capitalized
-        }
-    }
-
-    private func pluralForm(of unit: String) -> String {
-        switch unit.lowercased() {
-        case "day", "days": return "days"
-        case "week", "weeks": return "weeks"
-        case "month", "months": return "months"
-        case "year", "years": return "years"
-        default: return unit.lowercased() + "s"
-        }
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: appData.eventStyle == "naked" ? 8 : 20) {
             // Event Style Indicator
@@ -98,8 +57,8 @@ struct EventRow: View {
                     Spacer()
                 }
 
-                // Event Date(s) and Repeat Information
-                Text(eventDateAndRepeatText)
+                // Event date and duration
+                Text(getDurationText(start: event.date, end: event.endDate))
                     .font(.footnote)
                     .foregroundColor(
                         colorScheme == .dark
@@ -129,14 +88,6 @@ struct EventRow: View {
             selectedCategory = event.category
             showEditSheet = true
         }
-    }
-
-    private var eventDateAndRepeatText: String {
-        var text = calculateTimeRemaining(from: event.date, to: event.endDate)
-        if event.repeatOption != .never {
-            text += " • \(getRepeatText())"
-        }
-        return text
     }
 
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {

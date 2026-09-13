@@ -10,213 +10,25 @@ import SwiftUI
 import UserNotifications
 import WidgetKit
 
-struct EventTimelineView: View {
-    @EnvironmentObject var appData: AppData
-    var events: [Event]
-    let numberOfDays: Int = 365  // Show a full year
-    @Environment(\.colorScheme) var colorScheme
-    var selectedCategoryFilter: String?
-
-    private let dayWidth: CGFloat = 40
-    private let eventHeight: CGFloat = 24
-
-    private var startDate: Date {
-        Calendar.current.startOfDay(for: Date())
-    }
-
-    private var dateRange: [Date] {
-        (0..<numberOfDays).map { dayOffset in
-            Calendar.current.date(byAdding: .day, value: dayOffset, to: startDate) ?? startDate
-        }
-    }
-
-    private func eventsForDate(_ date: Date) -> [(event: Event, level: Int)] {
-        let eventsOnDate = events.filter { event in
-            let eventStart = Calendar.current.startOfDay(for: event.date)
-            let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-            let targetDate = Calendar.current.startOfDay(for: date)
-            return targetDate >= eventStart && targetDate <= eventEnd
-        }
-
-        // Sort events by start date and duration
-        let sortedEvents = eventsOnDate.sorted { e1, e2 in
-            if e1.date == e2.date {
-                let d1 =
-                    e1.endDate.map {
-                        Calendar.current.dateComponents([.day], from: e1.date, to: $0).day ?? 0
-                    } ?? 0
-                let d2 =
-                    e2.endDate.map {
-                        Calendar.current.dateComponents([.day], from: e2.date, to: $0).day ?? 0
-                    } ?? 0
-                return d1 > d2
-            }
-            return e1.date < e2.date
-        }
-
-        // Assign levels to events based on overlap
-        var eventLevels: [(event: Event, level: Int)] = []
-        var usedLevels: Set<Int> = []
-
-        for event in sortedEvents {
-            var level = 0
-            while usedLevels.contains(level) {
-                level += 1
-            }
-            eventLevels.append((event: event, level: level))
-            usedLevels.insert(level)
-        }
-
-        return eventLevels
-    }
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            ZStack(alignment: .topLeading) {
-                // Days row
-                LazyHStack(alignment: .top, spacing: 4) {
-                    ForEach(dateRange, id: \.self) { date in
-                        VStack(alignment: .center, spacing: 4) {
-                            // Day abbreviated name
-                            Text(date.formatted(.dateTime.weekday(.abbreviated)))
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.gray)
-                            // Day number in circle
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        Calendar.current.isDateInToday(date)
-                                            ? Color.accentColor : Color.clear
-                                    )
-                                    .frame(width: 24, height: 24)
-                                Text("\(Calendar.current.component(.day, from: date))")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundColor(
-                                        Calendar.current.isDateInToday(date) ? .white : .primary)
-                            }
-                        }
-                        .frame(width: dayWidth)
-                    }
-                }
-                .padding(.horizontal, 16)
-
-                // Events layer
-                ForEach(events) { event in
-                    if let startIndex = dateRange.firstIndex(where: {
-                        Calendar.current.startOfDay(for: $0)
-                            == Calendar.current.startOfDay(for: event.date)
-                    }) {
-                        let xOffset = CGFloat(startIndex) * (dayWidth + 4) + 16  // Account for day spacing
-                        let width = calculateEventWidth(event)
-                        let level = eventLevel(for: event)
-
-                        // For multi-day events, add more padding to the left
-                        let isMultiDay =
-                            event.endDate != nil
-                            && Calendar.current.dateComponents(
-                                [.day], from: event.date, to: event.endDate!
-                            ).day! > 0
-                        let adjustedXOffset = isMultiDay ? xOffset + (dayWidth * 0.2) : xOffset
-
-                        EventPill(event: event)
-                            .frame(width: width, height: eventHeight)
-                            .offset(x: adjustedXOffset, y: 48 + CGFloat(level) * (eventHeight + 4))
-                    }
-                }
-            }
-        }
-        .frame(height: calculateTimelineHeight())
-    }
-
-    private func calculateTimelineHeight() -> CGFloat {
-        let headerHeight: CGFloat = 48  // Height for stacked day header
-        let spacing: CGFloat = 4  // Spacing between events
-        let levels = maxEventLevels + 1  // Add 1 to account for 0-based index
-        let eventsHeight = CGFloat(levels) * (eventHeight + spacing)
-        let bottomPadding: CGFloat = 8  // Padding at the bottom
-
-        return headerHeight + eventsHeight + bottomPadding
-    }
-
-    private func eventLevel(for event: Event) -> Int {
-        let eventStart = Calendar.current.startOfDay(for: event.date)
-        let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-
-        var level = 0
-        for otherEvent in events {
-            if otherEvent.id == event.id { continue }
-
-            let otherStart = Calendar.current.startOfDay(for: otherEvent.date)
-            let otherEnd =
-                otherEvent.endDate.map { Calendar.current.startOfDay(for: $0) } ?? otherStart
-
-            // Check if events overlap
-            if max(eventStart, otherStart) <= min(eventEnd, otherEnd) {
-                if otherEvent.date < event.date
-                    || (otherEvent.date == event.date && otherEvent.id < event.id)
-                {
-                    level += 1
-                }
-            }
-        }
-
-        return level
-    }
-
-    private var maxEventLevels: Int {
-        dateRange.map { date in
-            eventsForDate(date).map(\.level).max() ?? 0
-        }.max() ?? 0 + 1
-    }
-
-    private func calculateEventWidth(_ event: Event) -> CGFloat {
-        let eventStart = Calendar.current.startOfDay(for: event.date)
-        let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-        let days = Calendar.current.dateComponents([.day], from: eventStart, to: eventEnd).day ?? 0
-        return CGFloat(days + 1) * dayWidth  // Remove the extra spacing between days
-    }
-}
-
-struct EventPill: View {
-    var event: Event
-
-    var body: some View {
-        let isMultiDay =
-            event.endDate != nil
-            && Calendar.current.dateComponents([.day], from: event.date, to: event.endDate!).day!
-                > 0
-
-        Group {
-            if isMultiDay {
-                // Multi-day pill with rounded ends
-                Rectangle()
-                    .fill(event.color.color.opacity(0.2))
-                    .cornerRadius(12)
-            } else {
-                // Single-day circular pill
-                Circle()
-                    .fill(event.color.color.opacity(0.2))
-            }
-        }
-        .foregroundColor(event.color.color)
-    }
-}
-
 struct ContentView: View {
 
     // State variables to manage the view's state
+    @State private var quickEventInput: String = ""
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
     @State private var newEventEndDate: Date = Date()
+    @State private var newEventRecurrence: ParsedEventRecurrence?
     @State private var showAddEventSheet: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
+    @State private var highlightedEventID: UUID?
+    @State private var highlightRequestID: UUID?
     @State private var showEndDate: Bool = false
     @State private var showPastEventsView: Bool = false
     @State private var selectedCategoryFilter: String? = nil
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
-    @State private var monthsToLoad: Int = 12
+    @State private var eventListPosition: Date?
     @State private var eventDetails = EventDetails(
         title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
     @State private var dateOptions = DateOptions(
@@ -232,6 +44,7 @@ struct ContentView: View {
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @FocusState private var isFocused: Bool
 
@@ -256,21 +69,15 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            ZStack(alignment: .bottom) {
-                mainContent
-                AddEventButton(
-                    selectedCategoryFilter: $selectedCategoryFilter,
-                    showAddEventSheet: $showAddEventSheet,
-                    newEventTitle: $newEventTitle,
-                    newEventDate: $newEventDate,
-                    newEventEndDate: $newEventEndDate,
-                    showEndDate: $showEndDate,
-                    selectedCategory: $selectedCategory
-                )
-                .padding(0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .environmentObject(appData)
-            }
+            mainContent
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    QuickAddEventField(
+                        text: $quickEventInput,
+                        color: quickEventDefaults.categoryOptions.selectedColor.color,
+                        onAdd: addQuickEvent,
+                        onOpenDetails: openEventDetails
+                    )
+                }
         }
         .focused($isFocused)
         .sheet(isPresented: $showAddEventSheet) {
@@ -283,45 +90,45 @@ struct ContentView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            let sortedEvents = filteredEvents().sorted(by: { $0.date < $1.date })
-            let groupedEventsByMonth = groupEventsByMonth(events: sortedEvents)
-            let sortedMonths = groupedEventsByMonth.keys.sorted()
+            let days = EventListDay.group(events: timelineEvents)
 
-            if sortedEvents.isEmpty {
+            EventTimelineView(events: timelineEvents) { event in
+                selectTimelineEvent(event)
+            }
+            Divider()
+
+            if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
-                viewMoreButton
             } else {
-                // Timeline view fixed at the top
-                EventTimelineView(
-                    events: sortedEvents, selectedCategoryFilter: selectedCategoryFilter
-                )
-                .padding(.top, 16)  // Changed from [.top, .bottom] to just .top
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-
-                Divider()
-
-                // Scrollable content below
                 ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(sortedMonths, id: \.self) { month in
-                            monthSection(month: month, events: groupedEventsByMonth[month]!)
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(days) { day in
+                            VStack(alignment: .leading, spacing: 0) {
+                                if day.startsMonth {
+                                    Text(itemDateFormatter.string(from: day.date))
+                                        .font(.headline)
+                                        .padding(.horizontal)
+                                        .padding(.top, 10)
+                                }
+                                eventRowView(key: day.date.relativeDate(), events: day.events)
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 10)
+                            }
+                            .id(day.date)
                         }
-                        .padding(.top, 8)  // Reduced from 16 to 8
-
-                        viewMoreButton
-
-                        Spacer(minLength: 80)
+                        Spacer(minLength: 16)
                     }
+                    .scrollTargetLayout()
+                    .padding(.top, 8)
                 }
-                .listStyle(PlainListStyle())
-                .listRowSeparator(.hidden)
+                .scrollPosition(id: $eventListPosition, anchor: .top)
+                .scrollDismissesKeyboard(.interactively)
                 .background(Color.clear)
-                .refreshable {
-                    appData.loadEvents()
+                .onChange(of: days.map(\.date), initial: true) {
+                    guard !days.contains(where: { $0.date == eventListPosition }) else { return }
+                    eventListPosition = EventListDay.initialDate(in: days)
                 }
             }
-            NavigationLink("Past Events") { PastEventsView(category: selectedCategoryFilter) }
-                .font(.footnote).padding(.bottom, 76)
         }
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
@@ -355,12 +162,8 @@ struct ContentView: View {
                     }
                 }
             } label: {
-                Image(
-                    systemName: selectedCategoryFilter == nil
-                        ? "line.3.horizontal.decrease.circle"
-                        : "line.3.horizontal.decrease.circle.fill"
-                )
-                .imageScale(.large)
+                Image(systemName: "line.horizontal.3.decrease")
+                    .imageScale(.large)
             }
         )
         .onAppear {
@@ -374,6 +177,22 @@ struct ContentView: View {
         .onOpenURL { url in
             handleOpenURL(url)
         }
+        .onChange(of: selectedCategoryFilter) {
+            highlightRequestID = nil
+            highlightedEventID = nil
+            eventListPosition = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents))
+        }
+        .task(id: highlightRequestID) {
+            guard highlightRequestID != nil else { return }
+            do {
+                try await Task.sleep(for: .seconds(2))
+            } catch {
+                return
+            }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) {
+                highlightedEventID = nil
+            }
+        }
     }
 
     private var settingsButton: some View {
@@ -381,6 +200,47 @@ struct ContentView: View {
             Image(systemName: "gearshape.fill")
                 .imageScale(.large)
         }
+    }
+
+    private var timelineEvents: [Event] {
+        appData.events.filter { selectedCategoryFilter == nil || $0.category == selectedCategoryFilter }
+    }
+
+    private func selectTimelineEvent(_ event: Event) {
+        highlightedEventID = event.id
+        highlightRequestID = UUID()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            eventListPosition = EventListDay.displayDate(for: event)
+        }
+    }
+
+    private var quickEventDefaults: NewEventDraft {
+        NewEventDraft(title: "", date: Date(), category: selectedCategoryFilter, appData: appData)
+    }
+
+    private func addQuickEvent(_ input: ParsedEventInput) {
+        let draft = NewEventDraft(title: input.title, date: input.date,
+                                  category: selectedCategoryFilter, appData: appData,
+                                  recurrence: input.recurrence)
+        guard draft.dateOptions.validationMessage == nil else {
+            openEventDetails(input)
+            return
+        }
+        appData.events.append(contentsOf: NewEventDraft.events(
+            title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions))
+        appData.saveEvents()
+        quickEventInput = ""
+    }
+
+    private func openEventDetails(_ input: ParsedEventInput?) {
+        newEventTitle = input?.title ?? quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        newEventDate = input?.date ?? Calendar.current.startOfDay(for: Date())
+        newEventEndDate = newEventDate
+        newEventRecurrence = input?.recurrence ?? QuickEventParser.inferredRecurrence(for: newEventTitle)
+        showEndDate = false
+        selectedCategory = quickEventDefaults.categoryOptions.selectedCategory
+        selectedColor = quickEventDefaults.categoryOptions.selectedColor
+        showAddEventSheet = true
     }
 
     private var addEventSheet: some View {
@@ -394,6 +254,8 @@ struct ContentView: View {
             showAddEventSheet: $showAddEventSheet,
             selectedCategory: $selectedCategory,
             selectedColor: $selectedColor,
+            initialRecurrence: newEventRecurrence,
+            onSave: { quickEventInput = "" },
             appData: _appData
         )
         .focused($isFocused)
@@ -408,81 +270,6 @@ struct ContentView: View {
         )
         .environmentObject(appData)
         .focused($isFocused)
-    }
-
-    private func monthSection(month: Date, events: [Event]) -> some View {
-        VStack(alignment: .leading) {
-            Text(itemDateFormatter.string(from: month))
-                .font(.headline)
-                .padding(.horizontal)
-                .padding(.top, 10)
-
-            let groupedEventsByDate = groupEventsByDate(events: events)
-            let sortedKeys = sortKeys(Array(groupedEventsByDate.keys))
-
-            ForEach(sortedKeys, id: \.self) { key in
-                eventRowView(key: key, events: groupedEventsByDate[key]!)
-            }
-            .listRowSeparator(.hidden)
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-        }
-    }
-
-    private var viewMoreButton: some View {
-        Group {
-            if selectedCategoryFilter == nil || hasMoreEventsToLoad() {
-                if hasMoreEventsToLoad() {
-                    Button(action: {
-                        self.monthsToLoad += 12
-                        appData.loadEvents()
-                    }) {
-                        Text("View More")
-                            .font(.system(size: 13, weight: .medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.gray)
-                            .cornerRadius(20)
-                    }
-                    .padding(.vertical, 10)
-                }
-            }
-        }
-    }
-
-    // Group events by month
-    func groupEventsByMonth(events: [Event]) -> [Date: [Event]] {
-        return Dictionary(
-            grouping: events,
-            by: { event in
-                let components = Calendar.current.dateComponents([.year, .month], from: event.date)
-                return Calendar.current.date(from: components)!
-            })
-    }
-
-    // Group events by date
-    func groupEventsByDate(events: [Event]) -> [String: [Event]] {
-        return Dictionary(
-            grouping: events,
-            by: { event in
-                if event.date <= Date()
-                    && (event.endDate ?? event.date) >= Calendar.current.startOfDay(for: Date())
-                {
-                    return "Today"
-                } else {
-                    return event.date.relativeDate()
-                }
-            })
-    }
-
-    // Sort keys for grouped events
-    func sortKeys(_ keys: [String]) -> [String] {
-        return keys.sorted { key1, key2 in
-            let date1 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key1)))
-            let date2 = Date().addingTimeInterval(TimeInterval(daysFromRelativeDate(key2)))
-            return date1 < date2
-        }
     }
 
     // View for each event row
@@ -506,6 +293,18 @@ struct ContentView: View {
                         showEditSheet: $showEditSheet,
                         categories: simplifiedCategories
                     )
+                    .background {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(event.color.color.opacity(highlightedEventID == event.id ? 0.18 : 0))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(event.color.color, lineWidth: 2)
+                            .opacity(highlightedEventID == event.id ? 1 : 0)
+                            .allowsHitTesting(false)
+                    }
+                    .accessibilityAddTraits(highlightedEventID == event.id ? .isSelected : [])
+                    .id(event.id)
                     .onTapGesture {
                         selectEvent(event)
                     }
@@ -533,7 +332,7 @@ struct ContentView: View {
                     .font(.subheadline)
                     .foregroundColor(.gray)
             } else {
-                Text("No upcoming events")
+                Text("No events yet")
                     .font(.headline)
                 Text("Add something you're looking forward to")
                     .font(.subheadline)
@@ -551,6 +350,7 @@ struct ContentView: View {
         showEditSheet = false
         switch link {
         case .addEvent:
+            newEventRecurrence = nil
             newEventTitle = ""
             newEventDate = Date()
             newEventEndDate = Date()
@@ -566,40 +366,42 @@ struct ContentView: View {
         }
     }
 
-    // Filter events based on selected category and date range
-    func filteredEvents() -> [Event] {
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        let endDate = Calendar.current.date(
-            byAdding: .month, value: monthsToLoad, to: startOfToday)!
-        return appData.events.filter {
-            (selectedCategoryFilter == nil || $0.category == selectedCategoryFilter) &&
-            EventWindow.intersects($0, start: startOfToday, end: endDate)
-        }.sorted { $0.date < $1.date }
+    private func selectEvent(_ event: Event) {
+        selectedEvent = event
+    }
+}
+
+/// Group by calendar dates, including history, without parsing relative labels.
+struct EventListDay: Identifiable {
+    var date: Date
+    var events: [Event]
+    var startsMonth: Bool
+    var id: Date { date }
+
+    static func displayDate(for event: Event, today: Date = Date(), calendar: Calendar = .current) -> Date {
+        let today = calendar.startOfDay(for: today)
+        let start = calendar.startOfDay(for: event.date)
+        let end = calendar.startOfDay(for: event.endDate ?? event.date)
+        return start <= today && end >= today ? today : start
     }
 
-    // Delete an event
-    func deleteEvent(_ event: Event) {
-        appData.deleteEvent(event)
-    }
-
-    // Check if there are more events to load
-    func hasMoreEventsToLoad() -> Bool {
-        let now = Date()
-        let startOfToday = Calendar.current.startOfDay(for: now)
-        let endDate = Calendar.current.date(
-            byAdding: .month, value: monthsToLoad, to: startOfToday)!
-        return appData.events.contains { event in
-            let eventDate = event.date
-            if let filter = selectedCategoryFilter {
-                return event.category == filter && eventDate > endDate
-            } else {
-                return eventDate > endDate
-            }
+    static func group(events: [Event], today: Date = Date(), calendar: Calendar = .current) -> [EventListDay] {
+        let grouped = Dictionary(grouping: events) { displayDate(for: $0, today: today, calendar: calendar) }
+        let dates = grouped.keys.sorted()
+        return dates.enumerated().map { index, date in
+            EventListDay(
+                date: date,
+                events: grouped[date]!.sorted {
+                    if $0.date != $1.date { return $0.date < $1.date }
+                    return $0.id.uuidString < $1.id.uuidString
+                },
+                startsMonth: index == 0 || !calendar.isDate(date, equalTo: dates[index - 1], toGranularity: .month)
+            )
         }
     }
 
-    private func selectEvent(_ event: Event) {
-        selectedEvent = event
+    static func initialDate(in days: [EventListDay], today: Date = Date(), calendar: Calendar = .current) -> Date? {
+        let today = calendar.startOfDay(for: today)
+        return days.first { $0.date >= today }?.date ?? days.last?.date
     }
 }

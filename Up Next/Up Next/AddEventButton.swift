@@ -1,49 +1,91 @@
 import SwiftUI
 
-struct AddEventButton: View {
-    @Binding var selectedCategoryFilter: String?
-    @Binding var showAddEventSheet: Bool
-    @Binding var newEventTitle: String
-    @Binding var newEventDate: Date
-    @Binding var newEventEndDate: Date
-    @Binding var showEndDate: Bool
-    @Binding var selectedCategory: String?
-    @GestureState private var isButtonPressed: Bool = false
-    @EnvironmentObject var appData: AppData
+struct QuickAddEventField: View {
+    @Binding var text: String
+    var color: Color
+    var onAdd: (ParsedEventInput) -> Void
+    var onOpenDetails: (ParsedEventInput?) -> Void
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
+        let parsed = QuickEventParser.parse(text)
+        let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        HStack(spacing: 4) {
+            Button(action: openDetails) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 20))
+                    .frame(width: 48, height: 48)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Edit event details")
+            .accessibilityHint("Opens the full event form with your title and date.")
+            .accessibilityIdentifier("manualEventInput")
+            .padding(.leading, 4)
 
-        ZStack {
-            RoundedRectangle(cornerRadius: 40)
-                .fill(buttonColor)
-                .frame(width: 80, height: 60)
-                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
+            TextField("Add an event, like Dune 12/18", text: $text)
+                .textInputAutocapitalization(.sentences)
+                .submitLabel(.done)
+                .focused($isFocused)
+                .accessibilityLabel("Quick event entry")
+                .accessibilityHint("Enter an event title followed by a date, then tap Done to add.")
+                .accessibilityIdentifier("quickEventInput")
+                .onSubmit {
+                    submit()
+                }
+                .padding(.vertical, 14)
+                .padding(.trailing, hasText ? 0 : 18)
 
-            Image(systemName: "plus")
-                .font(.title)
-                .bold()
-                .foregroundColor(.white)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
+            if hasText {
+                Button(action: submit) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .frame(width: 48, height: 48)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(parsed.map(submitLabel) ?? "Continue to event details")
+                .accessibilityIdentifier("quickAddSubmit")
+                .padding(.trailing, 4)
+            }
         }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isButtonPressed) { _, isPressed, _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    self.newEventTitle = ""
-                    self.newEventDate = Date()
-                    self.newEventEndDate = Date()
-                    self.showEndDate = false
-                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-                    self.showAddEventSheet = true
-                }
-        )
+        .tint(color)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
+        .overlay {
+            RoundedRectangle(cornerRadius: 28)
+                .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+
+    private func submit() {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if let parsed = QuickEventParser.parse(text) {
+            add(parsed)
+        } else {
+            openDetails()
+        }
+    }
+
+    private func submitLabel(_ input: ParsedEventInput) -> String {
+        let date = input.date.formatted(date: .complete, time: .omitted)
+        guard let recurrence = input.recurrence else { return "Add \(input.title) on \(date)" }
+        var label = "Add \(input.title), repeating every \(recurrence.interval) \(recurrence.unit.lowercased()), starting \(date)"
+        if let until = recurrence.until {
+            label += ", until \(until.formatted(date: .complete, time: .omitted))"
+        }
+        return label
+    }
+
+    private func add(_ parsed: ParsedEventInput) {
+        onAdd(parsed)
+        isFocused = false
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    private func openDetails() {
+        isFocused = false
+        onOpenDetails(QuickEventParser.parse(text))
     }
 }

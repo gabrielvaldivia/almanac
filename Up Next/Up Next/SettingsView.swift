@@ -20,7 +20,6 @@ struct SettingsView: View {
         UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
     @State private var iconChangeSuccess: Bool?
     @State private var showingAppIconSheet = false
-    @State private var showingSubscriptionAlert = false
     @State private var showingCategoryManagementSheet = false
 
     var body: some View {
@@ -160,24 +159,6 @@ struct SettingsView: View {
                     Text("Rate on App Store")
                 }
 
-                Button(action: {
-                    if appData.isSubscribed {
-                        showingSubscriptionAlert = true
-                    } else {
-                        appData.purchase()
-                    }
-                }) {
-                    Text(appData.isSubscribed ? "Manage Subscription" : "Subscribe to Almanac Pro")
-                }
-                .alert(isPresented: $showingSubscriptionAlert) {
-                    Alert(
-                        title: Text("Subscription Active"),
-                        message: Text(
-                            "You are already subscribed to Almanac Pro. To manage your subscription, please go to your App Store settings."
-                        ),
-                        dismissButton: .default(Text("OK"))
-                    )
-                }
             }
 
             // Danger Zone Section
