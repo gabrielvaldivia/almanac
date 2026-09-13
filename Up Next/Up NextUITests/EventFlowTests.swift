@@ -38,8 +38,8 @@ final class EventFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         let name = "Audit \(UUID().uuidString.prefix(8))", renamed = name + " edited"
-        XCTAssertTrue(app.buttons["addEventButton"].waitForExistence(timeout: 10))
-        app.buttons["addEventButton"].tap()
+        XCTAssertTrue(app.buttons["manualEventInput"].waitForExistence(timeout: 10))
+        app.buttons["manualEventInput"].tap()
         let title = app.textFields["Title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         title.tap(); title.typeText(name)

@@ -77,6 +77,7 @@ struct CategoryForm: View {
                     TextField("Category Name", text: $categoryName)
                         .padding(.horizontal)
                         .padding(.vertical, 12)
+                        .frame(minHeight: 44)
 
                     if !categoryName.isEmpty && !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName) {
                         Text("Choose a unique category name. All Categories is reserved for widget filters.")
@@ -85,16 +86,9 @@ struct CategoryForm: View {
                     Divider()
                         .padding(.leading)
 
-                    HStack {
-                        Text("Color")
-                        Spacer()
-                        Button { showColorPickerSheet = true } label: {
-                            Circle().fill(categoryColor).frame(width: 29, height: 29)
-                                .frame(minWidth: 44, minHeight: 44)
-                        }.accessibilityLabel("Category Color")
+                    ColorSelectionRow(color: categoryColor) {
+                        showColorPickerSheet = true
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
 
                     Divider()
                         .padding(.leading)
@@ -108,7 +102,7 @@ struct CategoryForm: View {
                         repeatUntilCount: $repeatUntilCount,
                         repeatUntil: $repeatUntil
                     )
-                    .padding(.vertical, repeatOption == .never ? 12 : 6)
+                    .padding(.vertical, 6)
                 }
                 .background(Color(UIColor.secondarySystemGroupedBackground))
                 .cornerRadius(12)

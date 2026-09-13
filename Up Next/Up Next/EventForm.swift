@@ -31,10 +31,13 @@ struct EventForm: View {
                     TitleSection(
                         newEventTitle: $eventDetails.title, isTitleFocused: _isTitleFocused)
                     DateSection(
-                        dateOptions: $dateOptions, useCustomRepeatOptions: $useCustomRepeatOptions,
+                        dateOptions: $dateOptions,
                         showCustomStartDatePicker: $showCustomStartDatePicker,
                         showCustomEndDatePicker: $showCustomEndDatePicker,
-                        tempEndDate: $tempEndDate, categoryOptions: $categoryOptions)
+                        tempEndDate: $tempEndDate)
+                    RepeatSection(
+                        dateOptions: $dateOptions,
+                        useCustomRepeatOptions: $useCustomRepeatOptions)
                     if let message = dateOptions.validationMessage {
                         Text(message).font(.footnote).foregroundStyle(.red)
                     }
@@ -86,177 +89,123 @@ struct TitleSection: View {
 
 struct DateSection: View {
     @Binding var dateOptions: DateOptions
-    @Binding var useCustomRepeatOptions: Bool
     @Binding var showCustomStartDatePicker: Bool
     @Binding var showCustomEndDatePicker: Bool
     @Binding var tempEndDate: Date?
-    @Binding var categoryOptions: CategoryOptions
 
     var body: some View {
-        VStack {
-            HStack(alignment: .center, spacing: 0) {
-                Button(action: { showCustomStartDatePicker = true }) {
-                    Text(dateOptions.date, formatter: dateFormatter)
-                        .foregroundColor(.primary)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 10)
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
-                }
-                .padding(.horizontal, 6)
-                .sheet(isPresented: $showCustomStartDatePicker) {
-                    CustomDatePicker(
-                        selectedDate: $dateOptions.date,
-                        showCustomDatePicker: $showCustomStartDatePicker, minimumDate: nil,
-                        onDateSelected: { dateOptions.endDate = max(dateOptions.date, dateOptions.endDate) }, onRemoveEndDate: nil, isEndDatePicker: false,
-                        showEndDate: dateOptions.showEndDate
-                    )
-                    .presentationDetents([.medium])
-                }
-
-                if dateOptions.showEndDate {
-                    Text(" → ")
-                        .foregroundColor(.primary)
-                        .padding(.trailing, 6)
-                    Button(action: {
-                        tempEndDate = dateOptions.endDate
-                        showCustomEndDatePicker = true
-                    }) {
-                        Text(dateOptions.endDate, formatter: dateFormatter)
-                            .foregroundColor(.primary)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                    }
-                    .sheet(isPresented: $showCustomEndDatePicker) {
-                        CustomDatePicker(
-                            selectedDate: Binding(
-                                get: { self.tempEndDate ?? dateOptions.date },
-                                set: { self.tempEndDate = $0 }
-                            ), showCustomDatePicker: $showCustomEndDatePicker,
-                            minimumDate: dateOptions.date,
-                            onDateSelected: {
-                                if let tempEndDate = tempEndDate {
-                                    dateOptions.endDate = tempEndDate
-                                    dateOptions.showEndDate = true
-                                }
-                            },
-                            onRemoveEndDate: {
-                                dateOptions.showEndDate = false
-                                dateOptions.endDate = dateOptions.date
-                                tempEndDate = nil
-                                showCustomEndDatePicker = false
-                            }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate
-                        )
-                        .presentationDetents([.medium])
-                    }
-                    Spacer()
-                } else {
-                    Spacer()
-                    Button(action: {
-                        tempEndDate = nil
-                        showCustomEndDatePicker = true
-                    }) {
-                        Image(
-                            systemName: "point.topleft.down.to.point.bottomright.filled.curvepath"
-                        )
-                        .accessibilityLabel("Add End Date")
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
-                    }
-                    .padding(.trailing, 6)
-                    .sheet(isPresented: $showCustomEndDatePicker) {
-                        CustomDatePicker(
-                            selectedDate: Binding(
-                                get: { self.tempEndDate ?? dateOptions.date },
-                                set: { self.tempEndDate = $0 }
-                            ), showCustomDatePicker: $showCustomEndDatePicker,
-                            minimumDate: dateOptions.date,
-                            onDateSelected: {
-                                if let tempEndDate = tempEndDate {
-                                    dateOptions.endDate = tempEndDate
-                                    dateOptions.showEndDate = true
-                                }
-                            },
-                            onRemoveEndDate: {
-                                dateOptions.showEndDate = false
-                                dateOptions.endDate = dateOptions.date
-                                tempEndDate = nil
-                                showCustomEndDatePicker = false
-                            }, isEndDatePicker: true, showEndDate: dateOptions.showEndDate
-                        )
-                        .presentationDetents([.medium])
-                    }
-                }
-
-                // Repeat Button
-                Button(action: {
-                    if dateOptions.showRepeatOptions {
-                        useCustomRepeatOptions = true
-                        dateOptions.repeatOption = .never
-                        dateOptions.showRepeatOptions = false
-                    }
-                }) {
-                    Image(systemName: "repeat")
-                        .accessibilityLabel("Stop Repeating")
-                        .foregroundColor(dateOptions.repeatOption != .never ? .white : .gray)
-                        .padding(8)
-                        .background(
-                            dateOptions.repeatOption != .never
-                                ? categoryOptions.selectedColor.color
-                                : Color.gray.opacity(0.2)
-                        )
-                        .cornerRadius(8)
-                }
-                .overlay(
-                    Group {
-                        if !dateOptions.showRepeatOptions {
-                            Menu {
-                                ForEach(RepeatOption.allCases, id: \.self) { option in
-                                    Button(action: {
-                                        useCustomRepeatOptions = true
-                                        dateOptions.repeatOption = option
-                                        dateOptions.showRepeatOptions = option != .never
-                                    }) {
-                                        Text(option.rawValue)
-                                    }
-                                }
-                            } label: {
-                                Color.clear
-                                    .frame(width: 44, height: 44)
-                                    .accessibilityLabel("Repeat Options")
-                            }
-                        }
-                    }
-                )
-                .padding(.trailing, 6)
+        VStack(spacing: 0) {
+            Button(action: { showCustomStartDatePicker = true }) {
+                dateRow("Start date", value: dateFormatter.string(from: dateOptions.date))
             }
-            .padding(.vertical, 6)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Start date")
+            .accessibilityValue(dateFormatter.string(from: dateOptions.date))
 
-            if dateOptions.showRepeatOptions {
-                RepeatOptions(
-                    repeatOption: manual(\.repeatOption),
-                    showRepeatOptions: manual(\.showRepeatOptions),
-                    customRepeatCount: manual(\.customRepeatCount),
-                    repeatUnit: manual(\.repeatUnit),
-                    repeatUntilOption: manual(\.repeatUntilOption),
-                    repeatUntilCount: manual(\.repeatUntilCount),
-                    repeatUntil: manual(\.repeatUntil)
-                )
-                // .padding(.horizontal)
+            Divider()
+                .padding(.leading)
+
+            Button(action: {
+                tempEndDate = dateOptions.showEndDate ? dateOptions.endDate : dateOptions.date
+                showCustomEndDatePicker = true
+            }) {
+                dateRow("End date", value: endDateValue)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("End date")
+            .accessibilityValue(endDateValue)
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)
-    }
-    private func manual<T>(_ key: WritableKeyPath<DateOptions, T>) -> Binding<T> {
-        Binding(get: { dateOptions[keyPath: key] }, set: { dateOptions[keyPath: key] = $0; useCustomRepeatOptions = true })
+        .sheet(isPresented: $showCustomStartDatePicker) {
+            CustomDatePicker(
+                selectedDate: $dateOptions.date,
+                showCustomDatePicker: $showCustomStartDatePicker,
+                minimumDate: nil,
+                onDateSelected: {
+                    dateOptions.endDate = max(dateOptions.date, dateOptions.endDate)
+                },
+                onRemoveEndDate: nil,
+                isEndDatePicker: false,
+                showEndDate: dateOptions.showEndDate
+            )
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showCustomEndDatePicker) {
+            CustomDatePicker(
+                selectedDate: Binding(
+                    get: { tempEndDate ?? dateOptions.date },
+                    set: { tempEndDate = $0 }
+                ),
+                showCustomDatePicker: $showCustomEndDatePicker,
+                minimumDate: dateOptions.date,
+                onDateSelected: {
+                    if let tempEndDate = tempEndDate {
+                        dateOptions.endDate = tempEndDate
+                        dateOptions.showEndDate = true
+                    }
+                },
+                onRemoveEndDate: {
+                    dateOptions.showEndDate = false
+                    dateOptions.endDate = dateOptions.date
+                    tempEndDate = nil
+                    showCustomEndDatePicker = false
+                },
+                isEndDatePicker: true,
+                showEndDate: dateOptions.showEndDate
+            )
+            .presentationDetents([.medium])
+        }
     }
 
+    private var endDateValue: String {
+        dateOptions.showEndDate ? dateFormatter.string(from: dateOptions.endDate) : "None"
+    }
+
+    private func dateRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+}
+
+struct RepeatSection: View {
+    @Binding var dateOptions: DateOptions
+    @Binding var useCustomRepeatOptions: Bool
+
+    var body: some View {
+        RepeatOptions(
+            repeatOption: manual(\.repeatOption),
+            showRepeatOptions: manual(\.showRepeatOptions),
+            customRepeatCount: manual(\.customRepeatCount),
+            repeatUnit: manual(\.repeatUnit),
+            repeatUntilOption: manual(\.repeatUntilOption),
+            repeatUntilCount: manual(\.repeatUntilCount),
+            repeatUntil: manual(\.repeatUntil)
+        )
+        .padding(.vertical, 6)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+    }
+
+    private func manual<T>(_ key: WritableKeyPath<DateOptions, T>) -> Binding<T> {
+        Binding(
+            get: { dateOptions[keyPath: key] },
+            set: {
+                dateOptions[keyPath: key] = $0
+                useCustomRepeatOptions = true
+            }
+        )
+    }
 }
 
 struct CategoryAndColorSection: View {
@@ -266,7 +215,7 @@ struct CategoryAndColorSection: View {
     @ObservedObject var appData: AppData
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             HStack {
                 Text("Category")
                 Spacer()
@@ -300,25 +249,16 @@ struct CategoryAndColorSection: View {
                     }
                 }
             }
-            .padding(.top, 10)
             .padding(.horizontal)
+            .padding(.vertical, 12)
+            .frame(minHeight: 44)
 
             Divider()
                 .padding(.leading)
 
-            HStack {
-                Text("Color")
-                Spacer()
-                Button(action: { showColorPickerSheet = true }) {
-                    Circle()
-                        .fill(categoryOptions.selectedColor.color)
-                        .frame(width: 24, height: 24)
-                        .padding(.trailing, 6)
-                        .accessibilityLabel("Event Color")
-                }
+            ColorSelectionRow(color: categoryOptions.selectedColor.color) {
+                showColorPickerSheet = true
             }
-            .padding(.bottom, 6)
-            .padding(.horizontal)
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)

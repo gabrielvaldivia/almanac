@@ -23,6 +23,9 @@ struct AddEventView: View {
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor  // Use CodableColor to store color
 
+    var initialRecurrence: ParsedEventRecurrence? = nil
+    var onSave: () -> Void = {}
+
     // Environment object to access shared app data
     @EnvironmentObject var appData: AppData
 
@@ -76,43 +79,19 @@ struct AddEventView: View {
             .navigationTitle("Add Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Toolbar with cancel and save buttons
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") {
                         showAddEventSheet = false
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(width: 32, height: 32)
-                            Image(systemName: "xmark")
-                                .accessibilityLabel("Cancel")
-                                .font(.system(size: 10, weight: .heavy))
-                                .foregroundColor(.primary)
-                        }
                     }
+                    .labelStyle(.iconOnly)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
                         saveNewEvent()
+                        onSave()
                         showAddEventSheet = false
-                    }) {
-                        Group {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(categoryOptions.selectedColor.color)
-                                    .frame(width: 60, height: 32)
-                                Text("Add")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(
-                                        CustomColorPickerSheet(
-                                            selectedColor: $categoryOptions.selectedColor,
-                                            showColorPickerSheet: .constant(false)
-                                        ).contrastColor)
-                            }
-                        }
-                        .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
+                    .tint(categoryOptions.selectedColor.color)
                     .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil || appData.storageError != nil)
                 }
             }
@@ -128,23 +107,15 @@ struct AddEventView: View {
         .onAppear {
             guard !hasInitialized else { return }
             hasInitialized = true
-            isTitleFocused = true
-            eventDetails.title = newEventTitle
-            dateOptions.date = newEventDate
-            dateOptions.endDate = max(newEventDate, newEventEndDate)
-            dateOptions.showEndDate = showEndDate
-            categoryOptions.selectedCategory = selectedCategory ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-            categoryOptions.selectedColor = selectedColor
-            if let category = appData.categories.first(where: { $0.name == categoryOptions.selectedCategory }) {
-                categoryOptions.selectedColor = CodableColor(color: category.color)
-                dateOptions.repeatOption = category.repeatOption
-                dateOptions.showRepeatOptions = category.repeatOption != .never
-                dateOptions.customRepeatCount = category.customRepeatCount
-                dateOptions.repeatUnit = category.repeatUnit
-                dateOptions.repeatUntilOption = category.repeatUntilOption
-                dateOptions.repeatUntilCount = category.repeatUntilCount
-                dateOptions.repeatUntil = category.repeatUntil
-            }
+            let draft = NewEventDraft(title: newEventTitle, date: newEventDate,
+                                      endDate: showEndDate ? newEventEndDate : nil,
+                                      category: selectedCategory, appData: appData,
+                                      recurrence: initialRecurrence)
+            eventDetails.title = draft.title
+            dateOptions = draft.dateOptions
+            useCustomRepeatOptions = initialRecurrence != nil
+            categoryOptions = draft.categoryOptions
+            isTitleFocused = newEventTitle.isEmpty
         }
         .onDisappear {
             // Clear focus when view disappears
@@ -166,44 +137,10 @@ struct AddEventView: View {
         }
     }
 
-    // Function to save the new event
+    // Quick entry and the full form share event construction and persistence.
     func saveNewEvent() {
-        let repeatUntilDate: Date?
-        switch dateOptions.repeatUntilOption {
-        case .indefinitely:
-            repeatUntilDate = nil
-        case .after:
-            repeatUntilDate = nil
-        case .onDate:
-            repeatUntilDate = dateOptions.repeatUntil
-        }
-
-        let newEvent = Event(
-            title: eventDetails.title,
-            date: dateOptions.date,
-            endDate: dateOptions.showEndDate ? dateOptions.endDate : nil,
-            color: categoryOptions.selectedColor,
-            category: categoryOptions.selectedCategory,
-            repeatOption: dateOptions.repeatOption,
-            repeatUntil: repeatUntilDate,
-            seriesID: dateOptions.repeatOption != .never ? UUID() : nil,
-            customRepeatCount: dateOptions.customRepeatCount,
-            repeatUnit: dateOptions.repeatUnit,
-            repeatUntilCount: dateOptions.repeatUntilCount,
-            useCustomRepeatOptions: true
-        )
-
-        if dateOptions.repeatOption != .never {
-            let repeatingEvents = generateRepeatingEvents(
-                for: newEvent,
-                repeatUntilOption: dateOptions.repeatUntilOption,
-                showEndDate: dateOptions.showEndDate
-            )
-            events.append(contentsOf: repeatingEvents)
-        } else {
-            events.append(newEvent)
-        }
-
+        events.append(contentsOf: NewEventDraft.events(
+            title: eventDetails.title, dates: dateOptions, category: categoryOptions))
         appData.saveEvents()
     }
 

@@ -1,33 +1,57 @@
 import Foundation
 
-struct TimelineItem: Identifiable {
-    let event: Event
-    let start: Int
-    let end: Int
-    let lane: Int
-    var id: UUID { event.id }
-    var dayCount: Int { end - start + 1 }
+struct TimelineEventPlacement {
+    var event: Event
+    var startDay: Int
+    var endDay: Int
+    var lane: Int
 }
 
-enum TimelineLayout {
-    static func items(events: [Event], from start: Date, days: Int, calendar: Calendar = .current) -> [TimelineItem] {
-        guard days > 0 else { return [] }
-        let start = calendar.startOfDay(for: start)
-        let spans = events.compactMap { event -> (Event, Int, Int)? in
-            let first = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: event.date)).day ?? 0
-            let last = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: event.endDate ?? event.date)).day ?? first
-            guard last >= 0, first < days else { return nil }
-            return (event, max(0, first), min(days - 1, max(first, last)))
+struct TimelineLayout {
+    var placements: [TimelineEventPlacement]
+    var laneCount: Int
+
+    static func make(events: [Event], visibleDays: ClosedRange<Int>, anchor: Date,
+                     calendar: Calendar = .current) -> TimelineLayout {
+        make(indexedEvents: index(events: events, anchor: anchor, calendar: calendar), visibleDays: visibleDays)
+    }
+
+    static func index(events: [Event], anchor: Date, calendar: Calendar = .current) -> [TimelineEventPlacement] {
+        let anchor = calendar.startOfDay(for: anchor)
+        return events.map { event in
+            let start = calendar.dateComponents([.day], from: anchor,
+                                               to: calendar.startOfDay(for: event.date)).day ?? 0
+            let end = max(start, calendar.dateComponents([.day], from: anchor,
+                                                         to: calendar.startOfDay(for: event.endDate ?? event.date)).day ?? start)
+            return TimelineEventPlacement(event: event, startDay: start, endDay: end, lane: 0)
         }.sorted {
-            if $0.1 != $1.1 { return $0.1 < $1.1 }
-            if $0.2 != $1.2 { return $0.2 > $1.2 }
-            return $0.0.id.uuidString < $1.0.id.uuidString
+            if $0.startDay != $1.startDay { return $0.startDay < $1.startDay }
+            if $0.endDay != $1.endDay { return $0.endDay > $1.endDay }
+            return $0.event.id.uuidString < $1.event.id.uuidString
         }
+
+    }
+
+    static func make(indexedEvents: [TimelineEventPlacement], visibleDays: ClosedRange<Int>) -> TimelineLayout {
+        let candidates = indexedEvents.filter { $0.startDay <= visibleDays.upperBound && $0.endDay >= visibleDays.lowerBound }
+        // Reuse the first free lane. Counting earlier overlapping events can
+        // leave gaps for chains of events that don't all overlap one another.
         var laneEnds: [Int] = []
-        return spans.map { event, first, last in
-            let lane = laneEnds.firstIndex { $0 < first } ?? laneEnds.count
-            if lane == laneEnds.count { laneEnds.append(last) } else { laneEnds[lane] = last }
-            return TimelineItem(event: event, start: first, end: last, lane: lane)
+        let placements = candidates.map { candidate in
+            var placement = candidate
+            let lane = laneEnds.firstIndex { $0 < placement.startDay } ?? laneEnds.count
+            if lane == laneEnds.count {
+                laneEnds.append(placement.endDay)
+            } else {
+                laneEnds[lane] = placement.endDay
+            }
+            placement.lane = lane
+            return placement
         }
+        return TimelineLayout(placements: placements, laneCount: laneEnds.count)
+    }
+
+    static func height(for laneCount: Int) -> CGFloat {
+        48 + CGFloat(laneCount) * 28 + 8
     }
 }

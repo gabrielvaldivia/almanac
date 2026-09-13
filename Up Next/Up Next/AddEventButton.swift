@@ -1,43 +1,91 @@
 import SwiftUI
 
-struct AddEventButton: View {
-    @Binding var selectedCategoryFilter: String?
-    @Binding var showAddEventSheet: Bool
-    @Binding var newEventTitle: String
-    @Binding var newEventDate: Date
-    @Binding var newEventEndDate: Date
-    @Binding var showEndDate: Bool
-    @Binding var selectedCategory: String?
-    @EnvironmentObject var appData: AppData
+struct QuickAddEventField: View {
+    @Binding var text: String
+    var color: Color
+    var onAdd: (ParsedEventInput) -> Void
+    var onOpenDetails: (ParsedEventInput?) -> Void
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
+        let parsed = QuickEventParser.parse(text)
+        let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        HStack(spacing: 4) {
+            Button(action: openDetails) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 20))
+                    .frame(width: 48, height: 48)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Edit event details")
+            .accessibilityHint("Opens the full event form with your title and date.")
+            .accessibilityIdentifier("manualEventInput")
+            .padding(.leading, 4)
 
-        Button {
-            newEventTitle = ""
-            newEventDate = Date()
-            newEventEndDate = Date()
-            showEndDate = false
-            selectedCategory = selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-            showAddEventSheet = true
-        } label: {
-            Image(systemName: "plus").font(.title.bold()).foregroundStyle(.white)
-                .frame(width: 80, height: 60)
-                .background(buttonColor, in: Capsule())
-                .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
+            TextField("Add an event, like Dune 12/18", text: $text)
+                .textInputAutocapitalization(.sentences)
+                .submitLabel(.done)
+                .focused($isFocused)
+                .accessibilityLabel("Quick event entry")
+                .accessibilityHint("Enter an event title followed by a date, then tap Done to add.")
+                .accessibilityIdentifier("quickEventInput")
+                .onSubmit {
+                    submit()
+                }
+                .padding(.vertical, 14)
+                .padding(.trailing, hasText ? 0 : 18)
+
+            if hasText {
+                Button(action: submit) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .frame(width: 48, height: 48)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(parsed.map(submitLabel) ?? "Continue to event details")
+                .accessibilityIdentifier("quickAddSubmit")
+                .padding(.trailing, 4)
+            }
         }
-        .buttonStyle(AddEventPressStyle())
-        .accessibilityLabel("Add Event")
-        .accessibilityIdentifier("addEventButton")
-        .disabled(appData.storageError != nil)
+        .tint(color)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
+        .overlay {
+            RoundedRectangle(cornerRadius: 28)
+                .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
     }
-}
 
-private struct AddEventPressStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
+    private func submit() {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if let parsed = QuickEventParser.parse(text) {
+            add(parsed)
+        } else {
+            openDetails()
+        }
+    }
+
+    private func submitLabel(_ input: ParsedEventInput) -> String {
+        let date = input.date.formatted(date: .complete, time: .omitted)
+        guard let recurrence = input.recurrence else { return "Add \(input.title) on \(date)" }
+        var label = "Add \(input.title), repeating every \(recurrence.interval) \(recurrence.unit.lowercased()), starting \(date)"
+        if let until = recurrence.until {
+            label += ", until \(until.formatted(date: .complete, time: .omitted))"
+        }
+        return label
+    }
+
+    private func add(_ parsed: ParsedEventInput) {
+        onAdd(parsed)
+        isFocused = false
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    private func openDetails() {
+        isFocused = false
+        onOpenDetails(QuickEventParser.parse(text))
     }
 }

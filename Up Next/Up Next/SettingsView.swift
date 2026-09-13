@@ -21,7 +21,6 @@ struct SettingsView: View {
         UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
     @State private var iconChangeSuccess: Bool?
     @State private var showingAppIconSheet = false
-    @State private var showingSubscriptionManagement = false
     @State private var showingCategoryManagementSheet = false
 
     var body: some View {
@@ -172,22 +171,6 @@ struct SettingsView: View {
                     Text("Rate on App Store")
                 }
 
-                Text("Almanac Pro supports ongoing development. All features remain available without a subscription.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                if appData.isSubscribed {
-                    Button("Manage Subscription") { showingSubscriptionManagement = true }
-                        .manageSubscriptionsSheet(isPresented: $showingSubscriptionManagement)
-                } else if appData.isLoadingSubscription {
-                    ProgressView("Loading subscription…")
-                } else if let price = appData.subscriptionPrice {
-                    Button("Support Almanac — \(price)") { appData.purchase() }
-                        .disabled(appData.isPurchasing)
-                } else {
-                    Button("Retry Subscription Information") { appData.loadSubscriptionProduct() }
-                }
-                if appData.isPurchasing { ProgressView("Contacting the App Store…") }
-                if let message = appData.subscriptionMessage { Text(message).font(.footnote).foregroundStyle(.secondary) }
-                Button("Restore Purchases") { appData.restorePurchases() }.disabled(appData.isPurchasing)
             }
 
             // Danger Zone Section

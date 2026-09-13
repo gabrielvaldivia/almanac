@@ -2,7 +2,7 @@
 
 All 20 areas from the [ranked September 13 audit](2026-09-13.md) are implemented. The order below preserves the audit's impact-versus-effort ranking. Each area was committed and pushed separately; final integration fixes and regression coverage complete item 20.
 
-Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on those commits. The remaining work was isolated in `/private/tmp/almanac-fixes` because other tasks are editing the original checkout. Their uncommitted UI changes and Xcode workspace state are preserved.
+The audit branch incorporates main’s concurrent quick-entry, timeline, and form changes from `3ad3cbc`. Merge resolutions retain that UI, including the removal of subscription controls, while preserving notification scheduling, storage protection, calendar-day recurrence, and identity-based editing. Work was isolated in `/private/tmp/almanac-fixes`; the original checkout was not modified.
 
 | Rank | Fixed behavior | Commit |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 | 14 | Timeline lanes handle overlaps and ongoing ranges consistently, including column spacing. | `ae1bf8d` |
 | 15 | Primary controls use native buttons and accessible labels, usable target sizes, and Reduce Motion. | `832494e` |
 | 16 | Widgets refresh across midnight and align event dates, categories, colors, and empty states with the app. | `0731472` |
-| 17 | StoreKit tracks verified purchases/refunds, refreshes entitlements, and shows price, pending/error/restore states and subscription management. | `8a28a8f` |
+| 17 | StoreKit tracks verified purchases/refunds and refreshes entitlements. Subscription controls remain removed, matching the concurrent main change. | `8a28a8f` |
 | 18 | Event and recurrence dates preserve calendar days while traveling; reminder preferences preserve local hour/minute. | `495afc7` |
 | 19 | Shared models/date formatting replace duplicate implementations; removed inactive code, Google dependencies, sample live activity, event-content logs, and widget app-form/StoreKit dependencies. | `e8e0a08` |
 | 20 | Activated unit/UI targets, added StoreKit configuration and CI, tested asynchronous scheduling and real editing flows, and fixed issues found during integration. | Final regression commit |
@@ -32,19 +32,19 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 - The edit sheet could display the selected event but save using a placeholder event ID, silently leaving the original unchanged. Presentation and editing now use the selected event's identity. Category edit sheets also derive presentation from their selected category.
 - A failed notification request no longer prevents the remaining requests from being scheduled.
 - Failed event loading preserves existing reminders instead of replacing them with an empty plan. Preference refresh happens after successful loading.
-- A fresh CI run exposed stale refund entitlements. Verified revocations now override cached entitlement records, expired transactions are excluded, and older overlapping refreshes cannot overwrite newer state. The StoreKit test creates its own app-state observer after configuring the test catalog, waits for product loading, and finishes its purchase before requesting a refund. This avoids inheriting the host app’s earlier observer and matches the app purchase lifecycle.
+- StoreKit entitlement handling excludes verified revocations and expired transactions, and prevents older overlapping refreshes from replacing newer state. The regression test configures its own app-state observer and waits for published product/entitlement changes. CI diagnostics showed slow StoreKit receipt synchronization and AppleMediaServices requests timing out; the test allows up to three minutes for each observed state change, with an eight-minute overall cap.
 - Category date decoding accepts legacy numeric dates and newer calendar-day values; unreadable category data is preserved and editing pauses.
 
 ## Verification
 
-- **26 unit/integration tests passed, zero failures**, including series deletion/editing, recurrence anchoring/refill/exceptions, storage recovery, preference migration, time zones, DST, notification capacity/reconciliation, timeline overlap, and widget boundaries.
+- **50 unit/integration tests passed, zero failures after merging main’s changes**, including quick-entry parsing/defaults, scrolling timeline layout, series deletion/editing, recurrence anchoring/refill/exceptions, storage recovery, preference migration, time zones, DST, notification capacity/reconciliation, and widget boundaries.
 - The StoreKit test purchases a verified test subscription, confirms the entitlement, refunds it, and observes the app's transaction listener remove the entitlement. StoreKit changes are asynchronous; the test waits for the observed state change.
-- **Two UI tests passed, zero failures** on iOS 18.5 and again after final navigation changes on iOS 26.5: create/edit/relaunch/delete an event; create/rename/relaunch/reopen/delete a category.
+- **Two UI tests passed, zero failures** on iOS 18.5 after the combined merge (and before that on iOS 26.5): create/edit/relaunch/delete an event; create/rename/relaunch/reopen/delete a category.
 - **Release device builds passed** for the app and widget extension, including signing with the existing developer team. The signed update was installed in place and launched successfully on the connected iPhone (iOS 26.7); no uninstall was performed. This is a development-signed installation, not an App Store release.
 - All 16 alternate-icon identifiers were checked against the built Info.plist. The registered widget URL scheme was opened successfully in the simulator.
 - `git diff --check` passes. Tests use dedicated simulators and test-created records.
 
-Xcode 26.6's iOS 26.5 simulator rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. The older Xcode 16.4 CI runner also failed to deliver the refund update within the test timeout. CI explicitly uses Xcode 26.3 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
+Xcode 26.6's iOS 26.5 simulator rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. CI on Xcode 16.4 and 26.3 also exceeded the original state-change timeouts; downloaded diagnostics show delayed receipt synchronization and AppleMediaServices network timeouts. CI validation is pending the longer, bounded StoreKit waits. CI explicitly uses Xcode 26.3 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
 
 Reproduce the complete suite with an available iOS 18.5 iPhone simulator:
 
@@ -64,4 +64,4 @@ Up to 64 upcoming event days are queued. Launch, activation, significant time ch
 
 Physical-device delivery with the app closed, travel on a real device, VoiceOver, and production App Store purchases still need device verification. The updated build has been installed and launched on the connected iPhone. Enable notifications if needed and check the scheduled-through date in Settings. The regression tests prove scheduling and state behavior; they do not prove delivery on the user's phone.
 
-All-day events retain their calendar day while traveling. Legacy timestamps migrate using the current device timezone because the old format did not save the original timezone. Legacy recurrence end dates are preserved unless existing occurrences prove the old end was ignored; ambiguous old data is not guessed. Pro is described as a supporter subscription, with existing app features remaining available.
+All-day events retain their calendar day while traveling. Legacy timestamps migrate using the current device timezone because the old format did not save the original timezone. Legacy recurrence end dates are preserved unless existing occurrences prove the old end was ignored; ambiguous old data is not guessed. The concurrent main change removes subscription controls; existing app features remain available.
