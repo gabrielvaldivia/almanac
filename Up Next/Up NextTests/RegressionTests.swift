@@ -8,6 +8,13 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testSpanningEventsIntersectWindowEvenWhenBothEndpointsAreOutside() {
+        var event = makeEvent(day: 1)
+        event.endDate = makeEvent(day: 30).date
+        XCTAssertTrue(EventWindow.intersects(event, start: makeEvent(day: 5).date, end: makeEvent(day: 10).date))
+        XCTAssertFalse(EventWindow.intersects(makeEvent(day: 1), start: makeEvent(day: 5).date, end: makeEvent(day: 10).date))
+    }
+
     func testInvalidRepeatIntervalsCannotCreateDuplicates() {
         var event = makeEvent()
         event.repeatOption = .custom

@@ -53,6 +53,8 @@
 		768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D779FBF97208130751AAF53A /* AppPreferences.swift */; };
 		DCCB36AF7935BC806656C34E /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */; };
 		A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */; };
+		25168B30958C3883582A3A8B /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
+		254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -136,6 +138,7 @@
 		D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/NotificationTests.swift"; sourceTree = SOURCE_ROOT; };
 		D779FBF97208130751AAF53A /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/AppPreferences.swift"; sourceTree = SOURCE_ROOT; };
 		9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/DeepLink.swift"; sourceTree = SOURCE_ROOT; };
+		AA4E2B1300420E0C57E87638 /* EventWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/EventWindow.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +204,7 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				AA4E2B1300420E0C57E87638 /* EventWindow.swift */,
 				9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */,
 				D779FBF97208130751AAF53A /* AppPreferences.swift */,
 				D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */,
@@ -432,6 +436,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */,
 				A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */,
 				768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */,
 				21DC314ACD79AB19AFBCBC78 /* NotificationPlan.swift in Sources */,
@@ -453,6 +458,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				25168B30958C3883582A3A8B /* EventWindow.swift in Sources */,
 				DCCB36AF7935BC806656C34E /* DeepLink.swift in Sources */,
 				EE7E13646416A9F1AC2F2B03 /* AppPreferences.swift in Sources */,
 				590233A1ECFCD0624510B31F /* NotificationPlan.swift in Sources */,

@@ -289,6 +289,7 @@ struct ContentView: View {
 
             if sortedEvents.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
+                viewMoreButton
             } else {
                 // Timeline view fixed at the top
                 EventTimelineView(
@@ -319,6 +320,8 @@ struct ContentView: View {
                     appData.loadEvents()
                 }
             }
+            NavigationLink("Past Events") { PastEventsView(category: selectedCategoryFilter) }
+                .font(.footnote).padding(.bottom, 76)
         }
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
@@ -364,6 +367,9 @@ struct ContentView: View {
             print("ContentView appeared")
             appData.loadEvents()
             appData.loadCategories()
+        }
+        .onChange(of: appData.categories.map(\.name)) { _, names in
+            if let selectedCategoryFilter, !names.contains(selectedCategoryFilter) { self.selectedCategoryFilter = nil }
         }
         .onOpenURL { url in
             handleOpenURL(url)
@@ -566,28 +572,10 @@ struct ContentView: View {
         let startOfToday = Calendar.current.startOfDay(for: now)
         let endDate = Calendar.current.date(
             byAdding: .month, value: monthsToLoad, to: startOfToday)!
-        var allEvents = [Event]()
-
-        for event in appData.events {
-            if let filter = selectedCategoryFilter {
-                if event.category == filter
-                    && (event.date >= startOfToday && event.date <= endDate
-                        || (event.endDate != nil && event.endDate! >= startOfToday
-                            && event.endDate! <= endDate))
-                {
-                    allEvents.append(event)
-                }
-            } else {
-                if event.date >= startOfToday && event.date <= endDate
-                    || (event.endDate != nil && event.endDate! >= startOfToday
-                        && event.endDate! <= endDate)
-                {
-                    allEvents.append(event)
-                }
-            }
-        }
-
-        return allEvents.sorted { $0.date < $1.date }
+        return appData.events.filter {
+            (selectedCategoryFilter == nil || $0.category == selectedCategoryFilter) &&
+            EventWindow.intersects($0, start: startOfToday, end: endDate)
+        }.sorted { $0.date < $1.date }
     }
 
     // Delete an event
@@ -602,7 +590,7 @@ struct ContentView: View {
         let endDate = Calendar.current.date(
             byAdding: .month, value: monthsToLoad, to: startOfToday)!
         return appData.events.contains { event in
-            let eventDate = event.endDate ?? event.date
+            let eventDate = event.date
             if let filter = selectedCategoryFilter {
                 return event.category == filter && eventDate > endDate
             } else {
