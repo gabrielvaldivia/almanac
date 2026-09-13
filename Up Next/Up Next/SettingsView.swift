@@ -225,10 +225,8 @@ struct SettingsView: View {
 
     // Function to delete all events
     private func deleteAllEvents() {
-        appData.objectWillChange.send()  // Notify the view of changes
         appData.events.removeAll()
         appData.saveEvents()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")  // Notify widget to reload
     }
 
     // Preview for SettingsView

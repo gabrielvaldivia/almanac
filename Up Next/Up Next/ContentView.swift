@@ -279,10 +279,6 @@ struct ContentView: View {
         .sheet(isPresented: $showEditSheet) {
             editEventSheet
         }
-        .onChange(of: appData.events) { oldValue, newValue in
-            // Force view update
-            appData.objectWillChange.send()
-        }
     }
 
     private var mainContent: some View {
@@ -597,9 +593,6 @@ struct ContentView: View {
     // Delete an event
     func deleteEvent(_ event: Event) {
         appData.deleteEvent(event)
-        appData.objectWillChange.send()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
 
     // Check if there are more events to load

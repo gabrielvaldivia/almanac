@@ -257,8 +257,6 @@ struct EditEventView: View {
         if let index = appData.events.firstIndex(where: { $0.id == event.id }) {
             appData.events.remove(at: index)
             appData.saveEvents()
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
         }
     }
 

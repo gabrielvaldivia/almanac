@@ -207,25 +207,7 @@ struct AddEventView: View {
             events.append(newEvent)
         }
 
-        saveEvents()
-        appData.loadEvents()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-        appData.objectWillChange.send()
-        appData.scheduleDailyNotification()
-    }
-
-    // Function to save events to UserDefaults
-    func saveEvents() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let encoded = try? encoder.encode(events),
-            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
-        {
-            sharedDefaults.set(encoded, forKey: "events")
-            // print("Saved events: \(events)")
-        } else {
-            print("Failed to encode events.")
-        }
+        appData.saveEvents()
     }
 
     // Helper function to get the color of the selected category

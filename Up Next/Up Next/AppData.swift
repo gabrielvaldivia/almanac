@@ -277,7 +277,6 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 AppPreferences.shared.set(defaultCategory, forKey: "defaultCategory")
-                objectWillChange.send()  // Notify observers
             }
         }
     }
@@ -308,6 +307,7 @@ class AppData: NSObject, ObservableObject {
         didSet {
             if isDataLoaded {
                 AppPreferences.shared.set(eventStyle, forKey: "eventStyle")
+                WidgetCenter.shared.reloadAllTimelines()
             }
         }
     }
@@ -354,6 +354,7 @@ class AppData: NSObject, ObservableObject {
         }
         encodeToUserDefaults(
             categoryData, forKey: "categories", suiteName: "group.UpNextIdentifier")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // Function to load categories from UserDefaults
@@ -518,7 +519,7 @@ class AppData: NSObject, ObservableObject {
             let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
         {
             sharedDefaults.set(encoded, forKey: "events")
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")  // Notify widget to reload
+            WidgetCenter.shared.reloadAllTimelines()
             scheduleDailyNotification()  // Reschedule daily notification
             print("Saved events: \(events)")  // Debugging line
         } else {
@@ -612,8 +613,6 @@ class AppData: NSObject, ObservableObject {
             }
         }
         saveEvents()
-        WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-        WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
     }
 
     // Function to update events when a category is edited
@@ -634,9 +633,6 @@ class AppData: NSObject, ObservableObject {
         }
         if eventsUpdated {
             saveEvents()
-            objectWillChange.send()
-            WidgetCenter.shared.reloadTimelines(ofKind: "UpNextWidget")
-            WidgetCenter.shared.reloadTimelines(ofKind: "NextEventWidget")
             print("Events updated and saved.")
         } else {
             print("No events updated.")
