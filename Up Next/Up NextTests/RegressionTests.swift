@@ -8,6 +8,14 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testWidgetLinksHaveValidatedRoutes() {
+        let id = UUID()
+        XCTAssertEqual(DeepLink(url: DeepLink.eventURL(id)), .event(id))
+        XCTAssertEqual(DeepLink(url: URL(string: "upnext://addEvent")!), .addEvent)
+        XCTAssertNil(DeepLink(url: URL(string: "https://event/\(id)")!))
+        XCTAssertNil(DeepLink(url: URL(string: "upnext://event/bad-id")!))
+    }
+
     func testPreferencesMigrationPreservesLatestSettingsAndNone() {
         let oldName = "test.legacy.\(UUID())", newName = "test.shared.\(UUID())"
         let old = UserDefaults(suiteName: oldName)!, shared = UserDefaults(suiteName: newName)!

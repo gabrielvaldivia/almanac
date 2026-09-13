@@ -8,4 +8,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 4: Replaced repeating snapshots and hidden 15-minute reminders with sorted, dated local summaries; reconcile on changes, launch, activation, significant time changes, and best-effort background refresh. Permission/status is visible. Eight tests pass, including DST and future coverage. iOS limits the pending queue; up to 64 event days are queued and Settings shows coverage. Background refresh timing is controlled by iOS: https://developer.apple.com/documentation/backgroundtasks/bgtaskrequest/earliestbegindate
 - 5: Preferences use one shared store; migration preserves the latest settings and explicit None. Removed launch reset. Nine tests pass.
 - 6: Add form initializes once from its incoming category/date; shared form no longer overwrites None or colors on appearance. Explicit repeat edits preserve custom choices. App and widget build pass.
-- 7–20: In progress.
+- 7: Registered the widget URL scheme, validated routes, and wired Next Event to its event ID. Ten tests pass; simulator successfully opens upnext://addEvent.
+- 8–20: In progress.

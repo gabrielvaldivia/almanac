@@ -544,17 +544,23 @@ struct ContentView: View {
 
     // Handle URL scheme for adding events
     func handleOpenURL(_ url: URL) {
-        if url.scheme == "upnext" && url.host == "addEvent" {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.newEventTitle = ""
-                self.newEventDate = Date()
-                self.newEventEndDate = Date()
-                self.showEndDate = false
-                self.selectedCategory =
-                    self.selectedCategoryFilter
-                    ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-                self.showAddEventSheet = true
+        guard let link = DeepLink(url: url) else { return }
+        showAddEventSheet = false
+        showEditSheet = false
+        switch link {
+        case .addEvent:
+            newEventTitle = ""
+            newEventDate = Date()
+            newEventEndDate = Date()
+            showEndDate = false
+            selectedCategory = selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
+            showAddEventSheet = true
+        case .event(let id):
+            if let event = appData.events.first(where: { $0.id == id }) {
+                selectedEvent = event
+                showEditSheet = true
             }
+        case .home: selectedCategoryFilter = nil
         }
     }
 

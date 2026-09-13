@@ -478,7 +478,7 @@ struct NextEventWidgetEntryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .widgetURL(URL(string: "upnext://editWidget"))
+        .widgetURL(DeepLink.eventURL(entry.event.id))
     }
 
     private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
