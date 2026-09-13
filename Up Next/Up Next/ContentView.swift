@@ -11,169 +11,52 @@ import UserNotifications
 import WidgetKit
 
 struct EventTimelineView: View {
-    @EnvironmentObject var appData: AppData
     var events: [Event]
-    let numberOfDays: Int = 365  // Show a full year
-    @Environment(\.colorScheme) var colorScheme
     var selectedCategoryFilter: String?
-
+    var onSelectEvent: ((Event) -> Void)? = nil
+    private let numberOfDays = 365
     private let dayWidth: CGFloat = 40
+    private let spacing: CGFloat = 4
     private let eventHeight: CGFloat = 24
 
-    private var startDate: Date {
-        Calendar.current.startOfDay(for: Date())
-    }
-
-    private var dateRange: [Date] {
-        (0..<numberOfDays).map { dayOffset in
-            Calendar.current.date(byAdding: .day, value: dayOffset, to: startDate) ?? startDate
-        }
-    }
-
-    private func eventsForDate(_ date: Date) -> [(event: Event, level: Int)] {
-        let eventsOnDate = events.filter { event in
-            let eventStart = Calendar.current.startOfDay(for: event.date)
-            let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-            let targetDate = Calendar.current.startOfDay(for: date)
-            return targetDate >= eventStart && targetDate <= eventEnd
-        }
-
-        // Sort events by start date and duration
-        let sortedEvents = eventsOnDate.sorted { e1, e2 in
-            if e1.date == e2.date {
-                let d1 =
-                    e1.endDate.map {
-                        Calendar.current.dateComponents([.day], from: e1.date, to: $0).day ?? 0
-                    } ?? 0
-                let d2 =
-                    e2.endDate.map {
-                        Calendar.current.dateComponents([.day], from: e2.date, to: $0).day ?? 0
-                    } ?? 0
-                return d1 > d2
-            }
-            return e1.date < e2.date
-        }
-
-        // Assign levels to events based on overlap
-        var eventLevels: [(event: Event, level: Int)] = []
-        var usedLevels: Set<Int> = []
-
-        for event in sortedEvents {
-            var level = 0
-            while usedLevels.contains(level) {
-                level += 1
-            }
-            eventLevels.append((event: event, level: level))
-            usedLevels.insert(level)
-        }
-
-        return eventLevels
-    }
-
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let items = TimelineLayout.items(events: events, from: today, days: numberOfDays)
+        let lanes = (items.map(\.lane).max() ?? 0) + 1
+        let height = 48 + CGFloat(lanes) * (eventHeight + spacing) + 8
+        ScrollView([.horizontal, .vertical], showsIndicators: false) {
             ZStack(alignment: .topLeading) {
-                // Days row
-                LazyHStack(alignment: .top, spacing: 4) {
-                    ForEach(dateRange, id: \.self) { date in
-                        VStack(alignment: .center, spacing: 4) {
-                            // Day abbreviated name
+                LazyHStack(alignment: .top, spacing: spacing) {
+                    ForEach(0..<numberOfDays, id: \.self) { offset in
+                        let date = calendar.date(byAdding: .day, value: offset, to: today)!
+                        VStack(spacing: 4) {
                             Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                                .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                            Text("\(calendar.component(.day, from: date))")
                                 .font(.caption.weight(.medium))
-                                .foregroundColor(.gray)
-                            // Day number in circle
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        Calendar.current.isDateInToday(date)
-                                            ? Color.accentColor : Color.clear
-                                    )
-                                    .frame(width: 24, height: 24)
-                                Text("\(Calendar.current.component(.day, from: date))")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundColor(
-                                        Calendar.current.isDateInToday(date) ? .white : .primary)
-                            }
+                                .frame(width: 24, height: 24)
+                                .background(offset == 0 ? Color.accentColor : .clear, in: Circle())
+                                .foregroundStyle(offset == 0 ? Color.white : Color.primary)
+                        }.frame(width: dayWidth)
+                    }
+                }.padding(.horizontal, 16)
+                ForEach(items) { item in
+                    Group {
+                        if let onSelectEvent {
+                            Button { onSelectEvent(item.event) } label: { EventPill(event: item.event) }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("\(item.event.title), \(item.event.date.formatted(date: .complete, time: .omitted))")
+                        } else {
+                            EventPill(event: item.event).accessibilityLabel(item.event.title)
                         }
-                        .frame(width: dayWidth)
                     }
+                    .frame(width: CGFloat(item.dayCount) * (dayWidth + spacing) - spacing, height: eventHeight)
+                    .offset(x: CGFloat(item.start) * (dayWidth + spacing) + 16,
+                            y: 48 + CGFloat(item.lane) * (eventHeight + spacing))
                 }
-                .padding(.horizontal, 16)
-
-                // Events layer
-                ForEach(events) { event in
-                    if let startIndex = dateRange.firstIndex(where: {
-                        Calendar.current.startOfDay(for: $0)
-                            == Calendar.current.startOfDay(for: event.date)
-                    }) {
-                        let xOffset = CGFloat(startIndex) * (dayWidth + 4) + 16  // Account for day spacing
-                        let width = calculateEventWidth(event)
-                        let level = eventLevel(for: event)
-
-                        // For multi-day events, add more padding to the left
-                        let isMultiDay =
-                            event.endDate != nil
-                            && Calendar.current.dateComponents(
-                                [.day], from: event.date, to: event.endDate!
-                            ).day! > 0
-                        let adjustedXOffset = isMultiDay ? xOffset + (dayWidth * 0.2) : xOffset
-
-                        EventPill(event: event)
-                            .frame(width: width, height: eventHeight)
-                            .offset(x: adjustedXOffset, y: 48 + CGFloat(level) * (eventHeight + 4))
-                    }
-                }
-            }
-        }
-        .frame(height: calculateTimelineHeight())
-    }
-
-    private func calculateTimelineHeight() -> CGFloat {
-        let headerHeight: CGFloat = 48  // Height for stacked day header
-        let spacing: CGFloat = 4  // Spacing between events
-        let levels = maxEventLevels + 1  // Add 1 to account for 0-based index
-        let eventsHeight = CGFloat(levels) * (eventHeight + spacing)
-        let bottomPadding: CGFloat = 8  // Padding at the bottom
-
-        return headerHeight + eventsHeight + bottomPadding
-    }
-
-    private func eventLevel(for event: Event) -> Int {
-        let eventStart = Calendar.current.startOfDay(for: event.date)
-        let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-
-        var level = 0
-        for otherEvent in events {
-            if otherEvent.id == event.id { continue }
-
-            let otherStart = Calendar.current.startOfDay(for: otherEvent.date)
-            let otherEnd =
-                otherEvent.endDate.map { Calendar.current.startOfDay(for: $0) } ?? otherStart
-
-            // Check if events overlap
-            if max(eventStart, otherStart) <= min(eventEnd, otherEnd) {
-                if otherEvent.date < event.date
-                    || (otherEvent.date == event.date && otherEvent.id < event.id)
-                {
-                    level += 1
-                }
-            }
-        }
-
-        return level
-    }
-
-    private var maxEventLevels: Int {
-        dateRange.map { date in
-            eventsForDate(date).map(\.level).max() ?? 0
-        }.max() ?? 0 + 1
-    }
-
-    private func calculateEventWidth(_ event: Event) -> CGFloat {
-        let eventStart = Calendar.current.startOfDay(for: event.date)
-        let eventEnd = event.endDate.map { Calendar.current.startOfDay(for: $0) } ?? eventStart
-        let days = Calendar.current.dateComponents([.day], from: eventStart, to: eventEnd).day ?? 0
-        return CGFloat(days + 1) * dayWidth  // Remove the extra spacing between days
+            }.frame(width: CGFloat(numberOfDays) * (dayWidth + spacing) + 28, height: height, alignment: .topLeading)
+        }.frame(height: min(height, 220))
     }
 }
 

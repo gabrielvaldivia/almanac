@@ -8,6 +8,18 @@ final class RegressionTests: XCTestCase {
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
     }
 
+    func testTimelineReusesOnlyNonoverlappingLanesAndClipsOngoingEvents() {
+        var a = makeEvent("A", day: 1); a.endDate = makeEvent(day: 3).date
+        var b = makeEvent("B", day: 2); b.endDate = makeEvent(day: 4).date
+        var c = makeEvent("C", day: 4); c.endDate = makeEvent(day: 5).date
+        let layout = TimelineLayout.items(events: [c, a, b], from: makeEvent(day: 2).date, days: 7)
+        let laneA = layout.first { $0.id == a.id }!, laneB = layout.first { $0.id == b.id }!, laneC = layout.first { $0.id == c.id }!
+        XCTAssertEqual(laneA.start, 0)
+        XCTAssertNotEqual(laneB.lane, laneC.lane)
+        XCTAssertEqual(laneA.lane, laneC.lane)
+        XCTAssertEqual(laneA.dayCount, 2)
+    }
+
     func testSpanningEventsIntersectWindowEvenWhenBothEndpointsAreOutside() {
         var event = makeEvent(day: 1)
         event.endDate = makeEvent(day: 30).date

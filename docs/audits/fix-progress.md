@@ -15,4 +15,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 11: Spanning events stay visible, View More is available from the empty state, and history is reachable with chronological grouping and deletion by event ID. Regression added; verification runs in the isolated audit checkout to avoid concurrent UI edits.
 - 12: Added guarded storage, a readable backup, preservation of unreadable originals, visible recovery controls, and tolerant decoding of legacy optional fields. Fourteen tests pass, including refusal to overwrite corrupt data.
 - 13: Saved recurrence rules distinguish end modes, anchor month/year dates, refill the horizon, and preserve occurrence IDs, exceptions, and deletions. Legacy end dates are preserved unless existing occurrences prove the old end was ignored. Added four recurrence tests; syntax check passes. Simulator validation pending while Xcode is being reinstalled.
-- 14–20: In progress.
+- 14: Timeline uses one deterministic interval layout, clips ongoing events at today, reuses only free lanes, and includes column spacing in widths. Added overlap regression; syntax check passes. Simulator validation pending Xcode reinstall.
+- 15–20: In progress.

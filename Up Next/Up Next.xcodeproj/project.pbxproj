@@ -61,6 +61,7 @@
 		375D6F82F4943D3207D9A79A /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */; };
 		333981FF51AAA8898779B9EE /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */; };
 		94B239855355F36008D77FAD /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */; };
+		57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B32FC648A00425681AAD1B /* TimelineLayout.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +150,7 @@
 		194B1A78F23BD7C7A274D267 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/StorageTests.swift"; sourceTree = SOURCE_ROOT; };
 		526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/Recurrence.swift"; sourceTree = SOURCE_ROOT; };
 		0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RecurrenceTests.swift"; sourceTree = SOURCE_ROOT; };
+		53B32FC648A00425681AAD1B /* TimelineLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/TimelineLayout.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +216,7 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				53B32FC648A00425681AAD1B /* TimelineLayout.swift */,
 				0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */,
 				526CE7F7A1C4FE706A73E1FA /* Recurrence.swift */,
 				194B1A78F23BD7C7A274D267 /* StorageTests.swift */,
@@ -474,6 +477,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */,
 				375D6F82F4943D3207D9A79A /* Recurrence.swift in Sources */,
 				787B0AAD2805E72D9B040DFC /* EventStore.swift in Sources */,
 				25168B30958C3883582A3A8B /* EventWindow.swift in Sources */,
