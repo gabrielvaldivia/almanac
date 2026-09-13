@@ -71,14 +71,14 @@ struct Event: Identifiable, Codable, Equatable {
         endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
         color = try container.decode(CodableColor.self, forKey: .color)
         category = try container.decodeIfPresent(String.self, forKey: .category)
-        notificationsEnabled = try container.decode(Bool.self, forKey: .notificationsEnabled)
-        repeatOption = try container.decode(RepeatOption.self, forKey: .repeatOption)
+        notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
+        repeatOption = try container.decodeIfPresent(RepeatOption.self, forKey: .repeatOption) ?? .never
         repeatUntil = try container.decodeIfPresent(Date.self, forKey: .repeatUntil)
         seriesID = try container.decodeIfPresent(UUID.self, forKey: .seriesID)
         customRepeatCount = try container.decodeIfPresent(Int.self, forKey: .customRepeatCount) ?? 1  // Default value
         repeatUnit = try container.decodeIfPresent(String.self, forKey: .repeatUnit) ?? "Days"  // Default value
         repeatUntilCount = try container.decodeIfPresent(Int.self, forKey: .repeatUntilCount) ?? 1  // Default value
-        useCustomRepeatOptions = try container.decode(Bool.self, forKey: .useCustomRepeatOptions)
+        useCustomRepeatOptions = try container.decodeIfPresent(Bool.self, forKey: .useCustomRepeatOptions) ?? false
     }
 
     // Coding keys for encoding and decoding
@@ -413,118 +413,34 @@ class AppData: NSObject, ObservableObject {
         return allEvents.sorted { $0.date < $1.date }
     }
 
-    // Function to load events from UserDefaults
+    @Published var storageError: String?
+    private let eventStore = EventStore()
+
     func loadEvents() {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-            let data = sharedDefaults.data(forKey: "events")
-        {
-            do {
-                var decodedEvents = try decoder.decode([Event].self, from: data)
-                for i in 0..<decodedEvents.count {
-                    if decodedEvents[i].repeatUntil == nil {
-                        decodedEvents[i].repeatUntil =
-                            Calendar.current.date(
-                                from: DateComponents(
-                                    year: Calendar.current.component(.year, from: Date()),
-                                    month: 12, day: 31)) ?? Date()
-                    }
-                }
-                events = decodedEvents
-                print("Loaded \(events.count) events from user defaults.")
-                print("First event: \(events.first?.title ?? "No events")")
-            } catch {
-                print("Failed to decode events: \(error)")
-                print("Error description: \(error.localizedDescription)")
-                if let decodingError = error as? DecodingError {
-                    switch decodingError {
-                    case .dataCorrupted(let context):
-                        print("Data corrupted: \(context.debugDescription)")
-                    case .keyNotFound(let key, let context):
-                        print("Key not found: \(key.stringValue) - \(context.debugDescription)")
-                    case .typeMismatch(let type, let context):
-                        print("Type mismatch: \(type) - \(context.debugDescription)")
-                    case .valueNotFound(let type, let context):
-                        print("Value not found: \(type) - \(context.debugDescription)")
-                    @unknown default:
-                        print("Unknown decoding error")
-                    }
-                }
-                // If decoding fails, attempt to recover old events
-                if let oldEvents = decodeOldEvents(from: data) {
-                    events = oldEvents
-                    print("Recovered \(events.count) events from old format.")
-                    saveEvents()  // Save events in the new format
-                }
-            }
-        } else {
-            print("No events found in shared UserDefaults.")
-        }
-    }
-
-    // Helper function to decode events from the old format
-    private func decodeOldEvents(from data: Data) -> [Event]? {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        // Define a struct that matches the old Event structure
-        struct OldEvent: Codable {
-            var id = UUID()
-            var title: String
-            var date: Date
-            var endDate: Date?
-            var color: CodableColor
-            var category: String?
-            var notificationsEnabled: Bool = true
-            var repeatOption: RepeatOption = .never
-            var repeatUntil: Date?
-            var seriesID: UUID?
-            var customRepeatCount: Int?
-            var repeatUnit: String?
-            var repeatUntilCount: Int?  // Added this line
-        }
-
         do {
-            let oldEvents = try decoder.decode([OldEvent].self, from: data)
-            // Convert OldEvent to Event, setting isGoogleCalendarEvent to false
-            return oldEvents.map { oldEvent in
-                Event(
-                    id: oldEvent.id,
-                    title: oldEvent.title,
-                    date: oldEvent.date,
-                    endDate: oldEvent.endDate,
-                    color: oldEvent.color,
-                    category: oldEvent.category,
-                    notificationsEnabled: oldEvent.notificationsEnabled,
-                    repeatOption: oldEvent.repeatOption,
-                    repeatUntil: oldEvent.repeatUntil,
-                    seriesID: oldEvent.seriesID,
-                    customRepeatCount: oldEvent.customRepeatCount,
-                    repeatUnit: oldEvent.repeatUnit,
-                    repeatUntilCount: oldEvent.repeatUntilCount
-                )
-            }
+            events = try eventStore.load()
+            storageError = nil
         } catch {
-            print("Failed to decode old events: \(error)")
-            return nil
+            storageError = "Your saved events could not be read. The original data is preserved and saving is paused. \(error.localizedDescription)"
         }
     }
 
-    // Function to save events to UserDefaults
-    func saveEvents() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let encoded = try? encoder.encode(events),
-            let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
-        {
-            sharedDefaults.set(encoded, forKey: "events")
+    func restoreEventBackup() {
+        do {
+            events = try eventStore.restoreBackup()
+            storageError = nil
             WidgetCenter.shared.reloadAllTimelines()
-            scheduleDailyNotification()  // Reschedule daily notification
-            print("Saved events: \(events)")  // Debugging line
-        } else {
-            print("Failed to encode events.")
-        }
+            scheduleDailyNotification()
+        } catch { storageError = error.localizedDescription }
+    }
+
+    func saveEvents() {
+        guard storageError == nil else { return }
+        do {
+            try eventStore.save(events)
+            WidgetCenter.shared.reloadAllTimelines()
+            scheduleDailyNotification()
+        } catch { storageError = "Could not save events: \(error.localizedDescription)" }
     }
 
     @Published var notificationStatus: String?

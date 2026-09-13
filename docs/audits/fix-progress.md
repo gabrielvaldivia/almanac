@@ -13,4 +13,5 @@ Work proceeds in the order of the September 13 audit. Each completed item is ver
 - 9: All event writes go through AppData; saves refresh both widgets and reminders once. Removed redundant reloads and manual change notifications. App/widget build pass.
 - 10: Corrected Time Bot/Time Piece icon identifiers, show system icon-change errors, and read the actual selected icon. Build passes; all 16 alternate icon identifiers exist in the built Info.plist.
 - 11: Spanning events stay visible, View More is available from the empty state, and history is reachable with chronological grouping and deletion by event ID. Regression added; verification runs in the isolated audit checkout to avoid concurrent UI edits.
-- 12–20: In progress.
+- 12: Added guarded storage, a readable backup, preservation of unreadable originals, visible recovery controls, and tolerant decoding of legacy optional fields. Fourteen tests pass, including refusal to overwrite corrupt data.
+- 13–20: In progress.

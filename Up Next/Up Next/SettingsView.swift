@@ -15,6 +15,7 @@ import WidgetKit
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingDeleteAllAlert = false
+    @State private var showingRestoreBackupAlert = false
     @Environment(\.openURL) var openURL
     @State private var selectedAppIcon =
         UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
@@ -25,6 +26,17 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            if let error = appData.storageError {
+                Section("Data Recovery") {
+                    Text(error).font(.footnote)
+                    Button("Retry Loading") { appData.loadEvents() }
+                    Button("Restore Last Readable Backup") { showingRestoreBackupAlert = true }
+                        .alert("Restore backup?", isPresented: $showingRestoreBackupAlert) {
+                            Button("Restore", role: .destructive) { appData.restoreEventBackup() }
+                            Button("Cancel", role: .cancel) {}
+                        } message: { Text("This replaces the current event list with the last readable backup. The unreadable original remains preserved separately.") }
+                }
+            }
             // Notifications Section
             Section(header: Text("Notifications")) {
                 Toggle("Daily Notification", isOn: Binding(
@@ -225,6 +237,7 @@ struct SettingsView: View {
 
     // Function to delete all events
     private func deleteAllEvents() {
+        guard appData.storageError == nil else { return }
         appData.events.removeAll()
         appData.saveEvents()
     }

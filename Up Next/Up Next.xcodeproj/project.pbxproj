@@ -55,6 +55,9 @@
 		A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */; };
 		25168B30958C3883582A3A8B /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
 		254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4E2B1300420E0C57E87638 /* EventWindow.swift */; };
+		787B0AAD2805E72D9B040DFC /* EventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388A4DE642E1E45CDAA1415D /* EventStore.swift */; };
+		799C08E9F4947E56A02212B7 /* EventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388A4DE642E1E45CDAA1415D /* EventStore.swift */; };
+		86180C32DB874A966B7DC47A /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194B1A78F23BD7C7A274D267 /* StorageTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -139,6 +142,8 @@
 		D779FBF97208130751AAF53A /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/AppPreferences.swift"; sourceTree = SOURCE_ROOT; };
 		9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/DeepLink.swift"; sourceTree = SOURCE_ROOT; };
 		AA4E2B1300420E0C57E87638 /* EventWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/EventWindow.swift"; sourceTree = SOURCE_ROOT; };
+		388A4DE642E1E45CDAA1415D /* EventStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/EventStore.swift"; sourceTree = SOURCE_ROOT; };
+		194B1A78F23BD7C7A274D267 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/StorageTests.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +209,8 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				194B1A78F23BD7C7A274D267 /* StorageTests.swift */,
+				388A4DE642E1E45CDAA1415D /* EventStore.swift */,
 				AA4E2B1300420E0C57E87638 /* EventWindow.swift */,
 				9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */,
 				D779FBF97208130751AAF53A /* AppPreferences.swift */,
@@ -436,6 +443,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				799C08E9F4947E56A02212B7 /* EventStore.swift in Sources */,
 				254509D39B9F1D79BD49342E /* EventWindow.swift in Sources */,
 				A749BFE11F269FBBCA048C93 /* DeepLink.swift in Sources */,
 				768EA39117DC0620BCCD2BC4 /* AppPreferences.swift in Sources */,
@@ -458,6 +466,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				787B0AAD2805E72D9B040DFC /* EventStore.swift in Sources */,
 				25168B30958C3883582A3A8B /* EventWindow.swift in Sources */,
 				DCCB36AF7935BC806656C34E /* DeepLink.swift in Sources */,
 				EE7E13646416A9F1AC2F2B03 /* AppPreferences.swift in Sources */,
@@ -487,6 +496,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				86180C32DB874A966B7DC47A /* StorageTests.swift in Sources */,
 				3FB7FDD1DAF38F55B98B55E4 /* NotificationTests.swift in Sources */,
 				3300964BAEB5833E280B7B48 /* RegressionTests.swift in Sources */,
 			);

@@ -176,7 +176,7 @@ struct EditEventView: View {
                         }
                         .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
-                    .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil)
+                    .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil || appData.storageError != nil)
                 }
             }
             .alert(isPresented: $viewState.showDeleteActionSheet) {

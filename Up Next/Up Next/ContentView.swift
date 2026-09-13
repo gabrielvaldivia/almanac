@@ -323,6 +323,14 @@ struct ContentView: View {
             NavigationLink("Past Events") { PastEventsView(category: selectedCategoryFilter) }
                 .font(.footnote).padding(.bottom, 76)
         }
+        .safeAreaInset(edge: .top) {
+            if let error = appData.storageError {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(error).font(.footnote)
+                    NavigationLink("Data Recovery") { SettingsView() }
+                }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
+            }
+        }
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(
