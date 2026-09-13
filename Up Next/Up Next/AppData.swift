@@ -121,6 +121,8 @@ class AppData: NSObject, ObservableObject {
         loadSubscriptionProduct()
     }
 
+    deinit { transactionListener?.cancel() }
+
     @Published var categoryStorageError: String?
     private var isLoadingCategories = false
 
@@ -278,11 +280,13 @@ class AppData: NSObject, ObservableObject {
             isLoadingSubscription = true
             defer { isLoadingSubscription = false }
             startTransactionListener()
-            await refreshSubscriptionStatus()
+            // Product information must not wait for a slow receipt synchronization.
+            async let entitlementRefresh: Void = refreshSubscriptionStatus()
             do {
                 subscriptionProduct = try await Product.products(for: ["AP0001"]).first
                 subscriptionMessage = subscriptionProduct == nil ? "Subscription information is unavailable. Please try again." : nil
             } catch { subscriptionMessage = error.localizedDescription }
+            await entitlementRefresh
         }
     }
 

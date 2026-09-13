@@ -33,6 +33,7 @@ The audit branch incorporates main’s concurrent quick-entry, timeline, and for
 - A failed notification request no longer prevents the remaining requests from being scheduled.
 - Failed event loading preserves existing reminders instead of replacing them with an empty plan. Preference refresh happens after successful loading.
 - StoreKit entitlement handling excludes verified revocations and expired transactions, and prevents older overlapping refreshes from replacing newer state. The regression test configures its own app-state observer and waits for published product/entitlement changes. CI diagnostics showed slow StoreKit receipt synchronization and AppleMediaServices requests timing out; the test allows up to three minutes for each observed state change, with an eight-minute overall cap.
+- The shared quick-entry/form builder accepts the same calendar used for parsing, preventing daylight-saving drift when a supplied calendar differs from the machine timezone. The New York recurrence regression now passes its calendar explicitly. Product information loads concurrently with entitlement refresh so slow receipt synchronization cannot block catalog loading. Transaction listeners are canceled when their app-state owner is released.
 - Category date decoding accepts legacy numeric dates and newer calendar-day values; unreadable category data is preserved and editing pauses.
 
 ## Verification

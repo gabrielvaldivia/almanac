@@ -72,4 +72,3 @@ func daysFromRelativeDate(_ relativeDate: String) -> Int {
         return 0
     }
 }
-

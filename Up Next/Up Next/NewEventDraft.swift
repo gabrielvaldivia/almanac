@@ -32,7 +32,7 @@ struct NewEventDraft {
         }
     }
 
-    static func events(title: String, dates: DateOptions, category: CategoryOptions) -> [Event] {
+    static func events(title: String, dates: DateOptions, category: CategoryOptions, calendar: Calendar = .current) -> [Event] {
         let repeatUntil: Date?
         switch dates.repeatUntilOption {
         case .indefinitely:
@@ -50,7 +50,8 @@ struct NewEventDraft {
             customRepeatCount: dates.customRepeatCount, repeatUnit: dates.repeatUnit,
             repeatUntilCount: dates.repeatUntilCount, useCustomRepeatOptions: true)
         guard !event.title.isEmpty, dates.validationMessage == nil else { return [] }
-        return dates.repeatOption == .never ? [event] : generateRepeatingEvents(
-            for: event, repeatUntilOption: dates.repeatUntilOption, showEndDate: dates.showEndDate)
+        return dates.repeatOption == .never ? [event] : Recurrence.generate(
+            event, rule: RecurrenceRule(event: event, end: dates.repeatUntilOption, calendar: calendar),
+            calendar: calendar)
     }
 }

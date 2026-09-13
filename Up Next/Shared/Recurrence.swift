@@ -12,15 +12,15 @@ struct RecurrenceRule: Codable, Equatable {
     var count: Int
     var excludedIndices: [Int] = []
 
-    init(event: Event, end: RepeatUntilOption) {
+    init(event: Event, end: RepeatUntilOption, calendar: Calendar = .current) {
         anchor = event.date
-        anchorDay = CalendarDay(event.date)
+        anchorDay = CalendarDay(event.date, calendar: calendar)
         frequency = event.repeatOption
         interval = frequency == .custom ? (event.customRepeatCount ?? 1) : 1
         unit = event.repeatUnit ?? "Days"
         self.end = end
         until = end == .onDate ? event.repeatUntil : nil
-        untilDay = until.map { CalendarDay($0) }
+        untilDay = until.map { CalendarDay($0, calendar: calendar) }
         count = event.repeatUntilCount ?? 1
     }
 
