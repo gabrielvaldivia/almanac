@@ -100,6 +100,61 @@ enum EventSeries {
         return events.filter { $0.seriesID == seriesID }
     }
 
+    static func updating(_ selected: Event, with replacement: Event, in events: [Event],
+                         calendar: Calendar = .current) -> [Event] {
+        guard let seriesID = selected.seriesID else { return events }
+        let members = self.members(of: selected, in: events).sorted {
+            $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date
+        }
+        guard let anchor = members.firstIndex(where: { $0.id == selected.id }) else { return events }
+        if replacement.repeatOption == .never {
+            var single = replacement
+            single.seriesID = nil
+            return events.compactMap { event in
+                event.id == selected.id ? single : (event.seriesID == seriesID ? nil : event)
+            }
+        }
+        let sameInterval = selected.repeatOption == replacement.repeatOption
+            && selected.customRepeatCount == replacement.customRepeatCount
+            && selected.repeatUnit == replacement.repeatUnit
+        let shift = calendar.dateComponents([.day], from: calendar.startOfDay(for: selected.date),
+                                             to: calendar.startOfDay(for: replacement.date)).day ?? 0
+        let duration = replacement.endDate.map {
+            calendar.dateComponents([.day], from: calendar.startOfDay(for: replacement.date),
+                                    to: calendar.startOfDay(for: $0)).day ?? 0
+        }
+        let component: Calendar.Component
+        let interval: Int
+        switch replacement.repeatOption {
+        case .daily: component = .day; interval = 1
+        case .weekly: component = .weekOfYear; interval = 1
+        case .monthly: component = .month; interval = 1
+        case .yearly: component = .year; interval = 1
+        case .custom:
+            interval = max(1, replacement.customRepeatCount ?? 1)
+            switch replacement.repeatUnit?.lowercased() {
+            case "weeks": component = .weekOfYear
+            case "months": component = .month
+            case "years": component = .year
+            default: component = .day
+            }
+        case .never: return events
+        }
+        var updates: [UUID: Event] = [:]
+        for (index, event) in members.enumerated() {
+            var updated = replacement
+            updated.id = event.id
+            updated.seriesID = seriesID
+            updated.date = sameInterval
+                ? calendar.date(byAdding: .day, value: shift, to: event.date) ?? event.date
+                : calendar.date(byAdding: component, value: (index - anchor) * interval,
+                                to: replacement.date) ?? event.date
+            updated.endDate = duration.flatMap { calendar.date(byAdding: .day, value: $0, to: updated.date) }
+            updates[event.id] = updated
+        }
+        return events.map { updates[$0.id] ?? $0 }
+    }
+
     static func removing(_ event: Event, from events: [Event]) -> [Event] {
         guard let seriesID = event.seriesID else { return events }
         return events.filter { $0.seriesID != seriesID }

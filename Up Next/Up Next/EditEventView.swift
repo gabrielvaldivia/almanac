@@ -325,196 +325,27 @@ struct EditEventView: View {
     // Function to apply changes to an event or series of events
     func applyChanges(to option: DeleteOption) {
         guard let event = eventDetails.selectedEvent else { return }
-
-        // Calculate the new duration based on the updated end date
-        let newDuration =
-            Calendar.current.dateComponents([.day], from: dateOptions.date, to: dateOptions.endDate)
-            .day ?? 0
-
+        var updated = event
+        updated.title = eventDetails.title
+        updated.date = dateOptions.date
+        updated.endDate = dateOptions.showEndDate ? dateOptions.endDate : nil
+        updated.category = categoryOptions.selectedCategory
+        updated.color = categoryOptions.selectedColor
+        updated.repeatOption = dateOptions.repeatOption
+        updated.customRepeatCount = dateOptions.customRepeatCount
+        updated.repeatUnit = dateOptions.repeatUnit
         switch option {
         case .thisEvent:
-            if let index = events.firstIndex(where: { $0.id == event.id }) {
-                events[index].title = eventDetails.title
-                events[index].date = dateOptions.date
-                events[index].endDate = dateOptions.showEndDate ? dateOptions.endDate : nil
-                events[index].category = categoryOptions.selectedCategory
-                events[index].color = categoryOptions.selectedColor
-                events[index].repeatOption = dateOptions.repeatOption
-                events[index].customRepeatCount = dateOptions.customRepeatCount
-                events[index].repeatUnit = dateOptions.repeatUnit
-            }
+            if updated.repeatOption == .never { updated.seriesID = nil }
+            if let index = events.firstIndex(where: { $0.id == event.id }) { events[index] = updated }
         case .allEvents:
-            guard event.seriesID != nil else {
-                applyChanges(to: .thisEvent)
-                return
-            }
-            let repeatingEvents = EventSeries.members(of: event, in: events)
-            let repeatOption = dateOptions.repeatOption
-
-            // Update the selected event
-            guard let selectedIndex = events.firstIndex(where: { $0.id == event.id }) else {
-                return
-            }
-            events[selectedIndex].title = eventDetails.title
-            events[selectedIndex].date = dateOptions.date
-            events[selectedIndex].endDate = dateOptions.showEndDate ? dateOptions.endDate : nil
-            events[selectedIndex].category = categoryOptions.selectedCategory
-            events[selectedIndex].color = categoryOptions.selectedColor
-            events[selectedIndex].repeatOption = repeatOption
-            events[selectedIndex].customRepeatCount = dateOptions.customRepeatCount
-            events[selectedIndex].repeatUnit = dateOptions.repeatUnit
-
-            // Update future events
-            var eventCount = 1
-            for (_, event) in repeatingEvents.enumerated() {
-                if let eventIndex = events.firstIndex(where: { $0.id == event.id }),
-                    eventIndex > selectedIndex
-                {
-                    let previousEventDate = events[eventIndex - 1].date
-                    let newEventDate: Date?
-                    switch repeatOption {
-                    case .daily:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .day, value: 1, to: previousEventDate)
-                    case .weekly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .weekOfYear, value: 1, to: previousEventDate)
-                    case .monthly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .month, value: 1, to: previousEventDate)
-                    case .yearly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .year, value: 1, to: previousEventDate)
-                    case .never:
-                        newEventDate = nil
-                    case .custom:
-                        switch dateOptions.repeatUnit {
-                        case "Days":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .day, value: dateOptions.customRepeatCount,
-                                to: previousEventDate)
-                        case "Weeks":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .weekOfYear, value: dateOptions.customRepeatCount,
-                                to: previousEventDate)
-                        case "Months":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .month, value: dateOptions.customRepeatCount,
-                                to: previousEventDate)
-                        case "Years":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .year, value: dateOptions.customRepeatCount,
-                                to: previousEventDate)
-                        default:
-                            newEventDate = nil
-                        }
-                    }
-                    if let newEventDate = newEventDate, eventCount < 100 {
-                        events[eventIndex].title = eventDetails.title
-                        events[eventIndex].date = newEventDate
-                        events[eventIndex].endDate =
-                            dateOptions.showEndDate
-                            ? Calendar.current.date(
-                                byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].category = categoryOptions.selectedCategory
-                        events[eventIndex].color = categoryOptions.selectedColor
-                        events[eventIndex].repeatOption = repeatOption
-                        events[eventIndex].customRepeatCount = dateOptions.customRepeatCount
-                        events[eventIndex].repeatUnit = dateOptions.repeatUnit
-                        eventCount += 1
-                    } else {
-                        events.remove(at: eventIndex)
-                    }
-                }
-            }
-
-            // Update past events
-            eventCount = 1
-            for (_, event) in repeatingEvents.enumerated().reversed() {
-                if let eventIndex = events.firstIndex(where: { $0.id == event.id }),
-                    eventIndex < selectedIndex
-                {
-                    let nextEventDate = events[eventIndex + 1].date
-                    let newEventDate: Date?
-                    switch repeatOption {
-                    case .daily:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .day, value: -1, to: nextEventDate)
-                    case .weekly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .weekOfYear, value: -1, to: nextEventDate)
-                    case .monthly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .month, value: -1, to: nextEventDate)
-                    case .yearly:
-                        newEventDate = Calendar.current.date(
-                            byAdding: .year, value: -1, to: nextEventDate)
-                    case .never:
-                        newEventDate = nil
-                    case .custom:
-                        switch dateOptions.repeatUnit {
-                        case "Days":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .day, value: -dateOptions.customRepeatCount,
-                                to: nextEventDate)
-                        case "Weeks":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .weekOfYear, value: -dateOptions.customRepeatCount,
-                                to: nextEventDate)
-                        case "Months":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .month, value: -dateOptions.customRepeatCount,
-                                to: nextEventDate)
-                        case "Years":
-                            newEventDate = Calendar.current.date(
-                                byAdding: .year, value: -dateOptions.customRepeatCount,
-                                to: nextEventDate)
-                        default:
-                            newEventDate = nil
-                        }
-                    }
-                    if let newEventDate = newEventDate, eventCount < 100 {
-                        events[eventIndex].title = eventDetails.title
-                        events[eventIndex].date = newEventDate
-                        events[eventIndex].endDate =
-                            dateOptions.showEndDate
-                            ? Calendar.current.date(
-                                byAdding: .day, value: newDuration, to: newEventDate) : nil
-                        events[eventIndex].category = categoryOptions.selectedCategory
-                        events[eventIndex].color = categoryOptions.selectedColor
-                        events[eventIndex].repeatOption = repeatOption
-                        events[eventIndex].customRepeatCount = dateOptions.customRepeatCount
-                        events[eventIndex].repeatUnit = dateOptions.repeatUnit
-                        eventCount += 1
-                    } else {
-                        events.remove(at: eventIndex)
-                    }
-                }
+            if event.seriesID == nil {
+                if let index = events.firstIndex(where: { $0.id == event.id }) { events[index] = updated }
+            } else {
+                events = EventSeries.updating(event, with: updated, in: events)
             }
         }
-
-        // Check if the event will be included in the daily notification for the date of the event
-        let calendar = Calendar.current
-        let eventDayStart = calendar.startOfDay(for: dateOptions.date)
-        let eventDayEnd = calendar.date(byAdding: .day, value: 1, to: eventDayStart)!
-
-        let eventsOnEventDay = events.filter { event in
-            let eventStart = calendar.startOfDay(for: event.date)
-            return eventStart >= eventDayStart && eventStart < eventDayEnd
-        }
-
-        if eventsOnEventDay.contains(where: { $0.id == event.id }) {
-            print(
-                "The event '\(eventDetails.title)' will be included in the daily notification for \(dateOptions.date)."
-            )
-        } else {
-            print(
-                "The event '\(eventDetails.title)' will NOT be included in the daily notification for \(dateOptions.date)."
-            )
-        }
-
-        appData.objectWillChange.send()  // Notify observers of changes
-        saveEvents()  // Call the saveEvents function
+        saveEvents()
     }
 
     private func setupInitialState() {
