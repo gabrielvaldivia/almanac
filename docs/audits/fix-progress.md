@@ -44,7 +44,7 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 - All 16 alternate-icon identifiers were checked against the built Info.plist. The registered widget URL scheme was opened successfully in the simulator.
 - `git diff --check` passes. Tests use dedicated simulators and test-created records.
 
-Xcode 26.6's iOS 26.5 simulator rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. CI explicitly uses Xcode 16.4 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
+Xcode 26.6's iOS 26.5 simulator rejected StoreKit test configuration with `SKInternalErrorDomain Code=3` and returned no test products. The same purchase/refund test passes on iOS 18.5. The older Xcode 16.4 CI runner also failed to deliver the refund update within the test timeout. CI explicitly uses Xcode 26.3 and iOS 18.5, both listed in the [macOS 15 runner image](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md), rather than suppressing the test failure.
 
 Reproduce the complete suite with an available iOS 18.5 iPhone simulator:
 
