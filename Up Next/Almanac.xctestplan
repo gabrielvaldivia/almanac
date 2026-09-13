@@ -15,7 +15,9 @@
     "storeKitConfiguration": {
       "path": "Up Next/Almanac Pro.storekit"
     },
-    "testTimeoutsEnabled": true
+    "testTimeoutsEnabled": true,
+    "defaultTestExecutionTimeAllowance": 120,
+    "maximumTestExecutionTimeAllowance": 180
   },
   "testTargets": [
     {

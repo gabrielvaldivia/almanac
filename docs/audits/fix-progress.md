@@ -32,7 +32,7 @@ Items 1–11 are on `main`. Items 12–20 are on `codex/audit-fixes`, based on t
 - The edit sheet could display the selected event but save using a placeholder event ID, silently leaving the original unchanged. Presentation and editing now use the selected event's identity. Category edit sheets also derive presentation from their selected category.
 - A failed notification request no longer prevents the remaining requests from being scheduled.
 - Failed event loading preserves existing reminders instead of replacing them with an empty plan. Preference refresh happens after successful loading.
-- A fresh CI run exposed stale refund entitlements. Verified revocations now override cached entitlement records, expired transactions are excluded, and older overlapping refreshes cannot overwrite newer state. The StoreKit test also finishes its purchase before requesting a refund, matching the app purchase lifecycle.
+- A fresh CI run exposed stale refund entitlements. Verified revocations now override cached entitlement records, expired transactions are excluded, and older overlapping refreshes cannot overwrite newer state. The StoreKit test creates its own app-state observer after configuring the test catalog, waits for product loading, and finishes its purchase before requesting a refund. This avoids inheriting the host app’s earlier observer and matches the app purchase lifecycle.
 - Category date decoding accepts legacy numeric dates and newer calendar-day values; unreadable category data is preserved and editing pauses.
 
 ## Verification
