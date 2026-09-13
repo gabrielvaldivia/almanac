@@ -8,42 +8,36 @@ struct AddEventButton: View {
     @Binding var newEventEndDate: Date
     @Binding var showEndDate: Bool
     @Binding var selectedCategory: String?
-    @GestureState private var isButtonPressed: Bool = false
     @EnvironmentObject var appData: AppData
 
     var body: some View {
         let buttonColor = self.selectedCategoryFilter != nil ? appData.categories.first(where: { $0.name == self.selectedCategoryFilter })?.color ?? Color.black : appData.categories.first(where: { $0.name == appData.defaultCategory })?.color ?? Color.blue
 
-        ZStack {
-            RoundedRectangle(cornerRadius: 40)
-                .fill(buttonColor)
+        Button {
+            newEventTitle = ""
+            newEventDate = Date()
+            newEventEndDate = Date()
+            showEndDate = false
+            selectedCategory = selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
+            showAddEventSheet = true
+        } label: {
+            Image(systemName: "plus").font(.title.bold()).foregroundStyle(.white)
                 .frame(width: 80, height: 60)
+                .background(buttonColor, in: Capsule())
                 .shadow(color: buttonColor.opacity(0.3), radius: 10, x: 0, y: 5)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
-
-            Image(systemName: "plus")
-                .font(.title)
-                .bold()
-                .foregroundColor(.white)
-                .scaleEffect(isButtonPressed ? 0.7 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: isButtonPressed)
         }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isButtonPressed) { _, isPressed, _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    self.newEventTitle = ""
-                    self.newEventDate = Date()
-                    self.newEventEndDate = Date()
-                    self.showEndDate = false
-                    self.selectedCategory = self.selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-                    self.showAddEventSheet = true
-                }
-        )
+        .buttonStyle(AddEventPressStyle())
+        .accessibilityLabel("Add Event")
+        .accessibilityIdentifier("addEventButton")
+        .disabled(appData.storageError != nil)
+    }
+}
+
+private struct AddEventPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }

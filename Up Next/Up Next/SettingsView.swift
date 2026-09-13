@@ -220,7 +220,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .sheet(isPresented: $showingAppIconSheet) {
             AppIconSelectionView(selectedAppIcon: $selectedAppIcon)
-                .presentationDetents([.height(230)])
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingCategoryManagementSheet) {
             NavigationView {
@@ -304,37 +304,21 @@ struct SettingsView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 16) {
                         ForEach(Self.appIcons, id: \.1) { icon in
-                            VStack(alignment: .center, spacing: 4) {
-                                Image(icon.0)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.gray, lineWidth: 0.5)
-                                    )
-
-                                Text(icon.1)
-                                    .font(.footnote)
-                                    .foregroundColor(.primary)
-
-                                if let author = icon.3 {
-                                    Text("by \(author.0)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .onTapGesture {
-                                            if let url = URL(string: author.1) {
-                                                openURL(url)
-                                            }
-                                        }
+                            VStack(spacing: 4) {
+                                Button { changeAppIcon(to: icon.2, displayName: icon.1) } label: {
+                                    VStack {
+                                        Image(icon.0).resizable().aspectRatio(contentMode: .fit)
+                                            .frame(width: 60, height: 60).cornerRadius(12)
+                                        Text(icon.1).font(.footnote).foregroundStyle(.primary)
+                                    }
+                                }.accessibilityLabel("\(icon.1) App Icon")
+                                    .accessibilityValue(selectedAppIcon == icon.1 ? "Selected" : "")
+                                if let author = icon.3, let url = URL(string: author.1) {
+                                    Link("by \(author.0)", destination: url)
+                                        .font(.caption2).multilineTextAlignment(.center)
                                 }
-                            }
-                            .frame(width: 90, height: icon.3 != nil ? 120 : 100)
-                            .onTapGesture {
-                                changeAppIcon(to: icon.2, displayName: icon.1)
-                            }
+                            }.frame(width: 90)
+
                         }
                     }
                     .padding()

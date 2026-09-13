@@ -62,23 +62,16 @@ struct CategoriesView: View {
             // Categories section
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
-                    HStack {
-                        Text(appData.categories[index].name)
-                        Spacer()
-                        Circle()
-                            .fill(
-                                self.appData.categories.indices.contains(index)
-                                    ? self.appData.categories[index].color : .clear
-                            )
-                            .frame(width: 24, height: 24)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if editMode?.wrappedValue != .active {
-                            categoryToEdit = appData.categories[index]
-                            showingEditCategorySheet = true
+                    Button {
+                        categoryToEdit = appData.categories[index]
+                        showingEditCategorySheet = true
+                    } label: {
+                        HStack {
+                            Text(appData.categories[index].name).foregroundStyle(.primary)
+                            Spacer()
+                            Circle().fill(appData.categories[index].color).frame(width: 24, height: 24)
                         }
-                    }
+                    }.disabled(editMode?.wrappedValue == .active)
                 }
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)

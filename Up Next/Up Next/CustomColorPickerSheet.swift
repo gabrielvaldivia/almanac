@@ -41,7 +41,7 @@ struct CustomColorPickerSheet: View {
     @ViewBuilder
     private func ColorGrid() -> some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-            ForEach(colorOptions, id: \.self) { color in
+            ForEach(Array(colorOptions.enumerated()), id: \.offset) { index, color in
                 Button(action: {
                     selectedColor = CodableColor(color: color)
                     showColorPickerSheet = false
@@ -50,12 +50,18 @@ struct CustomColorPickerSheet: View {
                         .fill(color)
                         .frame(width: 50, height: 50)
                         .padding(.bottom, 10)
+                        .accessibilityLabel(colorNames[index])
+                        .accessibilityValue(selectedColor.color == color ? "Selected" : "")
                 }
             }
         }
         .padding()
     }
     
+    private var colorNames: [String] {
+        [colorScheme == .dark ? "White" : "Black", "Gray", "Blue", "Indigo", "Purple", "Red", "Pink", "Yellow", "Orange", "Brown", "Green", "Teal"]
+    }
+
     private var colorOptions: [Color] {
         return [colorScheme == .dark ? .white : .black] + Self.predefinedColors
     }

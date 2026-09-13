@@ -75,6 +75,7 @@ struct EventRow: View {
     }
 
     var body: some View {
+        Button(action: editEvent) {
         HStack(alignment: .top, spacing: appData.eventStyle == "naked" ? 8 : 20) {
             // Event Style Indicator
             if appData.eventStyle == "naked" {
@@ -118,7 +119,12 @@ struct EventRow: View {
                 : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
         )
         .cornerRadius(8)
-        .onTapGesture {
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func editEvent() {
             selectedEvent = event
             newEventTitle = event.title
             newEventDate = event.date
@@ -128,7 +134,6 @@ struct EventRow: View {
             showEndDate = event.endDate != nil
             selectedCategory = event.category
             showEditSheet = true
-        }
     }
 
     private var eventDateAndRepeatText: String {

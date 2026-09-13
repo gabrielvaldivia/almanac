@@ -252,6 +252,7 @@ struct ContentView: View {
                         : "line.3.horizontal.decrease.circle.fill"
                 )
                 .imageScale(.large)
+                .accessibilityLabel("Filter Events")
             }
         )
         .onAppear {
@@ -270,6 +271,7 @@ struct ContentView: View {
     private var settingsButton: some View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
+                .accessibilityLabel("Settings")
                 .imageScale(.large)
         }
     }

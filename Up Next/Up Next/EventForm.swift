@@ -77,7 +77,7 @@ struct TitleSection: View {
             TextField("Title", text: $newEventTitle)
                 .focused($isTitleFocused)
                 .padding(.horizontal)
-                .frame(height: 40)
+                .frame(minHeight: 44)
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(8)
@@ -161,6 +161,7 @@ struct DateSection: View {
                         Image(
                             systemName: "point.topleft.down.to.point.bottomright.filled.curvepath"
                         )
+                        .accessibilityLabel("Add End Date")
                         .foregroundColor(.primary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -201,6 +202,7 @@ struct DateSection: View {
                     }
                 }) {
                     Image(systemName: "repeat")
+                        .accessibilityLabel("Stop Repeating")
                         .foregroundColor(dateOptions.repeatOption != .never ? .white : .gray)
                         .padding(8)
                         .background(
@@ -225,7 +227,8 @@ struct DateSection: View {
                                 }
                             } label: {
                                 Color.clear
-                                    .frame(width: 40, height: 40)
+                                    .frame(width: 44, height: 44)
+                                    .accessibilityLabel("Repeat Options")
                             }
                         }
                     }
@@ -311,6 +314,7 @@ struct CategoryAndColorSection: View {
                         .fill(categoryOptions.selectedColor.color)
                         .frame(width: 24, height: 24)
                         .padding(.trailing, 6)
+                        .accessibilityLabel("Event Color")
                 }
             }
             .padding(.bottom, 6)

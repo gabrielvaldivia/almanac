@@ -86,6 +86,7 @@ struct AddEventView: View {
                                 .fill(Color.gray.opacity(0.2))
                                 .frame(width: 32, height: 32)
                             Image(systemName: "xmark")
+                                .accessibilityLabel("Cancel")
                                 .font(.system(size: 10, weight: .heavy))
                                 .foregroundColor(.primary)
                         }

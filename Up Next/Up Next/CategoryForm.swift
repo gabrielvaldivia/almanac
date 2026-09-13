@@ -84,12 +84,10 @@ struct CategoryForm: View {
                     HStack {
                         Text("Color")
                         Spacer()
-                        Circle()
-                            .fill(categoryColor)
-                            .frame(width: 29, height: 29)
-                            .onTapGesture {
-                                showColorPickerSheet = true
-                            }
+                        Button { showColorPickerSheet = true } label: {
+                            Circle().fill(categoryColor).frame(width: 29, height: 29)
+                                .frame(minWidth: 44, minHeight: 44)
+                        }.accessibilityLabel("Category Color")
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 12)
