@@ -84,6 +84,7 @@ struct AddEventView: View {
                         showAddEventSheet = false
                     }
                     .labelStyle(.iconOnly)
+                    .foregroundStyle(.tint)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
@@ -91,11 +92,11 @@ struct AddEventView: View {
                         onSave()
                         showAddEventSheet = false
                     }
-                    .tint(categoryOptions.selectedColor.color)
                     .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil || appData.storageError != nil)
                 }
             }
         }
+        .tint(categoryOptions.selectedColor.color)
         .sheet(isPresented: $showCategoryManagementView) {
             // Category management view
             NavigationView {

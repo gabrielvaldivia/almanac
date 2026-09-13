@@ -29,6 +29,9 @@ struct TimelineScrollWindow {
 
 struct EventTimelineView: View {
     var events: [Event]
+    var tint: Color
+    var scrollToTodayRequest: UUID?
+    var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -39,6 +42,10 @@ struct EventTimelineView: View {
         VStack(spacing: 0) {
             TimelineScroller(
                 events: events,
+                tint: tint,
+                scrollToTodayRequest: scrollToTodayRequest,
+                animateScrolling: !reduceMotion,
+                onTodayVisibilityChange: onTodayVisibilityChange,
                 onSelectEvent: onSelectEvent,
                 onLaneCountChange: { laneCount = $0 },
                 onCollapse: setCollapsed
@@ -72,6 +79,9 @@ struct EventTimelineView: View {
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: laneCount)
+        .onChange(of: scrollToTodayRequest) {
+            setCollapsed(false)
+        }
     }
 
     private func setCollapsed(_ collapsed: Bool) {
@@ -83,19 +93,35 @@ struct EventTimelineView: View {
 
 private struct TimelineScroller: UIViewRepresentable {
     var events: [Event]
+    var tint: Color
+    var scrollToTodayRequest: UUID?
+    var animateScrolling: Bool
+    var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
     var onLaneCountChange: (Int) -> Void
     var onCollapse: (Bool) -> Void
+
+    final class Coordinator {
+        var lastScrollToTodayRequest: UUID?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> TimelineScrollView {
         TimelineScrollView()
     }
 
     func updateUIView(_ scrollView: TimelineScrollView, context: Context) {
+        scrollView.tintColor = UIColor(tint)
         scrollView.onSelectEvent = onSelectEvent
         scrollView.onLaneCountChange = onLaneCountChange
         scrollView.onCollapse = onCollapse
+        scrollView.onTodayVisibilityChange = onTodayVisibilityChange
         scrollView.update(events: events)
+        if let scrollToTodayRequest, context.coordinator.lastScrollToTodayRequest != scrollToTodayRequest {
+            context.coordinator.lastScrollToTodayRequest = scrollToTodayRequest
+            scrollView.scrollToToday(animated: animateScrolling)
+        }
     }
 }
 
@@ -105,6 +131,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var onSelectEvent: ((Event) -> Void)?
     var onLaneCountChange: ((Int) -> Void)?
     var onCollapse: ((Bool) -> Void)?
+    var onTodayVisibilityChange: ((Bool) -> Void)?
 
     private let anchor = Calendar.current.startOfDay(for: Date())
     private var scrollWindow = TimelineScrollWindow()
@@ -114,6 +141,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var eventButtons: [UUID: TimelineEventButton] = [:]
     private var renderedDays: ClosedRange<Int>?
     private var reportedLaneCount: Int?
+    private var reportedTodayVisibility: Bool?
     private var isLayingOut = false
     private var needsEventLayout = true
 
@@ -140,6 +168,30 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    private var todayDay: Int {
+        Calendar.current.dateComponents([.day], from: anchor,
+                                        to: Calendar.current.startOfDay(for: Date())).day ?? 0
+    }
+
+    var isTodayVisible: Bool {
+        scrollWindow.visibleDays(offset: contentOffset.x, width: bounds.width).contains(todayDay)
+    }
+
+    func scrollToToday(animated: Bool) {
+        // Stop momentum before returning so a fling cannot move us away again.
+        setContentOffset(contentOffset, animated: false)
+        let targetIndex = todayDay - scrollWindow.firstDay
+        if (30...(TimelineScrollWindow.dayCount - 30)).contains(targetIndex) {
+            setContentOffset(CGPoint(x: CGFloat(targetIndex) * TimelineScrollWindow.dayWidth, y: 0), animated: animated)
+        } else {
+            // Today may be outside the recycled canvas after a long scroll.
+            scrollWindow.firstDay = todayDay - TimelineScrollWindow.centerDay
+            setContentOffset(CGPoint(x: scrollWindow.initialOffset, y: 0), animated: false)
+        }
+        needsEventLayout = true
+        setNeedsLayout()
+    }
 
     func update(events: [Event]) {
         let unchanged = self.events.count == events.count && zip(self.events, events).allSatisfy { old, new in
@@ -236,6 +288,14 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 self.onLaneCountChange?(count)
             }
         }
+        let showsToday = visibleDays.contains(todayDay)
+        if reportedTodayVisibility != showsToday {
+            reportedTodayVisibility = showsToday
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let visible = self.reportedTodayVisibility else { return }
+                self.onTodayVisibilityChange?(visible)
+            }
+        }
     }
 
     @objc private func selectedEvent(_ button: TimelineEventButton) {
@@ -259,6 +319,7 @@ private final class TimelineEventButton: UIButton {
 private final class TimelineDayView: UIView {
     private let weekday = UILabel()
     private let number = UILabel()
+    private var isToday = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -280,10 +341,15 @@ private final class TimelineDayView: UIView {
     func configure(date: Date) {
         weekday.text = date.formatted(.dateTime.weekday(.abbreviated))
         number.text = date.formatted(.dateTime.day())
-        let isToday = Calendar.current.isDateInToday(date)
+        isToday = Calendar.current.isDateInToday(date)
         number.backgroundColor = isToday ? tintColor : .clear
         number.textColor = isToday ? .white : .label
         accessibilityLabel = date.formatted(date: .complete, time: .omitted)
+    }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        number.backgroundColor = isToday ? tintColor : .clear
     }
 
     override func layoutSubviews() {

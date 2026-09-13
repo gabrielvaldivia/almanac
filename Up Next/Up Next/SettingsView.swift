@@ -76,7 +76,7 @@ struct SettingsView: View {
                             Text(appData.defaultCategory.isEmpty ? "None" : appData.defaultCategory)
                                 .foregroundColor(.gray)
                             Image(systemName: "chevron.up.chevron.down")
-                                .foregroundColor(.gray)
+                                .foregroundStyle(.tint)
                         }
                         .padding(.vertical, 6)
                         .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -91,7 +91,7 @@ struct SettingsView: View {
                             .foregroundColor(.primary)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.tint)
                     }
                 }
             }
@@ -142,7 +142,7 @@ struct SettingsView: View {
                             Text(appData.eventStyle.capitalized)
                                 .foregroundColor(.gray)
                             Image(systemName: "chevron.up.chevron.down")
-                                .foregroundColor(.gray)
+                                .foregroundStyle(.tint)
                         }
                         .padding(.vertical, 6)
                         .background(Color(UIColor.secondarySystemGroupedBackground))

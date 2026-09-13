@@ -72,8 +72,6 @@ struct EditEventView: View {
 
     @State private var showDeleteSeriesAlert = false
     @State private var deleteOption: DeleteOption = .thisEvent
-    @State private var showUpdateActionSheet = false
-    @State private var shouldDismissEditSheet = false
 
     // Function to save the event
     let saveEvents: () -> Void
@@ -136,46 +134,29 @@ struct EditEventView: View {
             .navigationTitle("Edit Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Toolbar with cancel and save buttons
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") {
                         showEditSheet = false
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(width: 32, height: 32)
-                            Image(systemName: "xmark")
-                                .accessibilityLabel("Cancel")
-                                .font(.system(size: 10, weight: .heavy))
-                                .foregroundColor(.primary)
-                        }
                     }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.tint)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                ToolbarItem(placement: .confirmationAction) {
+                    Group {
                         if eventDetails.selectedEvent?.seriesID == nil {
-                            applyChanges(to: .thisEvent)
-                            showEditSheet = false
+                            Button("Save") {
+                                saveChanges(to: .thisEvent)
+                            }
                         } else {
-                            showUpdateActionSheet = true
-                        }
-                    }) {
-                        Group {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(categoryOptions.selectedColor.color)
-                                    .frame(width: 60, height: 32)
-                                Text("Save")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(
-                                        CustomColorPickerSheet(
-                                            selectedColor: $categoryOptions.selectedColor,
-                                            showColorPickerSheet: .constant(false)
-                                        ).contrastColor)
+                            Menu("Save") {
+                                Button("This Event Only") {
+                                    saveChanges(to: .thisEvent)
+                                }
+                                Button("All Events in Series") {
+                                    saveChanges(to: .allEvents)
+                                }
                             }
                         }
-                        .opacity(eventDetails.title.isEmpty ? 0.3 : 1.0)
                     }
                     .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil || appData.storageError != nil)
                 }
@@ -191,45 +172,19 @@ struct EditEventView: View {
                     secondaryButton: .cancel()
                 )
             }
-            .actionSheet(isPresented: $showUpdateActionSheet) {
-                if eventDetails.selectedEvent?.seriesID != nil {
-                    return ActionSheet(
-                        title: Text("Update Event"),
-                        message: Text(
-                            "Do you want to apply the changes to this event only or all events in the series?"
-                        ),
-                        buttons: [
-                            .default(Text("This Event Only")) {
-                                applyChanges(to: .thisEvent)
-                                shouldDismissEditSheet = true
-                            },
-                            .default(Text("All Events in Series")) {
-                                applyChanges(to: .allEvents)
-                                shouldDismissEditSheet = true
-                            },
-                            .cancel(),
-                        ]
-                    )
-                } else {
-                    applyChanges(to: .thisEvent)
-                    shouldDismissEditSheet = true
-                    return ActionSheet(title: Text(""), message: Text(""), buttons: [])
-                }
-            }
         }
+        .tint(categoryOptions.selectedColor.color)
         .onAppear(perform: setupInitialState)
         .alertController(
             isPresented: $showDeleteSeriesAlert, title: "Delete Series",
             message: "Are you sure you want to delete all events in this series?",
             confirmAction: deleteSeries
         )
-        .onChange(of: shouldDismissEditSheet) { oldValue, newValue in
-            if newValue {
-                showEditSheet = false
-                shouldDismissEditSheet = false
-            }
-        }
+    }
 
+    private func saveChanges(to option: DeleteOption) {
+        applyChanges(to: option)
+        showEditSheet = false
     }
 
     // Function to delete an event

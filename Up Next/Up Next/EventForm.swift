@@ -238,6 +238,7 @@ struct CategoryAndColorSection: View {
                         HStack {
                             Text("Add Category")
                             Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(.tint)
                         }.foregroundColor(.gray)
                     }
                 } label: {
@@ -245,7 +246,7 @@ struct CategoryAndColorSection: View {
                         Text(categoryOptions.selectedCategory ?? "None")
                             .foregroundColor(.gray)
                         Image(systemName: "chevron.up.chevron.down")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.tint)
                     }
                 }
             }

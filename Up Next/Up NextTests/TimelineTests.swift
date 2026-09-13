@@ -93,6 +93,63 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testReturnToTodayAfterRecyclingInEitherDirection() {
+        for direction: CGFloat in [-1, 1] {
+            let scrollView = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 84))
+            let todayEvent = Event(title: "Today", date: Date(), color: CodableColor(color: .blue))
+            scrollView.update(events: [todayEvent])
+            scrollView.layoutIfNeeded()
+            XCTAssertTrue(scrollView.isTodayVisible)
+
+            for _ in 0..<100 {
+                scrollView.contentOffset.x += direction * 70 * TimelineScrollWindow.dayWidth
+                scrollView.setNeedsLayout()
+                scrollView.layoutIfNeeded()
+            }
+            XCTAssertFalse(scrollView.isTodayVisible)
+
+            scrollView.scrollToToday(animated: false)
+            scrollView.layoutIfNeeded()
+            XCTAssertTrue(scrollView.isTodayVisible)
+            XCTAssertTrue(scrollView.subviews.contains {
+                $0.accessibilityLabel == "Today" && scrollView.bounds.intersects($0.frame)
+            })
+            XCTAssertLessThan(scrollView.subviews.filter(\.isAccessibilityElement).count, 16)
+        }
+    }
+
+    @MainActor
+    func testTodayVisibilityReportsLeavingAndReturning() async {
+        let scrollView = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 84))
+        let initial = expectation(description: "Today visible initially")
+        scrollView.onTodayVisibilityChange = { visible in
+            XCTAssertTrue(visible)
+            initial.fulfill()
+        }
+        scrollView.layoutIfNeeded()
+        await fulfillment(of: [initial], timeout: 1)
+
+        let away = expectation(description: "Today is offscreen")
+        scrollView.onTodayVisibilityChange = { visible in
+            XCTAssertFalse(visible)
+            away.fulfill()
+        }
+        scrollView.contentOffset.x += 10 * TimelineScrollWindow.dayWidth
+        scrollView.setNeedsLayout()
+        scrollView.layoutIfNeeded()
+        await fulfillment(of: [away], timeout: 1)
+
+        let returned = expectation(description: "Today visible after return")
+        scrollView.onTodayVisibilityChange = { visible in
+            XCTAssertTrue(visible)
+            returned.fulfill()
+        }
+        scrollView.scrollToToday(animated: false)
+        scrollView.layoutIfNeeded()
+        await fulfillment(of: [returned], timeout: 1)
+    }
+
+    @MainActor
     func testScrollViewStartsTodayAndKeepsOnlyNearbyDayViews() {
         let scrollView = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 84))
         scrollView.layoutIfNeeded()

@@ -138,6 +138,7 @@ struct CategoryForm: View {
             }
         }
         .background(Color(UIColor.secondarySystemBackground))
+        .tint(categoryColor)
 
         .sheet(isPresented: $showColorPickerSheet) {
             CustomColorPickerSheet(

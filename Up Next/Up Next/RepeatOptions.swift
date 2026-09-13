@@ -55,7 +55,7 @@ struct RepeatOptions: View {
                         Text(repeatOption.rawValue)
                             .foregroundColor(.gray)
                         Image(systemName: "chevron.up.chevron.down")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.tint)
                     }
                 }
             }
@@ -88,7 +88,7 @@ struct RepeatOptions: View {
                                 Text(repeatUnit)
                                     .foregroundColor(.gray)
                                 Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.tint)
                             }
                         }
                     }
@@ -128,7 +128,7 @@ struct RepeatOptions: View {
                                 Text(repeatUntilOptionDisplayText)
                                     .foregroundColor(.gray)
                                 Image(systemName: "chevron.up.chevron.down")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.tint)
                             }
                         }
                     }

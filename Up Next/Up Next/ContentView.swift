@@ -31,6 +31,8 @@ struct ContentView: View {
     @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
+    @State private var timelineShowsToday = true
+    @State private var scrollToTodayRequest: UUID?
     @State private var eventDetails = EventDetails(
         title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
     @State private var dateOptions = DateOptions(
@@ -48,7 +50,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @FocusState private var isFocused: Bool
+    @FocusState private var isQuickEntryFocused: Bool
 
     // Date formatters
     let itemDateFormatter: DateFormatter = {
@@ -73,16 +75,30 @@ struct ContentView: View {
         NavigationView {
             mainContent
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    QuickAddEventField(
-                        text: $quickEventInput,
-                        color: quickEventDefaults.categoryOptions.selectedColor.color,
-                        onAdd: addQuickEvent,
-                        onOpenDetails: openEventDetails
-                    )
-                    .disabled(appData.storageError != nil)
+                    HStack(spacing: 8) {
+                        Group {
+                            if isQuickEntryFocused {
+                                closeQuickEntryButton
+                                    .transition(.blurReplace)
+                            } else {
+                                filterMenu
+                                    .transition(.blurReplace)
+                            }
+                        }
+                        .modifier(FloatingControlSurface())
+                        QuickAddEventField(
+                            text: $quickEventInput,
+                            isFocused: $isQuickEntryFocused,
+                            onSubmit: submitQuickEntry
+                        )
+                        .disabled(appData.storageError != nil)
+                        quickEntryActionButton
+                    }
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isQuickEntryFocused)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                 }
         }
-        .focused($isFocused)
         .sheet(isPresented: $showAddEventSheet) {
             addEventSheet
         }
@@ -91,15 +107,20 @@ struct ContentView: View {
                           showEditSheet: editSheetPresented, saveEvents: appData.saveEvents)
                 .id(event.id)
         }
+        .tint(categoryTint)
     }
 
     private var mainContent: some View {
-        VStack(spacing: 0) {
-            let days = EventListDay.group(events: timelineEvents)
+        let days = EventListDay.group(events: timelineEvents)
 
-            EventTimelineView(events: timelineEvents) { event in
-                selectTimelineEvent(event)
-            }
+        return VStack(spacing: 0) {
+            EventTimelineView(
+                events: timelineEvents,
+                tint: categoryTint,
+                scrollToTodayRequest: scrollToTodayRequest,
+                onTodayVisibilityChange: { timelineShowsToday = $0 },
+                onSelectEvent: selectTimelineEvent
+            )
             Divider()
 
             if days.isEmpty {
@@ -145,41 +166,22 @@ struct ContentView: View {
         }
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarItems(
-            leading: settingsButton,
-            trailing: Menu {
-                Button(action: {
-                    selectedCategoryFilter = nil
-                }) {
-                    HStack {
-                        Text("All Events")
-                        if selectedCategoryFilter == nil {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-
-                ForEach(appData.categories, id: \.name) { category in
-                    Button(action: {
-                        selectedCategoryFilter = category.name
-                    }) {
-                        HStack {
-                            Circle()
-                                .fill(category.color)
-                                .frame(width: 8, height: 8)
-                            Text(category.name)
-                            if selectedCategoryFilter == category.name {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "line.horizontal.3.decrease")
-                    .accessibilityLabel("Filter Events")
-                    .imageScale(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                settingsButton
             }
-        )
+            if !timelineShowsToday || isListAwayFromToday(in: days) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: scrollToToday) {
+                        Text(Date().formatted(.dateTime.day()))
+                            .monospacedDigit()
+                    }
+                    .accessibilityLabel("Today")
+                    .accessibilityHint("Return to today in the timeline and event list")
+                    .accessibilityIdentifier("scrollToToday")
+                }
+            }
+        }
         .onAppear {
             appData.loadEvents()
             appData.loadCategories()
@@ -212,7 +214,119 @@ struct ContentView: View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
                 .accessibilityLabel("Settings")
+                .foregroundStyle(.tint)
                 .imageScale(.large)
+        }
+    }
+
+    private func isListAwayFromToday(in days: [EventListDay]) -> Bool {
+        guard let eventListPosition, let todayPosition = EventListDay.initialDate(in: days) else { return false }
+        return eventListPosition != todayPosition
+    }
+
+    private func scrollToToday() {
+        highlightedEventID = nil
+        highlightRequestID = nil
+        scrollToTodayRequest = UUID()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            eventListPosition = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents))
+        }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            Button {
+                selectedCategoryFilter = nil
+            } label: {
+                HStack {
+                    Text("All Events")
+                    if selectedCategoryFilter == nil {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+
+            ForEach(appData.categories, id: \.name) { category in
+                Button {
+                    selectedCategoryFilter = category.name
+                } label: {
+                    HStack {
+                        Circle()
+                            .fill(category.color)
+                            .frame(width: 8, height: 8)
+                        Text(category.name)
+                        if selectedCategoryFilter == category.name {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "line.horizontal.3.decrease")
+                .foregroundStyle(.tint)
+                .imageScale(.large)
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
+        }
+        .accessibilityLabel("Filter events")
+        .accessibilityValue(selectedCategoryFilter ?? "All Events")
+        .accessibilityIdentifier("eventFilter")
+    }
+
+    private var closeQuickEntryButton: some View {
+        Button {
+            isQuickEntryFocused = false
+        } label: {
+            Image(systemName: "xmark")
+                .foregroundStyle(.tint)
+                .imageScale(.large)
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close event input")
+        .accessibilityHint("Dismisses the keyboard")
+        .accessibilityIdentifier("closeQuickEntry")
+    }
+
+    private var quickEntryActionButton: some View {
+        let isDisabled = appData.storageError != nil || (isQuickEntryFocused && quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        return Button {
+            if isQuickEntryFocused {
+                submitQuickEntry()
+            } else {
+                openEventDetails(QuickEventParser.parse(quickEventInput))
+            }
+        } label: {
+            Image(systemName: isQuickEntryFocused ? "arrow.up" : "calendar.badge.plus")
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(isQuickEntryFocused ? .white : categoryTint)
+                .font(.system(size: 20, weight: isQuickEntryFocused ? .semibold : .regular))
+                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .background {
+            if isQuickEntryFocused {
+                Circle().fill(categoryTint)
+            }
+        }
+        .modifier(FloatingControlSurface())
+        .opacity(isDisabled ? 0.45 : 1)
+        .accessibilityLabel(isQuickEntryFocused ? "Submit event" : "Add event")
+        .accessibilityHint(isQuickEntryFocused ? "Adds a recognized event or opens event details." : "Opens the full event form.")
+        .accessibilityIdentifier(isQuickEntryFocused ? "quickAddSubmit" : "manualEventInput")
+    }
+
+    private func submitQuickEntry() {
+        guard !quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isQuickEntryFocused = false
+        if let parsed = QuickEventParser.parse(quickEventInput) {
+            addQuickEvent(parsed)
+        } else {
+            openEventDetails(nil)
         }
     }
 
@@ -232,6 +346,10 @@ struct ContentView: View {
         NewEventDraft(title: "", date: Date(), category: selectedCategoryFilter, appData: appData)
     }
 
+    private var categoryTint: Color {
+        quickEventDefaults.categoryOptions.selectedColor.color
+    }
+
     private func addQuickEvent(_ input: ParsedEventInput) {
         guard appData.storageError == nil else { return }
         let draft = NewEventDraft(title: input.title, date: input.date,
@@ -245,9 +363,11 @@ struct ContentView: View {
             title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions))
         appData.saveEvents()
         quickEventInput = ""
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private func openEventDetails(_ input: ParsedEventInput?) {
+        isQuickEntryFocused = false
         newEventTitle = input?.title ?? quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines)
         newEventDate = input?.date ?? Calendar.current.startOfDay(for: Date())
         newEventEndDate = newEventDate
@@ -273,7 +393,6 @@ struct ContentView: View {
             onSave: { quickEventInput = "" },
             appData: _appData
         )
-        .focused($isFocused)
     }
 
     // View for each event row
