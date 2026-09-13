@@ -15,8 +15,11 @@ import WidgetKit
 struct Event: Identifiable, Codable, Equatable {
     var id = UUID()
     var title: String
-    var date: Date
-    var endDate: Date?
+    var date: Date { didSet { calendarDay = CalendarDay(date) } }
+    var endDate: Date? { didSet { calendarEndDay = endDate.map { CalendarDay($0) } } }
+    var calendarDay: CalendarDay?
+    var calendarEndDay: CalendarDay?
+    var calendarSchemaVersion = 1
     var color: CodableColor
     var category: String?
     var notificationsEnabled: Bool = true
@@ -52,6 +55,8 @@ struct Event: Identifiable, Codable, Equatable {
         self.title = title
         self.date = date
         self.endDate = endDate
+        self.calendarDay = CalendarDay(date)
+        self.calendarEndDay = endDate.map { CalendarDay($0) }
         self.color = color
         self.category = category
         self.notificationsEnabled = notificationsEnabled
@@ -70,8 +75,20 @@ struct Event: Identifiable, Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
-        date = try container.decode(Date.self, forKey: .date)
-        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        let calendar = decoder.userInfo[.eventCalendar] as? Calendar ?? .current
+        let legacyDate = try container.decode(Date.self, forKey: .date)
+        let legacyEnd = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        calendarDay = try container.decodeIfPresent(CalendarDay.self, forKey: .calendarDay) ?? CalendarDay(legacyDate, calendar: calendar)
+        calendarEndDay = try container.decodeIfPresent(CalendarDay.self, forKey: .calendarEndDay) ?? legacyEnd.map { CalendarDay($0, calendar: calendar) }
+        guard let resolved = calendarDay?.date(in: calendar) else {
+            throw DecodingError.dataCorruptedError(forKey: .calendarDay, in: container, debugDescription: "Invalid calendar date")
+        }
+        date = resolved
+        endDate = calendarEndDay?.date(in: calendar)
+        if calendarEndDay != nil && endDate == nil {
+            throw DecodingError.dataCorruptedError(forKey: .calendarEndDay, in: container, debugDescription: "Invalid end calendar date")
+        }
+        calendarSchemaVersion = try container.decodeIfPresent(Int.self, forKey: .calendarSchemaVersion) ?? 0
         color = try container.decode(CodableColor.self, forKey: .color)
         category = try container.decodeIfPresent(String.self, forKey: .category)
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
@@ -91,7 +108,7 @@ struct Event: Identifiable, Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, title, date, endDate, color, category, notificationsEnabled, repeatOption,
             repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount,
-            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException
+            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException, calendarDay, calendarEndDay, calendarSchemaVersion
     }
 
     static func == (lhs: Event, rhs: Event) -> Bool {
@@ -296,7 +313,7 @@ class AppData: NSObject, ObservableObject {
     {
         didSet {
             if isDataLoaded {
-                AppPreferences.shared.set(notificationTime, forKey: "notificationTime")
+                AppPreferences.saveReminderTime(notificationTime)
                 saveState()
                 scheduleDailyNotification()
             }
@@ -363,9 +380,7 @@ class AppData: NSObject, ObservableObject {
         defaultCategory = AppPreferences.shared.string(forKey: "defaultCategory") ?? ""
         dailyNotificationEnabled = AppPreferences.shared.bool(forKey: "dailyNotificationEnabled")
         eventStyle = AppPreferences.shared.string(forKey: "eventStyle") ?? "flat"
-        if let savedTime = AppPreferences.shared.object(forKey: "notificationTime") as? Date {
-            notificationTime = savedTime
-        }
+        notificationTime = AppPreferences.reminderTime()
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
@@ -411,9 +426,7 @@ class AppData: NSObject, ObservableObject {
             ]
         }
 
-        if let savedTime = AppPreferences.shared.object(forKey: "notificationTime") as? Date {
-            notificationTime = savedTime
-        }
+        notificationTime = AppPreferences.reminderTime()
     }
 
     // Function to filter events based on selected category
@@ -446,10 +459,13 @@ class AppData: NSObject, ObservableObject {
     private let eventStore = EventStore()
 
     func loadEvents() {
+        notificationTime = AppPreferences.reminderTime()
         do {
             let loaded = try eventStore.load()
-            events = Recurrence.replenishing(loaded)
-            if events.count != loaded.count || loaded.contains(where: { $0.seriesID != nil && $0.recurrence == nil }) {
+            events = Recurrence.replenishing(loaded).map { event in
+                var updated = event; updated.calendarSchemaVersion = 1; return updated
+            }
+            if events.count != loaded.count || loaded.contains(where: { $0.calendarSchemaVersion == 0 || ($0.seriesID != nil && $0.recurrence == nil) }) {
                 try eventStore.save(events)
             }
             storageError = nil
@@ -494,7 +510,7 @@ class AppData: NSObject, ObservableObject {
     func scheduleDailyNotification() {
         let enabled = dailyNotificationEnabled
         let snapshot = events
-        let time = Calendar.current.dateComponents([.hour, .minute], from: notificationTime)
+        let time = AppPreferences.reminderComponents()
         let previous = notificationTask
         notificationTask = Task { @MainActor in
             await previous?.value
@@ -528,7 +544,7 @@ class AppData: NSObject, ObservableObject {
 
     // Function to save state to UserDefaults
     func saveState() {
-        AppPreferences.shared.set(notificationTime, forKey: "notificationTime")
+        AppPreferences.saveReminderTime(notificationTime)
     }
 
     // Function to remove notification for an event

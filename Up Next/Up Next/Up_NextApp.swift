@@ -26,6 +26,7 @@ struct Up_NextApp: App {
                     if phase == .background { scheduleRefresh() }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    appData.loadEvents()
                     appData.scheduleDailyNotification()
                 }
                 .task {

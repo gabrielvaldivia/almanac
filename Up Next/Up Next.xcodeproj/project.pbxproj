@@ -64,6 +64,9 @@
 		57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B32FC648A00425681AAD1B /* TimelineLayout.swift */; };
 		023A9D682703DB452C78D9D9 /* WidgetEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */; };
 		62712D3B52A48220B59D8B89 /* WidgetEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */; };
+		9219A87CFE584617073DD910 /* CalendarDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */; };
+		6CCF9EA38B2B4B3C85DB7DA1 /* CalendarDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */; };
+		8C7DC69CE3A57680D6D442D0 /* CalendarDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FAD892E28928223EEDD471 /* CalendarDayTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -154,6 +157,8 @@
 		0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RecurrenceTests.swift"; sourceTree = SOURCE_ROOT; };
 		53B32FC648A00425681AAD1B /* TimelineLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/TimelineLayout.swift"; sourceTree = SOURCE_ROOT; };
 		52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/WidgetEvents.swift"; sourceTree = SOURCE_ROOT; };
+		B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/CalendarDay.swift"; sourceTree = SOURCE_ROOT; };
+		94FAD892E28928223EEDD471 /* CalendarDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/CalendarDayTests.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,6 +224,8 @@
 		40790D652C23286B005DDC65 = {
 			isa = PBXGroup;
 			children = (
+				94FAD892E28928223EEDD471 /* CalendarDayTests.swift */,
+				B6390FF42ACE40DE5232D7FA /* CalendarDay.swift */,
 				52057A3A9AFD9394CF57B755 /* WidgetEvents.swift */,
 				53B32FC648A00425681AAD1B /* TimelineLayout.swift */,
 				0A37B79236BB2FFA0AD703FF /* RecurrenceTests.swift */,
@@ -457,6 +464,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6CCF9EA38B2B4B3C85DB7DA1 /* CalendarDay.swift in Sources */,
 				62712D3B52A48220B59D8B89 /* WidgetEvents.swift in Sources */,
 				333981FF51AAA8898779B9EE /* Recurrence.swift in Sources */,
 				799C08E9F4947E56A02212B7 /* EventStore.swift in Sources */,
@@ -482,6 +490,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9219A87CFE584617073DD910 /* CalendarDay.swift in Sources */,
 				023A9D682703DB452C78D9D9 /* WidgetEvents.swift in Sources */,
 				57DF4C6C571B5B05BC2E70D5 /* TimelineLayout.swift in Sources */,
 				375D6F82F4943D3207D9A79A /* Recurrence.swift in Sources */,
@@ -515,6 +524,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8C7DC69CE3A57680D6D442D0 /* CalendarDayTests.swift in Sources */,
 				94B239855355F36008D77FAD /* RecurrenceTests.swift in Sources */,
 				86180C32DB874A966B7DC47A /* StorageTests.swift in Sources */,
 				3FB7FDD1DAF38F55B98B55E4 /* NotificationTests.swift in Sources */,

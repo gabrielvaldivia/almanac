@@ -1,23 +1,46 @@
 import Foundation
 
 struct RecurrenceRule: Codable, Equatable {
-    var anchor: Date
+    var anchor: Date { didSet { anchorDay = CalendarDay(anchor) } }
+    var anchorDay: CalendarDay?
     var frequency: RepeatOption
     var interval: Int
     var unit: String
     var end: RepeatUntilOption
-    var until: Date?
+    var until: Date? { didSet { untilDay = until.map { CalendarDay($0) } } }
+    var untilDay: CalendarDay?
     var count: Int
     var excludedIndices: [Int] = []
 
     init(event: Event, end: RepeatUntilOption) {
         anchor = event.date
+        anchorDay = CalendarDay(event.date)
         frequency = event.repeatOption
         interval = frequency == .custom ? (event.customRepeatCount ?? 1) : 1
         unit = event.repeatUnit ?? "Days"
         self.end = end
         until = end == .onDate ? event.repeatUntil : nil
+        untilDay = until.map { CalendarDay($0) }
         count = event.repeatUntilCount ?? 1
+    }
+
+    enum CodingKeys: String, CodingKey { case anchor, anchorDay, frequency, interval, unit, end, until, untilDay, count, excludedIndices }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let calendar = decoder.userInfo[.eventCalendar] as? Calendar ?? .current
+        let legacyAnchor = try values.decode(Date.self, forKey: .anchor)
+        anchorDay = try values.decodeIfPresent(CalendarDay.self, forKey: .anchorDay) ?? CalendarDay(legacyAnchor, calendar: calendar)
+        anchor = anchorDay?.date(in: calendar) ?? legacyAnchor
+        frequency = try values.decode(RepeatOption.self, forKey: .frequency)
+        interval = try values.decode(Int.self, forKey: .interval)
+        unit = try values.decode(String.self, forKey: .unit)
+        end = try values.decode(RepeatUntilOption.self, forKey: .end)
+        let legacyUntil = try values.decodeIfPresent(Date.self, forKey: .until)
+        untilDay = try values.decodeIfPresent(CalendarDay.self, forKey: .untilDay) ?? legacyUntil.map { CalendarDay($0, calendar: calendar) }
+        until = untilDay?.date(in: calendar)
+        count = try values.decode(Int.self, forKey: .count)
+        excludedIndices = try values.decodeIfPresent([Int].self, forKey: .excludedIndices) ?? []
     }
 
     var component: Calendar.Component {
