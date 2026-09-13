@@ -146,7 +146,7 @@ final class QuickEventTests: XCTestCase {
         let input = try XCTUnwrap(parse("Event every other Saturday until December 15"))
         let draft = NewEventDraft(title: input.title, date: input.date, category: nil, appData: AppData(),
                                   recurrence: input.recurrence)
-        let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions)
+        let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions, calendar: calendar)
         XCTAssertEqual(events.count, 7)
         XCTAssertEqual(events.first?.date, date(2026, 9, 19))
         XCTAssertEqual(events.last?.date, date(2026, 12, 12))
@@ -165,7 +165,7 @@ final class QuickEventTests: XCTestCase {
         let inclusiveDraft = NewEventDraft(title: inclusive.title, date: inclusive.date, category: nil, appData: AppData(),
                                            recurrence: inclusive.recurrence)
         XCTAssertEqual(NewEventDraft.events(title: inclusiveDraft.title, dates: inclusiveDraft.dateOptions,
-                                            category: inclusiveDraft.categoryOptions).last?.date, date(2026, 12, 12))
+                                            category: inclusiveDraft.categoryOptions, calendar: calendar).last?.date, date(2026, 12, 12))
     }
 
     func testDraftKeepsPrefilledTitleDatesAndCategory() {
@@ -187,7 +187,7 @@ final class QuickEventTests: XCTestCase {
                                 repeatUntilOption: .indefinitely, repeatUntilCount: 1,
                                 showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
         let category = CategoryOptions(selectedCategory: "Movies", selectedColor: CodableColor(color: .red))
-        let events = NewEventDraft.events(title: " Dune ", dates: dates, category: category)
+        let events = NewEventDraft.events(title: " Dune ", dates: dates, category: category, calendar: calendar)
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events.first?.title, "Dune")
         XCTAssertEqual(events.first?.date, dates.date)
@@ -196,10 +196,10 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(events.first?.color.red, category.selectedColor.red)
         XCTAssertNil(events.first?.seriesID)
         dates.repeatOption = .yearly
-        let series = NewEventDraft.events(title: "Dune", dates: dates, category: category)
+        let series = NewEventDraft.events(title: "Dune", dates: dates, category: category, calendar: calendar)
         XCTAssertGreaterThan(series.count, 1)
         XCTAssertEqual(Set(series.compactMap(\.seriesID)).count, 1)
         XCTAssertTrue(series.allSatisfy { $0.repeatOption == .yearly && $0.category == "Movies" })
-        XCTAssertTrue(NewEventDraft.events(title: "  ", dates: dates, category: category).isEmpty)
+        XCTAssertTrue(NewEventDraft.events(title: "  ", dates: dates, category: category, calendar: calendar).isEmpty)
     }
 }

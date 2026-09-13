@@ -30,7 +30,7 @@ struct PastEventsView: View {
                     }
                     .onDelete { offsets in
                         let ids = Set(offsets.map { events[$0].id })
-                        appData.events.removeAll { ids.contains($0.id) }
+                        for event in events where ids.contains(event.id) { appData.events = Recurrence.removingOccurrence(event, from: appData.events) }
                         appData.saveEvents()
                     }
                 }

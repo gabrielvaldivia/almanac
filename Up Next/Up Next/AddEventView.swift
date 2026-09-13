@@ -92,7 +92,7 @@ struct AddEventView: View {
                         showAddEventSheet = false
                     }
                     .tint(categoryOptions.selectedColor.color)
-                    .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil)
+                    .disabled(eventDetails.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || dateOptions.validationMessage != nil || appData.storageError != nil)
                 }
             }
         }

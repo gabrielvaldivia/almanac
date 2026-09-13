@@ -12,9 +12,6 @@ import SwiftUI
 struct UpNextWidgetBundle: WidgetBundle {
     var body: some Widget {
         UpNextWidget()
-        UpNextWidgetLiveActivity()
         NextEventWidget()
-        // ThisYearWidget()
-        // UpcomingQuarterWidget() // Ensure this is defined in the same module
     }
 }

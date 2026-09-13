@@ -11,74 +11,35 @@ import UIKit
 import UserNotifications
 import WidgetKit
 
-extension Color {
-    func toHex() -> String? {
-        let components = UIColor(self).cgColor.components
-        let r: CGFloat = components?[0] ?? 0
-        let g: CGFloat = components?[1] ?? 0
-        let b: CGFloat = components?[2] ?? 0
-        return String(
-            format: "#%02lX%02lX%02lX", lroundf(Float(r * 255)), lroundf(Float(g * 255)),
-            lroundf(Float(b * 255)))
-    }
-}
-
-struct PresentingViewController: UIViewControllerRepresentable {
-    var onPresent: (UIViewController) -> Void
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        let viewController = UIViewController()
-        DispatchQueue.main.async {
-            self.onPresent(viewController)
-        }
-        return viewController
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
-
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingAddCategorySheet = false
-    @State private var newCategoryName = ""
-    @State private var newCategoryColor = Color.blue
-    @FocusState private var isCategoryNameFieldFocused: Bool
-    @State private var showingDeleteAllAlert = false
-    @State private var selectedCategory: String?
+    private struct CategorySelection: Identifiable {
+        let id: String
+    }
     @Environment(\.editMode) private var editMode
-    @State private var showingEditCategorySheet = false
-    @State private var categoryToEdit:
-        (
-            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-            repeatUntil: Date
-        )?
-    @State private var showColorPickerSheet = false
-    @State private var dailyNotificationTime = Date()
-    @State private var isNotificationEnabled = false
+    @State private var categoryToEdit: CategorySelection?
 
     var body: some View {
         Form {
+            if let error = appData.categoryStorageError {
+                Section {
+                    Text(error).font(.footnote)
+                    Button("Retry Loading Categories") { appData.loadCategories() }
+                }
+            }
             // Categories section
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
-                    HStack {
-                        Text(appData.categories[index].name)
-                        Spacer()
-                        Circle()
-                            .fill(
-                                self.appData.categories.indices.contains(index)
-                                    ? self.appData.categories[index].color : .clear
-                            )
-                            .frame(width: 24, height: 24)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if editMode?.wrappedValue != .active {
-                            categoryToEdit = appData.categories[index]
-                            showingEditCategorySheet = true
+                    Button {
+                        categoryToEdit = CategorySelection(id: appData.categories[index].name)
+                    } label: {
+                        HStack {
+                            Text(appData.categories[index].name).foregroundStyle(.primary)
+                            Spacer()
+                            Circle().fill(appData.categories[index].color).frame(width: 24, height: 24)
                         }
-                    }
+                    }.disabled(editMode?.wrappedValue == .active)
                 }
                 .onDelete(perform: removeCategory)
                 .onMove(perform: moveCategory)
@@ -88,10 +49,6 @@ struct CategoriesView: View {
             HStack {
                 Button(action: {
                     showingAddCategorySheet = true
-                    newCategoryName = ""
-                    newCategoryColor = Color(
-                        red: Double.random(in: 0.1...0.9), green: Double.random(in: 0.1...0.9),
-                        blue: Double.random(in: 0.1...0.9))
                 }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -120,17 +77,16 @@ struct CategoriesView: View {
                             repeatUntilCount: newCategory.repeatUntilCount,
                             repeatUntil: newCategory.repeatUntil
                         ))
-                    appData.saveCategories()
                 }
             )
             .environmentObject(appData)
         }
 
         // Edit Category Sheet
-        .sheet(isPresented: $showingEditCategorySheet) {
-            if let category = categoryToEdit {
+        .sheet(item: $categoryToEdit) { selection in
+            if let category = appData.categories.first(where: { $0.name == selection.id }) {
                 CategoryForm(
-                    showingSheet: $showingEditCategorySheet,
+                    showingSheet: Binding(get: { categoryToEdit != nil }, set: { if !$0 { categoryToEdit = nil } }),
                     isEditing: true,
                     editingCategory: category,
                     onSave: { updatedCategory in
@@ -138,7 +94,6 @@ struct CategoriesView: View {
                             $0.name == category.name
                         }) {
                             appData.categories[index] = updatedCategory
-                            appData.saveCategories()
                             appData.updateEventsForCategoryChange(
                                 oldName: category.name, newName: updatedCategory.name,
                                 newColor: updatedCategory.color)
@@ -149,15 +104,11 @@ struct CategoriesView: View {
                 .environmentObject(appData)
             }
         }
-        .onChange(of: showingEditCategorySheet) { oldValue, newValue in
-            if !newValue {
-                categoryToEdit = nil  // Reset categoryToEdit when sheet is dismissed
-            }
-        }
 
     }
 
     private func removeCategory(at offsets: IndexSet) {
+        guard appData.categoryStorageError == nil else { return }
         let names = Set(offsets.compactMap { appData.categories.indices.contains($0) ? appData.categories[$0].name : nil })
         appData.categories.remove(atOffsets: offsets)
         for index in appData.events.indices where names.contains(appData.events[index].category ?? "") {
@@ -168,6 +119,7 @@ struct CategoriesView: View {
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
+        guard appData.categoryStorageError == nil else { return }
         appData.categories.move(fromOffsets: source, toOffset: destination)
     }
 }

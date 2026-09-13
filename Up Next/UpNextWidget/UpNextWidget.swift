@@ -24,17 +24,9 @@ struct Provider: AppIntentTimelineProvider {
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<
         SimpleEntry
     > {
-        var entries: [SimpleEntry] = []
-        let events = EventLoader.loadEvents(for: configuration.category)
-
-        let currentDate = Date()
-        for hourOffset in 0..<5 {
-            let entryDate = Calendar.current.date(
-                byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration, events: events)
-            entries.append(entry)
+        let entries = WidgetEvents.entryDates().map { date in
+            SimpleEntry(date: date, configuration: configuration, events: EventLoader.loadEvents(for: configuration.category, at: date))
         }
-
         return Timeline(entries: entries, policy: .atEnd)
     }
 }
@@ -48,7 +40,6 @@ struct SimpleEntry: TimelineEntry {
 struct UpNextWidgetEntryView: View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
-    @EnvironmentObject var appData: AppData
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -60,7 +51,7 @@ struct UpNextWidgetEntryView: View {
         var categoryColors: [String: Color] = [:]
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
             let data = sharedDefaults.data(forKey: "categories"),
-            let decoded = try? JSONDecoder().decode([CategoryData].self, from: data)
+            let decoded = try? CategoryStorage.decode(data)
         {
             for category in decoded {
                 categoryColors[category.name] = category.color.color
@@ -71,11 +62,11 @@ struct UpNextWidgetEntryView: View {
 
     var body: some View {
         let categoryColors = fetchCategoryColors()
-        let defaultCategoryColor = appData.defaultCategoryColor
+        let defaultCategoryColor = categoryColors[AppPreferences.shared.string(forKey: "defaultCategory") ?? ""] ?? .blue
 
         let filteredEvents = entry.events.filter { event in
             let twelveMonthsFromNow = Calendar.current.date(
-                byAdding: .month, value: 12, to: Date())!
+                byAdding: .month, value: 12, to: entry.date)!
             return event.date <= twelveMonthsFromNow
         }
 
@@ -113,15 +104,13 @@ struct UpNextWidgetEntryView: View {
                                 HStack {
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(
-                                            event.category != nil
-                                                ? (categoryColors[event.category ?? ""] ?? .gray)
-                                                : defaultCategoryColor
+                                            event.color.color
                                         )
                                         .frame(width: 4)
                                         .padding(.vertical, 1)
                                     VStack(alignment: .leading) {
                                         Text(
-                                            calculateTimeRemaining(
+                                            rangeDescription(
                                                 from: event.date, to: event.endDate)
                                         )
                                         .font(.caption)
@@ -156,20 +145,20 @@ struct UpNextWidgetEntryView: View {
                     let groupedEvents = Dictionary(
                         grouping: visibleEvents,
                         by: { event in
-                            if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                            if event.date <= entry.date && (event.endDate ?? event.date) >= entry.date {
                                 return "Today"
                             } else if let endDate = event.endDate,
-                                Calendar.current.isDateInToday(endDate)
+                                Calendar.current.isDate(endDate, inSameDayAs: entry.date)
                             {
                                 return "Today"
                             } else {
-                                return event.date.relativeDate()
+                                return event.date.relativeDate(now: entry.date)
                             }
                         })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                        let date1 = Date().addingTimeInterval(
+                        let date1 = entry.date.addingTimeInterval(
                             TimeInterval(daysFromRelativeDate(key1)))
-                        let date2 = Date().addingTimeInterval(
+                        let date2 = entry.date.addingTimeInterval(
                             TimeInterval(daysFromRelativeDate(key2)))
                         return date1 < date2
                     }
@@ -187,9 +176,7 @@ struct UpNextWidgetEntryView: View {
                                     HStack {
                                         RoundedRectangle(cornerRadius: 4)
                                             .fill(
-                                                event.category != nil
-                                                    ? (categoryColors[event.category ?? ""] ?? .gray)
-                                                    : defaultCategoryColor
+                                                event.color.color
                                             )
                                             .frame(width: 4)
                                             .padding(.vertical, 1)
@@ -200,7 +187,7 @@ struct UpNextWidgetEntryView: View {
                                                 .lineLimit(2)
                                                 .padding(.bottom, 0)
                                             Text(
-                                                calculateTimeRemaining(
+                                                rangeDescription(
                                                     from: event.date, to: event.endDate)
                                             )
                                             .foregroundColor(.gray)
@@ -220,20 +207,20 @@ struct UpNextWidgetEntryView: View {
                     let groupedEvents = Dictionary(
                         grouping: visibleEvents,
                         by: { event in
-                            if event.date <= Date() && (event.endDate ?? event.date) >= Date() {
+                            if event.date <= entry.date && (event.endDate ?? event.date) >= entry.date {
                                 return "Today"
                             } else if let endDate = event.endDate,
-                                Calendar.current.isDateInToday(endDate)
+                                Calendar.current.isDate(endDate, inSameDayAs: entry.date)
                             {
                                 return "Today"
                             } else {
-                                return event.date.relativeDate()
+                                return event.date.relativeDate(now: entry.date)
                             }
                         })
                     let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                        let date1 = Date().addingTimeInterval(
+                        let date1 = entry.date.addingTimeInterval(
                             TimeInterval(daysFromRelativeDate(key1)))
-                        let date2 = Date().addingTimeInterval(
+                        let date2 = entry.date.addingTimeInterval(
                             TimeInterval(daysFromRelativeDate(key2)))
                         return date1 < date2
                     }
@@ -251,9 +238,7 @@ struct UpNextWidgetEntryView: View {
                                     HStack {
                                         RoundedRectangle(cornerRadius: 4)
                                             .fill(
-                                                event.category != nil
-                                                    ? (categoryColors[event.category ?? ""] ?? .gray)
-                                                    : defaultCategoryColor
+                                                event.color.color
                                             )
                                             .frame(width: 4)
                                             .padding(.vertical, 1)
@@ -264,7 +249,7 @@ struct UpNextWidgetEntryView: View {
                                                 .lineLimit(2)
                                                 .padding(.bottom, 1)
                                             Text(
-                                                calculateTimeRemaining(
+                                                rangeDescription(
                                                     from: event.date, to: event.endDate)
                                             )
                                             .foregroundColor(.gray)
@@ -287,7 +272,7 @@ struct UpNextWidgetEntryView: View {
                                 .font(.subheadline)
                                 .lineLimit(1)
                                 .padding(.bottom, 1)
-                            Text(calculateTimeRemaining(from: event.date, to: event.endDate))
+                            Text(rangeDescription(from: event.date, to: event.endDate))
                                 .foregroundColor(.gray)
                                 .font(.caption)
                         }
@@ -318,48 +303,14 @@ struct UpNextWidgetEntryView: View {
 
     // Add this helper function to calculate remaining events count
     private func getRemainingEventsCount(events: [Event], visibleCount: Int) -> Int {
-        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
+        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: entry.date)!
         let futureEvents = events.filter { $0.date <= twelveMonthsFromNow }
         return max(0, futureEvents.count - visibleCount)
     }
 
     // Remove widget-specific implementation and use the shared one from Utilities
-    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return dateFormatter.string(from: startDate)
-        }
-
-        let calendar = Calendar.current
-        let now = calendar.startOfDay(for: Date())
-        let startOfStartDate = calendar.startOfDay(for: startDate)
-        let startOfEndDate = calendar.startOfDay(for: endDate)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate)
-
-        // Calculate total duration of the event (using start of days)
-        let duration =
-            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
-        let durationText = duration == 1 ? "day" : "days"
-
-        // If start date is after today, show duration
-        if startOfStartDate > now {
-            if calendar.isDate(startDate, inSameDayAs: endDate) {
-                return "\(startDateString) (\(duration) \(durationText))"
-            } else {
-                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
-            }
-        }
-
-        // For ongoing or past events, show days remaining
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
-
-        if calendar.isDate(startDate, inSameDayAs: endDate) {
-            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-        } else {
-            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
-        }
+    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
+        EventDateText.range(start: startDate, end: endDate, reference: entry.date)
     }
 }
 
@@ -371,11 +322,11 @@ struct UpNextWidget: Widget {
             kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()
         ) { entry in
             UpNextWidgetEntryView(entry: entry)
-                .environmentObject(AppData.shared)  // Pass appData as environment object
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Up Next")
         .description("Shows upcoming events.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
@@ -391,55 +342,21 @@ extension ConfigurationAppIntent {
 // New Next Event Widget
 struct NextEventProvider: TimelineProvider {
     func placeholder(in context: Context) -> NextEventEntry {
-        NextEventEntry(
-            date: Date(),
-            event: Event(title: "Sample Event", date: Date(), color: CodableColor(color: .blue)))
+        NextEventEntry(date: Date(), event: Event(title: "Sample Event", date: Date(), color: CodableColor(color: .blue)))
     }
-
     func getSnapshot(in context: Context, completion: @escaping (NextEventEntry) -> Void) {
-        let events = EventLoader.loadEvents(for: ConfigurationAppIntent().category)
-        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
-        let nextEvent =
-            events.filter { event in
-                let now = Date()
-                let startOfDay = Calendar.current.startOfDay(for: now)
-                return (event.date >= startOfDay || (event.endDate ?? event.date) >= now)
-                    && event.date <= twelveMonthsFromNow
-            }.sorted { $0.date < $1.date }.first
-            ?? Event(title: "No upcoming events", date: Date(), color: CodableColor(color: .gray))
-
-        let entry = NextEventEntry(date: Date(), event: nextEvent)
-        completion(entry)
+        let now = Date()
+        completion(NextEventEntry(date: now, event: EventLoader.loadEvents(at: now).first))
     }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<NextEventEntry>) -> Void)
-    {
-        var entries: [NextEventEntry] = []
-
-        let events = EventLoader.loadEvents(for: ConfigurationAppIntent().category)
-        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: Date())!
-        let nextEvent =
-            events.filter { event in
-                let now = Date()
-                let startOfDay = Calendar.current.startOfDay(for: now)
-                return (event.date >= startOfDay || (event.endDate ?? event.date) >= now)
-                    && event.date <= twelveMonthsFromNow
-            }.sorted { $0.date < $1.date }.first
-            ?? Event(title: "No upcoming events", date: Date(), color: CodableColor(color: .gray))
-
-        let entry = NextEventEntry(date: Date(), event: nextEvent)
-        entries.append(entry)
-
-        // Set the timeline policy to refresh more frequently
-        let timeline = Timeline(
-            entries: entries, policy: .after(Date().addingTimeInterval(60 * 15)))  // Refresh every 15 minutes
-        completion(timeline)
+    func getTimeline(in context: Context, completion: @escaping (Timeline<NextEventEntry>) -> Void) {
+        let entries = WidgetEvents.entryDates().map { NextEventEntry(date: $0, event: EventLoader.loadEvents(at: $0).first) }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 }
 
 struct NextEventEntry: TimelineEntry {
     let date: Date
-    let event: Event
+    let event: Event?
 }
 
 struct NextEventWidgetEntryView: View {
@@ -453,70 +370,25 @@ struct NextEventWidgetEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            if entry.event.title == "No upcoming events" {
+            if let event = entry.event {
+                Text(dateFormatter.string(from: event.date))
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(event.color.color)
                 Spacer()
-                Text("No upcoming events")
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .font(.caption)
-                Spacer()
+                Text(event.title).font(.headline).lineLimit(3)
+                Text(rangeDescription(from: event.date, to: event.endDate))
+                    .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text(dateFormatter.string(from: entry.event.date))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 Spacer()
-                Text(entry.event.title)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 1)
-                Text(calculateTimeRemaining(from: entry.event.date, to: entry.event.endDate))
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("No upcoming events").font(.caption).foregroundStyle(.secondary)
+                Spacer()
             }
         }
-        .widgetURL(DeepLink.eventURL(entry.event.id))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .widgetURL(entry.event.map { DeepLink.eventURL($0.id) } ?? URL(string: "upnext://home"))
     }
 
-    private func calculateTimeRemaining(from startDate: Date, to endDate: Date?) -> String {
-        guard let endDate = endDate else {
-            return dateFormatter.string(from: startDate)
-        }
-
-        let calendar = Calendar.current
-        let now = calendar.startOfDay(for: Date())
-        let startOfStartDate = calendar.startOfDay(for: startDate)
-        let startOfEndDate = calendar.startOfDay(for: endDate)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate)
-
-        // Calculate total duration of the event (using start of days)
-        let duration =
-            calendar.dateComponents([.day], from: startOfStartDate, to: startOfEndDate).day! + 1
-        let durationText = duration == 1 ? "day" : "days"
-
-        // If start date is after today, show duration
-        if startOfStartDate > now {
-            if calendar.isDate(startDate, inSameDayAs: endDate) {
-                return "\(startDateString) (\(duration) \(durationText))"
-            } else {
-                return "\(startDateString) → \(endDateString) (\(duration) \(durationText))"
-            }
-        }
-
-        // For ongoing or past events, show days remaining
-        let daysRemaining = calendar.dateComponents([.day], from: now, to: startOfEndDate).day! + 1
-        let dayText = daysRemaining == 1 ? "day" : "days"
-
-        if calendar.isDate(startDate, inSameDayAs: endDate) {
-            return "\(startDateString) (\(daysRemaining) \(dayText) left)"
-        } else {
-            return "\(startDateString) → \(endDateString) (\(daysRemaining) \(dayText) left)"
-        }
+    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
+        EventDateText.range(start: startDate, end: endDate, reference: entry.date)
     }
 }
 

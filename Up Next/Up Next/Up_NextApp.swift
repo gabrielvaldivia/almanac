@@ -19,19 +19,23 @@ struct Up_NextApp: App {
             ContentView()
                 .environmentObject(appData)
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { appData.scheduleDailyNotification() }
+                    if phase == .active {
+                        appData.loadEvents(); appData.scheduleDailyNotification()
+                        Task { await appData.refreshSubscriptionStatus() }
+                    }
                     if phase == .background { scheduleRefresh() }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    appData.loadEvents()
                     appData.scheduleDailyNotification()
                 }
                 .task {
                     appData.scheduleDailyNotification()
-                    await updateSubscriptionStatus()
+                    await appData.refreshSubscriptionStatus()
                 }
         }
         .backgroundTask(.appRefresh("com.almanac.reminders")) {
-            await MainActor.run { appData.scheduleDailyNotification(); scheduleRefresh() }
+            await MainActor.run { appData.loadEvents(); appData.scheduleDailyNotification(); scheduleRefresh() }
             await appData.waitForNotifications()
         }
     }
@@ -43,30 +47,4 @@ struct Up_NextApp: App {
         try? BGTaskScheduler.shared.submit(request)
     }
     
-    func updateSubscriptionStatus() async {
-        for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                appData.isSubscribed = transaction.productID == "AP0001"
-            }
-        }
-    }
-}
-
-class StoreObserver: NSObject, SKPaymentTransactionObserver {
-    static let shared = StoreObserver()
-    
-    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        for transaction in transactions {
-            switch transaction.transactionState {
-            case .purchased, .restored:
-                SKPaymentQueue.default().finishTransaction(transaction)
-            case .failed:
-                SKPaymentQueue.default().finishTransaction(transaction)
-            case .deferred, .purchasing:
-                break
-            @unknown default:
-                break
-            }
-        }
-    }
 }

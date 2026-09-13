@@ -19,8 +19,10 @@ struct ContentView: View {
     @State private var newEventEndDate: Date = Date()
     @State private var newEventRecurrence: ParsedEventRecurrence?
     @State private var showAddEventSheet: Bool = false
-    @State private var showEditSheet: Bool = false
     @State private var selectedEvent: Event?
+    private var editSheetPresented: Binding<Bool> {
+        Binding(get: { selectedEvent != nil }, set: { if !$0 { selectedEvent = nil } })
+    }
     @State private var highlightedEventID: UUID?
     @State private var highlightRequestID: UUID?
     @State private var showEndDate: Bool = false
@@ -77,14 +79,17 @@ struct ContentView: View {
                         onAdd: addQuickEvent,
                         onOpenDetails: openEventDetails
                     )
+                    .disabled(appData.storageError != nil)
                 }
         }
         .focused($isFocused)
         .sheet(isPresented: $showAddEventSheet) {
             addEventSheet
         }
-        .sheet(isPresented: $showEditSheet) {
-            editEventSheet
+        .sheet(item: $selectedEvent) { event in
+            EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
+                          showEditSheet: editSheetPresented, saveEvents: appData.saveEvents)
+                .id(event.id)
         }
     }
 
@@ -130,6 +135,14 @@ struct ContentView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top) {
+            if let error = appData.storageError {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(error).font(.footnote)
+                    NavigationLink("Data Recovery") { SettingsView() }
+                }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
+            }
+        }
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(
@@ -163,11 +176,11 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: "line.horizontal.3.decrease")
+                    .accessibilityLabel("Filter Events")
                     .imageScale(.large)
             }
         )
         .onAppear {
-            print("ContentView appeared")
             appData.loadEvents()
             appData.loadCategories()
         }
@@ -198,6 +211,7 @@ struct ContentView: View {
     private var settingsButton: some View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
+                .accessibilityLabel("Settings")
                 .imageScale(.large)
         }
     }
@@ -219,6 +233,7 @@ struct ContentView: View {
     }
 
     private func addQuickEvent(_ input: ParsedEventInput) {
+        guard appData.storageError == nil else { return }
         let draft = NewEventDraft(title: input.title, date: input.date,
                                   category: selectedCategoryFilter, appData: appData,
                                   recurrence: input.recurrence)
@@ -261,17 +276,6 @@ struct ContentView: View {
         .focused($isFocused)
     }
 
-    private var editEventSheet: some View {
-        EditEventView(
-            events: $appData.events,
-            selectedEvent: $selectedEvent,
-            showEditSheet: $showEditSheet,
-            saveEvents: appData.saveEvents
-        )
-        .environmentObject(appData)
-        .focused($isFocused)
-    }
-
     // View for each event row
     func eventRowView(key: String, events: [Event]) -> some View {
         HStack(alignment: .top) {
@@ -290,7 +294,7 @@ struct ContentView: View {
                         newEventEndDate: $newEventEndDate,
                         showEndDate: $showEndDate,
                         selectedCategory: $selectedCategory,
-                        showEditSheet: $showEditSheet,
+                        showEditSheet: editSheetPresented,
                         categories: simplifiedCategories
                     )
                     .background {
@@ -305,9 +309,6 @@ struct ContentView: View {
                     }
                     .accessibilityAddTraits(highlightedEventID == event.id ? .isSelected : [])
                     .id(event.id)
-                    .onTapGesture {
-                        selectEvent(event)
-                    }
                     .listRowSeparator(.hidden)
                 }
             }
@@ -347,7 +348,7 @@ struct ContentView: View {
     func handleOpenURL(_ url: URL) {
         guard let link = DeepLink(url: url) else { return }
         showAddEventSheet = false
-        showEditSheet = false
+        selectedEvent = nil
         switch link {
         case .addEvent:
             newEventRecurrence = nil
@@ -360,15 +361,11 @@ struct ContentView: View {
         case .event(let id):
             if let event = appData.events.first(where: { $0.id == id }) {
                 selectedEvent = event
-                showEditSheet = true
             }
         case .home: selectedCategoryFilter = nil
         }
     }
 
-    private func selectEvent(_ event: Event) {
-        selectedEvent = event
-    }
 }
 
 /// Group by calendar dates, including history, without parsing relative labels.

@@ -80,7 +80,7 @@ struct TitleSection: View {
             TextField("Title", text: $newEventTitle)
                 .focused($isTitleFocused)
                 .padding(.horizontal)
-                .frame(height: 40)
+                .frame(minHeight: 44)
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(8)
@@ -279,7 +279,6 @@ struct CategoryAndColorSection: View {
                             repeatUntilCount: newCategory.repeatUntilCount,
                             repeatUntil: newCategory.repeatUntil
                         ))
-                    appData.saveCategories()
                 }
             )
             .environmentObject(appData)

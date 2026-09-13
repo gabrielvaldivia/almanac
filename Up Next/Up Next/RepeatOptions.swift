@@ -167,7 +167,7 @@ struct RepeatOptions: View {
                         
                         Spacer()
                         
-                        Stepper("", value: $repeatUntilCount, in: 1...10000)
+                        Stepper("Repeat Occurrences", value: $repeatUntilCount, in: 1...10000)
                             .labelsHidden()
                     }
                     .padding(.bottom, 6)
