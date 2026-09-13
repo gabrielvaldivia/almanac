@@ -524,99 +524,41 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
-    // Function to set daily notification
+    @Published var notificationStatus: String?
+    private var notificationTask: Task<Void, Never>?
+
     func setDailyNotification(enabled: Bool) {
         dailyNotificationEnabled = enabled
-        UserDefaults.standard.set(enabled, forKey: "dailyNotificationEnabled")
-
-        let center = UNUserNotificationCenter.current()
-
-        if enabled {
-            // Schedule notifications for upcoming events
-            scheduleDailyNotification()
-            scheduleUpcomingEventNotifications()
-        } else {
-            // Clear all scheduled notifications
-            center.removeAllPendingNotificationRequests()
-            center.removeAllDeliveredNotifications()
-            print("All notifications have been cleared.")
+        guard enabled else { return }
+        Task { @MainActor in
+            do {
+                let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+                if !granted { notificationStatus = "Notifications are blocked. Enable them in iOS Settings." }
+                scheduleDailyNotification()
+            } catch { notificationStatus = error.localizedDescription }
         }
     }
 
-    private func scheduleUpcomingEventNotifications() {
-        let center = UNUserNotificationCenter.current()
-        let upcomingEvents = events.filter { $0.date > Date() }.prefix(10)  // Schedule for next 10 upcoming events
-
-        for event in upcomingEvents {
-            let content = UNMutableNotificationContent()
-            content.title = event.title
-            content.body = "Your event is starting soon"
-            content.sound = .default
-
-            let triggerDate = Calendar.current.date(byAdding: .minute, value: -15, to: event.date)!
-            let components = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute], from: triggerDate)
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-
-            let request = UNNotificationRequest(
-                identifier: event.id.uuidString, content: content, trigger: trigger)
-
-            center.add(request) { error in
-                if let error = error {
-                    print("Error scheduling notification for event \(event.title): \(error)")
-                }
-            }
-        }
-    }
-
-    // Function to schedule daily notification
     func scheduleDailyNotification() {
-        guard dailyNotificationEnabled else {
-            print("Daily notifications are disabled.")
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [
-                "dailyNotification"
-            ])
-            return
-        }
-
-        let content = UNMutableNotificationContent()
-
-        // Get today's events
-        let todayEvents = getTodayEvents()
-        let eventsCount = todayEvents.count
-
-        // If no events for today, do not schedule a notification
-        if eventsCount == 0 {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [
-                "dailyNotification"
-            ])
-            return
-        }
-
-        // Set notification content
-        content.title = "You have \(eventsCount) event\(eventsCount > 1 ? "s" : "") today"
-        content.body = todayEvents.map { $0.title }.joined(separator: ", ")
-        content.sound = .default
-        content.categoryIdentifier = "DAILY_NOTIFICATION"
-
-        // Set notification trigger time
-        var dateComponents = Calendar.current.dateComponents(
-            [.hour, .minute], from: notificationTime)
-        dateComponents.second = 0
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(
-            identifier: "dailyNotification", content: content, trigger: trigger)
-
-        // Add the notification request to the notification center
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling daily notification: \(error)")
-            } else {
-                print("Daily notification scheduled successfully.")
-            }
+        let enabled = dailyNotificationEnabled
+        let snapshot = events
+        let time = Calendar.current.dateComponents([.hour, .minute], from: notificationTime)
+        let previous = notificationTask
+        notificationTask = Task { @MainActor in
+            await previous?.value
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            let allowed = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+            let plan = enabled && allowed ? NotificationPlan.make(events: snapshot, hour: time.hour ?? 8, minute: time.minute ?? 0) : []
+            let error = await NotificationScheduler.shared.replace(with: plan)
+            if let error { notificationStatus = "Could not schedule reminders: \(error)" }
+            else if enabled && !allowed { notificationStatus = "Notifications are blocked. Enable them in iOS Settings." }
+            else if enabled, let last = plan.last {
+                notificationStatus = "Reminders scheduled through \(last.date.formatted(date: .abbreviated, time: .omitted)). Open Almanac periodically to keep reminders current."
+            } else { notificationStatus = enabled ? "No upcoming reminders to schedule." : nil }
         }
     }
+
+    func waitForNotifications() async { await notificationTask?.value }
 
     // Function to get today's events
     func getTodayEvents() -> [Event] {

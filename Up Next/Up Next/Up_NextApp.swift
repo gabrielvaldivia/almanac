@@ -7,19 +7,40 @@
 
 import SwiftUI
 import StoreKit
+import BackgroundTasks
 
 @main
 struct Up_NextApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appData = AppData.shared
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appData)
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { appData.scheduleDailyNotification() }
+                    if phase == .background { scheduleRefresh() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    appData.scheduleDailyNotification()
+                }
                 .task {
+                    appData.scheduleDailyNotification()
                     await updateSubscriptionStatus()
                 }
         }
+        .backgroundTask(.appRefresh("com.almanac.reminders")) {
+            await MainActor.run { appData.scheduleDailyNotification(); scheduleRefresh() }
+            await appData.waitForNotifications()
+        }
+    }
+
+    private func scheduleRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: "com.almanac.reminders")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 12 * 60 * 60)
+        // iOS chooses when to run this; already queued reminders do not depend on it.
+        try? BGTaskScheduler.shared.submit(request)
     }
     
     func updateSubscriptionStatus() async {

@@ -16,8 +16,6 @@ struct SettingsView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingDeleteAllAlert = false
     @Environment(\.openURL) var openURL
-    @State private var dailyNotificationEnabled = UserDefaults.standard.bool(
-        forKey: "dailyNotificationEnabled")  // Load state from UserDefaults
     @State private var selectedAppIcon =
         UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
     @State private var iconChangeSuccess: Bool?
@@ -29,14 +27,17 @@ struct SettingsView: View {
         Form {
             // Notifications Section
             Section(header: Text("Notifications")) {
-                Toggle("Daily Notification", isOn: $dailyNotificationEnabled)
-                    .onChange(of: dailyNotificationEnabled) { oldValue, newValue in
-                        appData.setDailyNotification(enabled: newValue)
+                Toggle("Daily Notification", isOn: Binding(
+                    get: { appData.dailyNotificationEnabled },
+                    set: { appData.setDailyNotification(enabled: $0) }))
+                if appData.dailyNotificationEnabled {
+                    DatePicker("Notification Time", selection: $appData.notificationTime, displayedComponents: .hourAndMinute)
+                    if let status = appData.notificationStatus {
+                        Text(status).font(.footnote).foregroundStyle(.secondary)
                     }
-                if dailyNotificationEnabled {
-                    DatePicker(
-                        "Notification Time", selection: $appData.notificationTime,
-                        displayedComponents: .hourAndMinute)
+                    Button("Notification Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                    }
                 }
             }
 
@@ -217,8 +218,7 @@ struct SettingsView: View {
         }
         .onAppear {
             print("SettingsView appeared")
-            dailyNotificationEnabled = UserDefaults.standard.bool(
-                forKey: "dailyNotificationEnabled")
+            appData.scheduleDailyNotification()
             selectedAppIcon = UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
         }
     }
