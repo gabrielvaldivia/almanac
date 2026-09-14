@@ -35,9 +35,9 @@ final class EventFlowTests: XCTestCase {
         list.swipeDown()
         waitForTimelineLayout(timeline)
         XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "Pulling the list cannot expand the timeline")
-        app.staticTexts["eventSheetTitle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.01))
             .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
-        XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "The list heading is not a resize handle")
+        XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "The list's top edge is not a resize handle")
         timeline.buttons[names[0]].tap()
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
         XCTAssertFalse(app.navigationBars["Edit Event"].exists, "A timeline dot reveals and highlights its event")
@@ -88,8 +88,7 @@ final class EventFlowTests: XCTestCase {
         func assertScale(_ scale: String, file: StaticString = #filePath, line: UInt = #line) {
             let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "\(scale) view,"), object: timeline)
             XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 5), .completed, file: file, line: line)
-            XCTAssertEqual(app.staticTexts["eventSheetTitle"].label, "Up Next", file: file, line: line)
-            XCTAssertTrue(app.staticTexts["eventSheetTitle"].isHittable, file: file, line: line)
+            XCTAssertFalse(app.staticTexts["eventSheetTitle"].exists, file: file, line: line)
             XCTAssertEqual(monthTitle.label, scale == "Days" ? Date().formatted(.dateTime.month(.wide)) : Date().formatted(.dateTime.year()),
                            file: file, line: line)
             waitForTimelineLayout(timeline)

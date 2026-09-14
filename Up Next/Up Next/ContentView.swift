@@ -259,16 +259,6 @@ struct ContentView: View {
 
     private func eventList(days: [EventListDay]) -> some View {
         VStack(spacing: 0) {
-            Text("Up Next")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal).padding(.top, 16).padding(.bottom, 10)
-                .fixedSize(horizontal: false, vertical: true)
-                .background(Color(uiColor: .systemBackground))
-                .zIndex(1)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("eventSheetTitle")
-
             if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
@@ -293,6 +283,7 @@ struct ContentView: View {
                             Spacer(minLength: 100)
                         }
                     }
+                    .contentMargins(.top, 16, for: .scrollContent)
                     .accessibilityIdentifier("eventList")
                     .coordinateSpace(name: "eventList")
                     .scrollDismissesKeyboard(.interactively)
