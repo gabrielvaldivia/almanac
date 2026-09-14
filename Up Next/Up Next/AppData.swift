@@ -115,6 +115,19 @@ class AppData: NSObject, ObservableObject {
         dailyNotificationEnabled = AppPreferences.shared.bool(forKey: "dailyNotificationEnabled")
         eventStyle = AppPreferences.shared.string(forKey: "eventStyle") ?? "flat"
         notificationTime = AppPreferences.reminderTime()
+        #if DEBUG && targetEnvironment(simulator)
+        // Seed layout fixtures through the real store without making a timeline
+        // test create and delete every row through a cold software keyboard.
+        if AppPreferences.uiTestSuiteName != nil,
+           AppPreferences.shared.data(forKey: "events") == nil,
+           let json = ProcessInfo.processInfo.environment["ALMANAC_UI_TEST_EVENTS"] {
+            do {
+                try eventStore.save(EventStore.decode(Data(json.utf8)))
+            } catch {
+                fatalError("Invalid UI test events: \(error)")
+            }
+        }
+        #endif
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
@@ -414,6 +427,7 @@ extension AppData: UNUserNotificationCenterDelegate {
 
 // Function to migrate user defaults to shared user defaults
 func migrateUserDefaults() {
+    guard AppPreferences.uiTestSuiteName == nil else { return }
     let defaults = UserDefaults.standard
     let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier")
 

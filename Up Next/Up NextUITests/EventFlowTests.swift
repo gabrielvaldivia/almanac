@@ -2,33 +2,40 @@ import XCTest
 import UIKit
 
 final class EventFlowTests: XCTestCase {
-    func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() {
-        continueAfterFailure = false
-        executionTimeAllowance = 480 // Cold CI runners must create and remove 12 rows through the UI.
+    private var testStoreID = UUID().uuidString
+
+    override func setUp() {
+        super.setUp()
+        testStoreID = UUID().uuidString
+    }
+
+    private func makeApp() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launch()
+        app.launchEnvironment["ALMANAC_UI_TEST_ID"] = testStoreID
+        return app
+    }
+
+    func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() throws {
+        continueAfterFailure = false
+        let app = makeApp()
         let prefix = "Timeline \(UUID().uuidString.prefix(6))"
         // The plain list is taller than the old sheet; provide enough rows to
         // scroll today's entire group offscreen and exercise date synchronization.
         let names = ["\(prefix) First planning session", "\(prefix) Second", "\(prefix) Later"] +
             (1...9).map { "\(prefix) Future \($0)" }
         let offsets = [0, 0, 3, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-        for (name, offset) in zip(names, offsets) {
-            openComposer(app)
-            let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
-            let text = "\(name) \(offset == 0 ? "today" : "in \(offset) days")"
-            // Let the empty composer's first text update settle before sending
-            // the rest of the fixture. A cold CI keyboard previously accepted
-            // only "T", and the test submitted that incomplete value unnoticed.
-            let firstCharacter = String(text.prefix(1))
-            input.typeText(firstCharacter)
-            let started = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", firstCharacter), object: input)
-            XCTAssertEqual(XCTWaiter.wait(for: [started], timeout: 5), .completed)
-            input.typeText(String(text.dropFirst()))
-            let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: input)
-            XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 5), .completed, "The complete fixture must be entered before submitting")
-            app.buttons["quickAddSubmit"].tap()
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let formatter = ISO8601DateFormatter()
+        let fixtures: [[String: Any]] = zip(names, offsets).map { name, offset in
+            ["id": UUID().uuidString, "title": name,
+             "date": formatter.string(from: calendar.date(byAdding: .day, value: offset, to: today)!),
+             "color": ["red": 0.0, "green": 0.5, "blue": 1.0, "opacity": 1.0],
+             "notificationsEnabled": false, "calendarSchemaVersion": 1]
         }
+        app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"] = String(
+            decoding: try JSONSerialization.data(withJSONObject: fixtures), as: UTF8.self)
+        app.launch()
         let list = app.scrollViews["eventList"]
         let timeline = app.scrollViews["eventTimeline"]
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
@@ -74,20 +81,11 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed)
         screenshot("List scrolling advances the timeline")
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
-        for name in names {
-            let title = list.staticTexts[name].firstMatch
-            if !title.isHittable { list.swipeUp() }
-            XCTAssertTrue(title.waitForExistence(timeout: 5))
-            title.tap()
-            XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
-            app.buttons["Delete Event"].tap()
-            app.alerts["Delete Event"].buttons["Delete this event"].tap()
-        }
     }
 
     func testPinchZoomsTheAutomaticallySizedTimelineThroughEveryScale() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         let monthTitle = app.staticTexts["appTitle"]
         XCTAssertTrue(monthTitle.waitForExistence(timeout: 5))
@@ -127,7 +125,7 @@ final class EventFlowTests: XCTestCase {
 
     func testShortPinchesRespondWhileTimelineHeightChangesAndKeepTheMonthHeading() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         let timeline = app.scrollViews["eventTimeline"]
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
@@ -160,7 +158,7 @@ final class EventFlowTests: XCTestCase {
 
     func testComposerMenusDismissWithoutLeavingRectangularHighlights() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
@@ -218,7 +216,7 @@ final class EventFlowTests: XCTestCase {
 
     func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         // A fresh install shows the empty state instead of a scrollable list.
         // Own the row needed for the keyboard/list geometry assertions below.
@@ -305,7 +303,7 @@ final class EventFlowTests: XCTestCase {
 
     func testComposerParsesPillsAndSavesQuickEdits() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
@@ -362,7 +360,7 @@ final class EventFlowTests: XCTestCase {
 
     func testComposerCreatesAndSelectsACategoryWithoutLosingTheDraft() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let suffix = String(UUID().uuidString.prefix(6))
@@ -442,7 +440,7 @@ final class EventFlowTests: XCTestCase {
 
     func testComposerAutomaticallySelectsBirthdayCategoryAndRespectsManualChoice() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
@@ -470,7 +468,7 @@ final class EventFlowTests: XCTestCase {
 
     func testPlusComposerRecognizesDateRangeAndPreservesItInEditorAndSavedEvent() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.exists)
@@ -516,12 +514,22 @@ final class EventFlowTests: XCTestCase {
         let plus = app.buttons["quickAddButton"]
         XCTAssertTrue(plus.waitForExistence(timeout: 10))
         plus.tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.waitForExistence(timeout: 5))
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
+        var previousFrame: CGRect?
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let frame = input.frame
+            defer { previousFrame = frame }
+            return input.isHittable && frame == previousFrame
+        }, object: input)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        input.tap()
     }
 
     func testInlineCalendarSelectsAndSavesARangeAcrossMonths() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let name = "Calendar \(UUID().uuidString.prefix(6))"
@@ -624,7 +632,7 @@ final class EventFlowTests: XCTestCase {
 
     func testInvalidScheduleCanBeCorrectedInComposer() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
@@ -641,7 +649,7 @@ final class EventFlowTests: XCTestCase {
 
     func testBirthdayReviewSelectionSaveAndRepeatedSync() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launchArguments += ["--birthday-import-ui-test"]
         app.launch()
         app.buttons["Settings"].tap()
@@ -691,7 +699,7 @@ final class EventFlowTests: XCTestCase {
 
     func testCategoryRenamePersistsAndCanBeEditedAgain() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         let name = "Category \(UUID().uuidString.prefix(8))", renamed = name + " edited"
         app.buttons["Settings"].tap()
@@ -703,6 +711,10 @@ final class EventFlowTests: XCTestCase {
         field.tap(); field.typeText(name)
         let keywords = app.textViews["categoryKeywords"]
         keywords.tap(); keywords.typeText("chapter")
+        let keyboardBackground = XCTAttachment(screenshot: app.screenshot())
+        keyboardBackground.name = "Category background extends behind keyboard corners"
+        keyboardBackground.lifetime = .keepAlways
+        add(keyboardBackground)
         app.navigationBars["Add Category"].buttons["Save"].tap()
         app.buttons[name].tap()
         XCTAssertTrue(app.navigationBars["Edit Category"].waitForExistence(timeout: 5))
@@ -731,7 +743,7 @@ final class EventFlowTests: XCTestCase {
 
     func testCreateEditPersistAndDeleteEvent() {
         continueAfterFailure = false
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         let name = "Audit \(UUID().uuidString.prefix(8))", renamed = name + " edited"
         openComposer(app)

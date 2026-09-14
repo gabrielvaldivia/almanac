@@ -1,7 +1,18 @@
 import Foundation
 
 enum AppPreferences {
-    static let shared = UserDefaults(suiteName: "group.UpNextIdentifier")!
+    // UI tests get their own persistent store, retained across relaunches within
+    // a test. This cannot redirect storage on a device or in a Release build.
+    static let uiTestSuiteName: String? = {
+        #if DEBUG && targetEnvironment(simulator)
+        if let value = ProcessInfo.processInfo.environment["ALMANAC_UI_TEST_ID"],
+           let id = UUID(uuidString: value) {
+            return "almanac.ui-tests.\(id.uuidString)"
+        }
+        #endif
+        return nil
+    }()
+    static let shared = UserDefaults(suiteName: uiTestSuiteName ?? "group.UpNextIdentifier")!
     static let keys = ["notificationTime", "dailyNotificationEnabled", "defaultCategory", "eventStyle"]
 
     static func reminderComponents(defaults: UserDefaults = shared) -> DateComponents {
