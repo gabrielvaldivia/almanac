@@ -3,11 +3,13 @@ import Foundation
 struct ParsedEventInput: Equatable {
     let title: String
     let date: Date
+    let endDate: Date?
     let recurrence: ParsedEventRecurrence?
 
-    init(title: String, date: Date, recurrence: ParsedEventRecurrence? = nil) {
+    init(title: String, date: Date, endDate: Date? = nil, recurrence: ParsedEventRecurrence? = nil) {
         self.title = title
         self.date = date
+        self.endDate = endDate
         self.recurrence = recurrence
     }
 }
@@ -30,7 +32,38 @@ enum QuickEventParser {
         if let recurrence = match(marker, in: text) {
             return parseRecurrence(text, marker: recurrence, now: now, calendar: calendar)
         }
-        return parseSingleEvent(text, now: now, calendar: calendar)
+        return parseDatedEvent(text, now: now, calendar: calendar)
+    }
+
+    // Match the complete range before considering a trailing single date. Once a
+    // range has started, incomplete/invalid endpoints must never become one day.
+    private static let rangeStartPattern = #"(?:^|\s)(?:from\s+)?((?:next\s+)?(?:sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)|today|tomorrow|tonight|in\s+\d{1,3}\s+(?:days?|weeks?)|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}(?:/(?:\d{4}|\d{2}))?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:,?\s+\d{4})?)\s*(?:(?:to|through|until)\b|[–—-])\s*([\s\S]*)$"#
+
+    static func containsDateRange(_ text: String) -> Bool { match(rangeStartPattern, in: text) != nil }
+
+    private static func parseDatedEvent(_ text: String, now: Date, calendar: Calendar) -> ParsedEventInput? {
+        guard let range = match(rangeStartPattern, in: text) else {
+            return parseSingleEvent(text, now: now, calendar: calendar)
+        }
+        let title = String(text[..<range.range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"\s+on$"#, with: "", options: [.regularExpression, .caseInsensitive])
+        guard !title.isEmpty,
+              let start = datePhrase(range.groups[0], now: now, calendar: calendar) else { return nil }
+        let endPhrase = range.groups[1].trimmingCharacters(in: .whitespacesAndNewlines)
+        let end: Date?
+        if let day = match(#"^(\d{1,2})(?:st|nd|rd|th)?$"#, in: endPhrase) {
+            // "Sep 18–21" inherits the start's month and year.
+            end = nextDate(month: calendar.component(.month, from: start), day: Int(day.groups[0])!,
+                           year: calendar.component(.year, from: start), today: start, calendar: calendar)
+        } else {
+            // An omitted year/weekday belongs after the start (Dec 30–Jan 2).
+            // Relative dates like "tomorrow" still refer to the user's today.
+            let relative = match(#"^(?:today|tomorrow|tonight|in\s+)"#, in: endPhrase) != nil
+            end = datePhrase(endPhrase, now: relative ? now : start, calendar: calendar)
+        }
+        guard let end, end >= start else { return nil }
+        return ParsedEventInput(title: title, date: start, endDate: end,
+                                recurrence: inferredRecurrence(for: title))
     }
 
     private static func parseSingleEvent(_ text: String, now: Date, calendar: Calendar) -> ParsedEventInput? {
@@ -109,7 +142,8 @@ enum QuickEventParser {
 
         // A starting date can precede the repeat phrase or follow "starting".
         // A weekday cadence advances that date to the first matching weekday.
-        let datedPrefix = parseSingleEvent(prefix, now: now, calendar: calendar)
+        let datedPrefix = parseDatedEvent(prefix, now: now, calendar: calendar)
+        if containsDateRange(prefix), datedPrefix == nil { return nil }
         let title = datedPrefix?.title ?? prefix
         var start = datedPrefix?.date ?? calendar.startOfDay(for: now)
         if let starting = match(#"\s+(?:starting|from)\b"#, in: schedule) {
@@ -163,8 +197,12 @@ enum QuickEventParser {
             guard let end = datePhrase(untilPhrase, now: now, calendar: calendar), end >= start else { return nil }
             until = end
         }
+        let duration = datedPrefix.flatMap { prefix in
+            prefix.endDate.flatMap { calendar.dateComponents([.day], from: prefix.date, to: $0).day }
+        }
         return ParsedEventInput(
             title: title, date: start,
+            endDate: duration.flatMap { calendar.date(byAdding: .day, value: $0, to: start) },
             recurrence: ParsedEventRecurrence(option: interval == 1 ? standardOption : .custom,
                                                interval: interval, unit: unit, until: until)
         )

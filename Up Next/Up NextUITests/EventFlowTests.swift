@@ -8,8 +8,8 @@ final class EventFlowTests: XCTestCase {
         let prefix = "Timeline \(UUID().uuidString.prefix(6))"
         let names = ["\(prefix) Alpha", "\(prefix) Beta", "\(prefix) Later"]
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
-        XCTAssertTrue(input.waitForExistence(timeout: 10))
         for (index, name) in names.enumerated() {
+            openComposer(app)
             input.tap()
             input.typeText("\(name) \(index == 2 ? "tomorrow" : "today")")
             app.buttons["quickAddSubmit"].tap()
@@ -83,6 +83,7 @@ final class EventFlowTests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
+        openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
         XCTAssertTrue(input.waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Today")
@@ -119,12 +120,70 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Tomorrow")
         app.buttons["quickAddSubmit"].tap()
         XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Today")
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
         app.staticTexts[name].tap()
         XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Work"].exists)
         app.buttons["Delete Event"].tap()
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
+    }
+
+    func testPlusComposerRecognizesDateRangeAndPreservesItInEditorAndSavedEvent() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.exists)
+        let plusScreenshot = XCTAttachment(screenshot: app.screenshot())
+        plusScreenshot.name = "Collapsed plus button"
+        plusScreenshot.lifetime = .keepAlways
+        add(plusScreenshot)
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        let name = "Tampa \(UUID().uuidString.prefix(6))"
+        input.typeText("\(name) Friday to Monday")
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let offset = (6 - calendar.component(.weekday, from: today) + 7) % 7
+        let start = calendar.date(byAdding: .day, value: offset == 0 ? 7 : offset, to: today)!
+        let end = calendar.date(byAdding: .day, value: 3, to: start)!
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Composer with date range and separate Edit control"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        XCTAssertFalse(app.scrollViews["quickEventPills"].buttons["manualEventInput"].exists)
+        app.buttons["manualEventInput"].tap()
+        XCTAssertTrue(app.navigationBars["Add Event"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["Title"].value as? String, name)
+        XCTAssertEqual(app.buttons["Start date"].value as? String, formatter.string(from: start))
+        XCTAssertEqual(app.buttons["End date"].value as? String, formatter.string(from: end))
+        app.navigationBars["Add Event"].buttons["Close"].tap()
+        app.buttons["quickEventDate"].tap()
+        app.collectionViews.buttons["Choose Dates…"].tap()
+        XCTAssertTrue(app.navigationBars["Dates"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.switches["End date"].value as? String, "1")
+        app.navigationBars["Dates"].buttons["Done"].tap()
+        app.buttons["quickAddSubmit"].tap()
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        let title = app.staticTexts[name].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["Start date"].value as? String, formatter.string(from: start))
+        XCTAssertEqual(app.buttons["End date"].value as? String, formatter.string(from: end))
+        app.buttons["Delete Event"].tap()
+        app.alerts["Delete Event"].buttons["Delete this event"].tap()
+    }
+
+    private func openComposer(_ app: XCUIApplication) {
+        let plus = app.buttons["quickAddButton"]
+        XCTAssertTrue(plus.waitForExistence(timeout: 10))
+        plus.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.waitForExistence(timeout: 5))
     }
 
     func testBirthdayReviewSelectionSaveAndRepeatedSync() {
@@ -173,7 +232,7 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(alex.value as? String, "0")
         app.buttons["saveContactBirthdays"].tap()
         app.terminate(); app.launch()
-        XCTAssertTrue(app.buttons["manualEventInput"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Birthday Test Alex’s birthday"].exists)
     }
 
@@ -214,7 +273,7 @@ final class EventFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         let name = "Audit \(UUID().uuidString.prefix(8))", renamed = name + " edited"
-        XCTAssertTrue(app.buttons["manualEventInput"].waitForExistence(timeout: 10))
+        openComposer(app)
         app.buttons["manualEventInput"].tap()
         let title = app.textFields["Title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))

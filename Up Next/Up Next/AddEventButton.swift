@@ -9,14 +9,23 @@ struct QuickAddEventField: View {
     var onSubmit: () -> Void
     var onEdit: () -> Void
 
-    @State private var showingDatePicker = false
-    @State private var pickerDate = Date()
-    @State private var showingRepeatPicker = false
-    @State private var repeatDraft: DateOptions?
+    @State private var dateDraft: QuickScheduleEditorDraft?
+    @State private var repeatDraft: QuickScheduleEditorDraft?
 
     private var dateLabel: String {
         let calendar = Calendar.current
         let date = draft.dateOptions.date
+        if draft.dateOptions.showEndDate {
+            let end = draft.dateOptions.endDate
+            let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: end)
+            let currentYear = calendar.component(.year, from: date) == calendar.component(.year, from: Date())
+            if sameYear && currentYear && calendar.component(.month, from: date) == calendar.component(.month, from: end) {
+                return "\(date.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.day()))"
+            }
+            let format: Date.FormatStyle = sameYear && currentYear
+                ? .dateTime.month(.abbreviated).day() : .dateTime.month(.abbreviated).day().year(.twoDigits)
+            return "\(date.formatted(format)) – \(end.formatted(format))"
+        }
         if calendar.isDateInToday(date) { return "Today" }
         if calendar.isDateInTomorrow(date) { return "Tomorrow" }
         if calendar.component(.year, from: date) != calendar.component(.year, from: Date()) {
@@ -52,13 +61,20 @@ struct QuickAddEventField: View {
                         dateMenu
                         categoryMenu
                         repeatMenu
-                        Button(action: onEdit) { pill("Edit") }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Edit event details")
-                            .accessibilityIdentifier("manualEventInput")
                     }
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("quickEventPills")
+                Button(action: onEdit) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit event details")
+                .accessibilityIdentifier("manualEventInput")
                 Button(action: onSubmit) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .semibold))
@@ -77,42 +93,30 @@ struct QuickAddEventField: View {
             }
         }
         .padding(8)
-        .modifier(FloatingControlSurface())
-        .sheet(isPresented: $showingDatePicker) {
-            NavigationStack {
-                DatePicker("Event date", selection: $pickerDate, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .accessibilityIdentifier("quickDatePicker")
-                    .padding()
-                    .navigationTitle("Date")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                overrides.date = Calendar.current.startOfDay(for: pickerDate)
-                                showingDatePicker = false
-                            }
-                        }
-                    }
+        .sheet(item: $dateDraft) { draft in
+            QuickDateEditor(options: draft.options) { date, endDate in
+                overrides.date = date
+                overrides.endDate = endDate
+                dateDraft = nil
             }
-            .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showingRepeatPicker) {
-            if let repeatDraft {
-                QuickRepeatEditor(options: repeatDraft) {
-                    overrides.repeatOptions = $0
-                    showingRepeatPicker = false
-                }
+        .sheet(item: $repeatDraft) { draft in
+            QuickRepeatEditor(options: draft.options) {
+                overrides.repeatOptions = $0
+                repeatDraft = nil
             }
         }
     }
 
-    private func pill(_ title: String) -> some View {
-        Text(title)
+    private func pill(_ title: String, icon: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text(title)
+        }
             .font(.caption.weight(.medium))
             .foregroundStyle(.primary)
             .lineLimit(1)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color(uiColor: .secondarySystemFill), in: Capsule())
             .frame(minHeight: 44)
@@ -121,20 +125,29 @@ struct QuickAddEventField: View {
 
     private var dateMenu: some View {
         Menu {
-            Button("Today") { overrides.date = Calendar.current.startOfDay(for: Date()) }
+            Button("Today") {
+                overrides.date = Calendar.current.startOfDay(for: Date())
+                overrides.endDate = nil
+            }
             Button("Tomorrow") {
                 overrides.date = Calendar.current.date(byAdding: .day, value: 1,
                                                         to: Calendar.current.startOfDay(for: Date()))
+                overrides.endDate = nil
             }
-            Button("Choose Date…") {
+            Button("Choose Dates…") {
                 isFocused = false
-                pickerDate = draft.dateOptions.date
-                showingDatePicker = true
+                dateDraft = QuickScheduleEditorDraft(options: draft.dateOptions)
+            }
+            if draft.dateOptions.showEndDate {
+                Button("Remove End Date") {
+                    overrides.date = draft.dateOptions.date
+                    overrides.endDate = nil
+                }
             }
             if overrides.date != nil {
-                Button("Use Date from Text") { overrides.date = nil }
+                Button("Use Date from Text") { overrides.date = nil; overrides.endDate = nil }
             }
-        } label: { pill(dateLabel) }
+        } label: { pill(dateLabel, icon: "calendar") }
         .accessibilityLabel("Date")
         .accessibilityValue(dateLabel)
         .accessibilityIdentifier("quickEventDate")
@@ -158,7 +171,7 @@ struct QuickAddEventField: View {
                 Divider()
                 Button("Use Text or Default") { overrides.categoryName = nil }
             }
-        } label: { pill(draft.categoryOptions.selectedCategory ?? "None") }
+        } label: { pill(draft.categoryOptions.selectedCategory ?? "None", icon: "tag") }
         .accessibilityLabel("Category")
         .accessibilityValue(draft.categoryOptions.selectedCategory ?? "None")
         .accessibilityIdentifier("quickEventCategory")
@@ -173,8 +186,7 @@ struct QuickAddEventField: View {
                     options.showRepeatOptions = option != .never
                     if option == .custom {
                         isFocused = false
-                        repeatDraft = options
-                        showingRepeatPicker = true
+                        repeatDraft = QuickScheduleEditorDraft(options: options)
                     } else {
                         overrides.repeatOptions = options
                     }
@@ -184,16 +196,53 @@ struct QuickAddEventField: View {
             }
             Button("Repeat Options…") {
                 isFocused = false
-                repeatDraft = draft.dateOptions
-                showingRepeatPicker = true
+                repeatDraft = QuickScheduleEditorDraft(options: draft.dateOptions)
             }
             if overrides.repeatOptions != nil {
                 Button("Use Text or Default") { overrides.repeatOptions = nil }
             }
-        } label: { pill(repeatLabel) }
+        } label: { pill(repeatLabel, icon: "repeat") }
         .accessibilityLabel("Repeat")
         .accessibilityValue(repeatLabel)
         .accessibilityIdentifier("quickEventRepeat")
+    }
+}
+
+// Item-driven presentation initializes each editor with the current parsed
+// values, including on its first presentation.
+private struct QuickScheduleEditorDraft: Identifiable {
+    let id = UUID()
+    var options: DateOptions
+}
+
+private struct QuickDateEditor: View {
+    @State var options: DateOptions
+    var onSave: (Date, Date?) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                DatePicker("Start date", selection: $options.date, displayedComponents: .date)
+                    .onChange(of: options.date) { _, date in options.endDate = max(date, options.endDate) }
+                Toggle("End date", isOn: $options.showEndDate)
+                if options.showEndDate {
+                    DatePicker("End date", selection: $options.endDate, in: options.date..., displayedComponents: .date)
+                }
+            }
+            .accessibilityIdentifier("quickDatePicker")
+            .navigationTitle("Dates")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        let calendar = Calendar.current
+                        onSave(calendar.startOfDay(for: options.date),
+                               options.showEndDate ? calendar.startOfDay(for: options.endDate) : nil)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

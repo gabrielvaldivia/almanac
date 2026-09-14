@@ -14,6 +14,8 @@ struct ContentView: View {
 
     // State variables to manage the view's state
     @State private var quickEventInput: String = ""
+    @State private var showingQuickEntry = false
+    @Namespace private var composerTransition
     @State private var quickEventOverrides = QuickEventOverrides()
     @State private var manualDraft: NewEventDraft?
     @State private var newEventTitle: String = ""
@@ -78,15 +80,7 @@ struct ContentView: View {
         NavigationView {
             mainContent
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    QuickAddEventField(
-                        text: $quickEventInput,
-                        isFocused: $isQuickEntryFocused,
-                        overrides: $quickEventOverrides,
-                        draft: quickEventDraft,
-                        categories: simplifiedCategories,
-                        onSubmit: submitQuickEntry,
-                        onEdit: openEventDetails
-                    )
+                    quickEntryControl
                     .disabled(appData.storageError != nil)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
@@ -101,6 +95,39 @@ struct ContentView: View {
                 .id(event.id)
         }
         .tint(categoryTint)
+    }
+
+    private var quickEntryControl: some View {
+        HStack(alignment: .bottom) {
+            if showingQuickEntry {
+                QuickAddEventField(
+                    text: $quickEventInput, isFocused: $isQuickEntryFocused,
+                    overrides: $quickEventOverrides, draft: quickEventDraft,
+                    categories: simplifiedCategories, onSubmit: submitQuickEntry, onEdit: openEventDetails
+                )
+                .modifier(FloatingControlSurface())
+                .matchedGeometryEffect(id: "composer", in: composerTransition, anchor: .bottomTrailing)
+                .transition(.opacity)
+                .task { isQuickEntryFocused = true }
+            } else {
+                Spacer()
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .medium))
+                        .frame(width: 56, height: 56)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .modifier(FloatingControlSurface())
+                .matchedGeometryEffect(id: "composer", in: composerTransition, anchor: .bottomTrailing)
+                .transition(.opacity)
+                .accessibilityLabel("Add event")
+                .accessibilityIdentifier("quickAddButton")
+            }
+        }
     }
 
     private var mainContent: some View {
@@ -318,8 +345,10 @@ struct ContentView: View {
     }
 
     private func resetQuickEntry() {
+        isQuickEntryFocused = false
         quickEventInput = ""
         quickEventOverrides = QuickEventOverrides()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
     }
 
     private var quickEventDraft: NewEventDraft {

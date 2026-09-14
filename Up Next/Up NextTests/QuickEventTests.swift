@@ -55,6 +55,52 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(parse("Dinner tomorrow", now: date(2026, 12, 31, hour: 23))?.date, date(2027, 1, 1))
     }
 
+    func testDateRangesKeepBothEndpointsAndRemoveTheWholePhraseFromTitle() {
+        for phrase in ["Friday to Monday", "from Friday through Monday", "Friday–Monday",
+                       "9/18-9/21", "Sep 18–21", "September 18th until September 21st",
+                       "18 September to 21 September", "2026-09-18 to 2026-09-21"] {
+            XCTAssertEqual(parse("Tampa \(phrase)"),
+                           ParsedEventInput(title: "Tampa", date: date(2026, 9, 18), endDate: date(2026, 9, 21)), phrase)
+        }
+        XCTAssertEqual(parse("Trip today to tomorrow")?.endDate, date(2026, 9, 14))
+        XCTAssertEqual(parse("Trip 12/30 to 1/2")?.endDate, date(2027, 1, 2))
+        let dst = parse("Trip Saturday to Monday", now: date(2026, 3, 6))
+        XCTAssertEqual(dst?.date, date(2026, 3, 7))
+        XCTAssertEqual(dst?.endDate, date(2026, 3, 9))
+    }
+
+    func testInvalidOrIncompleteRangesNeverFallBackToTheLastDate() {
+        let data = AppData()
+        for text in ["Trip Friday to", "Trip Friday to someday Monday", "Trip 2/30 to Monday",
+                     "Trip Friday to February 30", "Trip 9/18/2026 to 9/17/2026", "Trip Sep 18–17"] {
+            XCTAssertNil(parse(text), text)
+            XCTAssertTrue(QuickEventOverrides().resolve(text, category: nil, appData: data,
+                                                        now: date(2026, 9, 13), calendar: calendar).requiresScheduleReview, text)
+        }
+        XCTAssertEqual(parse("Road to Tomorrow")?.title, "Road to")
+    }
+
+    func testComposerRangeSurvivesSubmissionAndManualDateOverridesCanRemoveIt() {
+        let data = AppData()
+        var overrides = QuickEventOverrides()
+        let draft = overrides.resolve("Tampa Friday to Monday", category: nil, appData: data,
+                                       now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertTrue(draft.dateOptions.showEndDate)
+        XCTAssertEqual(draft.dateOptions.endDate, date(2026, 9, 21))
+        let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                          category: draft.categoryOptions, calendar: calendar)
+        XCTAssertEqual(events.first?.title, "Tampa")
+        XCTAssertEqual(events.first?.date, date(2026, 9, 18))
+        XCTAssertEqual(events.first?.endDate, date(2026, 9, 21))
+        overrides.date = date(2026, 10, 1)
+        XCTAssertFalse(overrides.resolve("Tampa Friday to Monday", category: nil, appData: data).dateOptions.showEndDate)
+        overrides.endDate = date(2026, 10, 3)
+        XCTAssertEqual(overrides.resolve("Tampa Friday to Monday", category: nil, appData: data).dateOptions.endDate, date(2026, 10, 3))
+        let recurring = parse("Trip Friday to Monday every Saturday")
+        XCTAssertEqual(recurring?.date, date(2026, 9, 19))
+        XCTAssertEqual(recurring?.endDate, date(2026, 9, 22), "Aligning recurrence must preserve the span's duration")
+    }
+
     func testLeapDaysAndImpossibleDates() {
         XCTAssertEqual(parse("Leap day 2/29")?.date, date(2028, 2, 29))
         for input in ["Dune 2/30", "Dune 2/29/2027", "Dune 13/18", "Dune 4/31", "Dune 0/1", "Dune 12/0"] {

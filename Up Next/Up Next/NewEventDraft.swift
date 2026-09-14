@@ -62,6 +62,8 @@ struct NewEventDraft {
 /// Explicit chip choices take precedence over live parsing and category defaults.
 struct QuickEventOverrides {
     var date: Date?
+    var endDate: Date?
+    var hasDateOverride: Bool { date != nil }
     // nil follows parsing/defaults; an empty name explicitly means no category.
     var categoryName: String?
     var repeatOptions: DateOptions?
@@ -83,13 +85,14 @@ struct QuickEventOverrides {
         let title = parsed?.title ?? text
         var draft = NewEventDraft(
             title: title, date: date ?? parsed?.date ?? calendar.startOfDay(for: now),
+            endDate: hasDateOverride ? endDate : parsed?.endDate,
             category: categoryName ?? taggedCategory ?? category, appData: appData,
             recurrence: parsed?.recurrence ?? QuickEventParser.inferredRecurrence(for: title))
         // Keep incomplete/invalid scheduling input in the manual review flow;
         // a plain title can use the default date displayed by the composer.
         let scheduleHint = #"(?:^|\s)\d{1,4}[-/]\d*|\b(?:every|until|through|starting)\b|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d"#
-        draft.requiresScheduleReview = parsed == nil && text.range(
-            of: scheduleHint, options: [.regularExpression, .caseInsensitive]) != nil
+        draft.requiresScheduleReview = parsed == nil && (QuickEventParser.containsDateRange(text) || text.range(
+            of: scheduleHint, options: [.regularExpression, .caseInsensitive]) != nil)
         if let repeatOptions {
             draft.dateOptions.repeatOption = repeatOptions.repeatOption
             draft.dateOptions.customRepeatCount = repeatOptions.customRepeatCount
