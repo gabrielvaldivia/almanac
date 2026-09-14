@@ -51,8 +51,8 @@ final class TimelineTests: XCTestCase {
                 for other in placements {
                     XCTAssertFalse(label.frame.intersects(other.marker))
                     if label.id != other.id { XCTAssertFalse(label.frame.intersects(other.frame)) }
-                    if let start = label.connector.first, let end = label.connector.last {
-                        XCTAssertEqual(label.connector.count, 2, "Connections must be direct")
+                    for (start, end) in zip(label.connector, label.connector.dropFirst()) {
+                        XCTAssertTrue(start.x == end.x || start.y == end.y, "Connections cannot contain diagonal segments")
                         XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.frame))
                         if label.id != other.id {
                             XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.marker))
@@ -61,9 +61,10 @@ final class TimelineTests: XCTestCase {
                 }
                 for other in placements.dropFirst(index + 1) {
                     XCTAssertFalse(label.marker.intersects(other.marker))
-                    if let a = label.connector.first, let b = label.connector.last,
-                       let c = other.connector.first, let d = other.connector.last {
-                        XCTAssertFalse(TimelineEventLabelLayout.segmentsCross(a, b, c, d))
+                    for (a, b) in zip(label.connector, label.connector.dropFirst()) {
+                        for (c, d) in zip(other.connector, other.connector.dropFirst()) {
+                            XCTAssertFalse(TimelineEventLabelLayout.segmentsCross(a, b, c, d))
+                        }
                     }
                 }
             }
@@ -71,7 +72,7 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testBirthdayAndReleaseLabelsUseBothSidesWithDirectConnections() {
+    func testBirthdayAndReleaseLabelsUseBothSidesWithCenteredConnections() {
         let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 360))
         container.backgroundColor = .systemBackground
         let titles = TimelineEventLabelsView(frame: container.bounds)
@@ -94,13 +95,73 @@ final class TimelineTests: XCTestCase {
             dot.backgroundColor = UIColor(entry.event.color.color)
             dot.layer.cornerRadius = 4.5
             container.addSubview(dot)
-            XCTAssertLessThanOrEqual(placement.connector.count, 2)
+            XCTAssertLessThanOrEqual(placement.connector.count, 4)
+            if let start = placement.connector.first, let end = placement.connector.last {
+                XCTAssertEqual(start.x, placement.marker.midX)
+                XCTAssertEqual(end.x, placement.frame.midX)
+            }
         }
         func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
         layoutTree(container)
         let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
         let screenshot = XCTAttachment(image: image)
-        screenshot.name = "Birthday and releases with balanced direct labels"
+        screenshot.name = "Birthday and releases with balanced centered labels"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    @MainActor
+    func testStackedReleaseLabelsConnectAtTheirCentersWithRoundedOrthogonalBends() {
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 360))
+        container.overrideUserInterfaceStyle = .light
+        container.backgroundColor = .systemBackground
+        let titles = TimelineEventLabelsView(frame: container.bounds)
+        container.addSubview(titles)
+        let entries = ["Dune 3", "Avengers Doomsday"].enumerated().map { index, title in
+            (event: Event(title: title, date: Date(), color: CodableColor(color: .purple)),
+             frame: CGRect(x: 360, y: 175 + CGFloat(index) * 24, width: 20, height: 20))
+        }
+        _ = titles.update(events: entries, viewport: container.bounds, opacity: 1, minimumY: 40)
+        XCTAssertEqual(titles.placements.count, 2)
+        XCTAssertTrue(titles.placements.contains { $0.frame.maxY < $0.marker.minY })
+        XCTAssertTrue(titles.placements.contains { $0.frame.minY > $0.marker.maxY })
+        for placement in titles.placements {
+            let points = placement.connector
+            XCTAssertEqual(points.count, 4)
+            guard points.count == 4 else { continue }
+            let above = placement.frame.maxY < placement.marker.minY
+            XCTAssertEqual(points.first, CGPoint(x: placement.marker.midX,
+                                                 y: above ? placement.marker.minY - 2 : placement.marker.maxY + 2))
+            XCTAssertEqual(points.last, CGPoint(x: placement.frame.midX,
+                                                y: above ? placement.frame.maxY + 2 : placement.frame.minY - 2))
+            XCTAssertEqual(points[0].x, points[1].x)
+            XCTAssertEqual(points[1].y, points[2].y)
+            XCTAssertEqual(points[2].x, points[3].x)
+            var curves = 0
+            var previous = points[0]
+            TimelineEventLabelLayout.roundedConnectorPath(points).cgPath.applyWithBlock { element in
+                switch element.pointee.type {
+                case .addQuadCurveToPoint:
+                    curves += 1
+                    previous = element.pointee.points[1]
+                case .addLineToPoint:
+                    let end = element.pointee.points[0]
+                    XCTAssertTrue(previous.x == end.x || previous.y == end.y)
+                    previous = end
+                default: break
+                }
+            }
+            XCTAssertEqual(curves, 2, "Both bends must be rounded, not sharp line joins")
+            let dot = UIView(frame: placement.marker)
+            dot.backgroundColor = .systemPurple
+            dot.layer.cornerRadius = 10
+            container.addSubview(dot)
+        }
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        layoutTree(container)
+        let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
+        let screenshot = XCTAttachment(image: image)
+        screenshot.name = "Stacked releases with rounded centered connectors"
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }

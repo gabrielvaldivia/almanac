@@ -13,10 +13,10 @@ struct TimelineLabelPlacement {
     let connector: [CGPoint]
 }
 
-/// Place the title and its direct connection together. Reserve both so later
+/// Place the title and its centered connection together. Reserve both so later
 /// titles cannot cover a connector, and never route a line around another label.
 enum TimelineEventLabelLayout {
-    static let gap: CGFloat = 10
+    static let gap: CGFloat = 16
 
     static func make(items: [TimelineLabelItem], horizontalBounds: ClosedRange<CGFloat>, minimumY: CGFloat = 0,
                      previous: [UUID: CGRect] = [:]) -> [TimelineLabelPlacement] {
@@ -36,13 +36,12 @@ enum TimelineEventLabelLayout {
                                width: size.width, height: size.height)
             let otherMarkers = markers.filter { $0.key != item.id }.map(\.value)
             let labels = result.map(\.frame)
-            let existingLines = result.compactMap { placement -> (CGPoint, CGPoint)? in
-                guard let first = placement.connector.first, let last = placement.connector.last else { return nil }
-                return (first, last)
+            let existingLines = result.flatMap { placement in
+                Array(zip(placement.connector, placement.connector.dropFirst()))
             }
-            func connection(to frame: CGRect) -> [CGPoint] {
+            func connection(to frame: CGRect) -> [CGPoint]? {
                 if frame == right { return [] }
-                return directConnection(marker: marker, label: frame)
+                return centeredConnection(marker: marker, label: frame)
             }
             func isFree(_ frame: CGRect) -> Bool {
                 guard frame.minX >= horizontalBounds.lowerBound, frame.maxX <= horizontalBounds.upperBound,
@@ -52,12 +51,13 @@ enum TimelineEventLabelLayout {
                       }),
                       !existingLines.contains(where: { segment($0.0, $0.1, intersects: frame.insetBy(dx: -4, dy: -4)) })
                 else { return false }
-                let points = connection(to: frame)
-                guard let start = points.first, let end = points.last else { return true }
-                return !(otherMarkers + labels).contains {
-                    segment(start, end, intersects: $0.insetBy(dx: -2, dy: -2))
-                } && !existingLines.contains {
-                    segmentsCross(start, end, $0.0, $0.1)
+                guard let points = connection(to: frame) else { return false }
+                return zip(points, points.dropFirst()).allSatisfy { start, end in
+                    !(otherMarkers + labels).contains {
+                        segment(start, end, intersects: $0.insetBy(dx: -4, dy: -4))
+                    } && !existingLines.contains {
+                        segmentsCross(start, end, $0.0, $0.1)
+                    }
                 }
             }
             var candidates = [right]
@@ -68,7 +68,6 @@ enum TimelineEventLabelLayout {
                     for x in columns { candidates.append(CGRect(origin: CGPoint(x: x, y: y), size: size)) }
                 }
             }
-            candidates.append(CGRect(x: marker.minX - 6 - size.width, y: right.minY, width: size.width, height: size.height))
             if let old = previous[item.id], old.size == size {
                 let retained = CGRect(x: clampedX(old.minX), y: old.minY, width: old.width, height: old.height)
                 // Preserve nearby placements while panning, but don't retain the
@@ -81,7 +80,7 @@ enum TimelineEventLabelLayout {
             if let available = candidates.first(where: isFree) {
                 frame = available
             } else {
-                // A fully surrounded dot cannot have a clear straight leader.
+                // A fully surrounded dot cannot have a clear centered leader.
                 // Keep its date (x) fixed and separate this event into a new row.
                 let rowTop = max(minimumY, markers.values.map(\.maxY).max() ?? minimumY,
                                  labels.map(\.maxY).max() ?? minimumY) + gap * 2
@@ -90,25 +89,49 @@ enum TimelineEventLabelLayout {
                 marker.origin.y = frame.maxY + gap
                 markers[item.id] = marker
             }
-            result.append(TimelineLabelPlacement(id: item.id, marker: marker, frame: frame, connector: connection(to: frame)))
+            result.append(TimelineLabelPlacement(id: item.id, marker: marker, frame: frame, connector: connection(to: frame) ?? []))
         }
         return result
     }
 
-    private static func directConnection(marker: CGRect, label: CGRect) -> [CGPoint] {
-        let inset = min(4, label.width / 2)
-        let x = max(label.minX + inset, min(marker.midX, label.maxX - inset))
+    private static func centeredConnection(marker: CGRect, label: CGRect) -> [CGPoint]? {
+        let start: CGPoint
+        let end: CGPoint
         if label.maxY <= marker.minY {
-            return [CGPoint(x: marker.midX, y: marker.minY - 2), CGPoint(x: x, y: label.maxY + 2)]
+            start = CGPoint(x: marker.midX, y: marker.minY - 2)
+            end = CGPoint(x: label.midX, y: label.maxY + 2)
+        } else if label.minY >= marker.maxY {
+            start = CGPoint(x: marker.midX, y: marker.maxY + 2)
+            end = CGPoint(x: label.midX, y: label.minY - 2)
+        } else {
+            // Side-by-side titles need no leader. Displaced titles belong above
+            // or below their dot so both ends can connect vertically.
+            return nil
         }
-        if label.minY >= marker.maxY {
-            return [CGPoint(x: marker.midX, y: marker.maxY + 2), CGPoint(x: x, y: label.minY - 2)]
+        if abs(start.x - end.x) < 0.0001 { return [start, end] }
+        let middleY = (start.y + end.y) / 2
+        return [start, CGPoint(x: start.x, y: middleY), CGPoint(x: end.x, y: middleY), end]
+    }
+
+    static func roundedConnectorPath(_ points: [CGPoint]) -> UIBezierPath {
+        let path = UIBezierPath()
+        guard let first = points.first, let last = points.last, points.count >= 2 else { return path }
+        path.move(to: first)
+        for index in 1..<(points.count - 1) {
+            let previous = points[index - 1], corner = points[index], next = points[index + 1]
+            let incoming = hypot(corner.x - previous.x, corner.y - previous.y)
+            let outgoing = hypot(next.x - corner.x, next.y - corner.y)
+            guard incoming > 0, outgoing > 0 else { continue }
+            let radius = min(4, incoming / 2, outgoing / 2)
+            let entry = CGPoint(x: corner.x + (previous.x - corner.x) * radius / incoming,
+                                y: corner.y + (previous.y - corner.y) * radius / incoming)
+            let exit = CGPoint(x: corner.x + (next.x - corner.x) * radius / outgoing,
+                               y: corner.y + (next.y - corner.y) * radius / outgoing)
+            path.addLine(to: entry)
+            path.addQuadCurve(to: exit, controlPoint: corner)
         }
-        let y = max(label.minY + 2, min(marker.midY, label.maxY - 2))
-        if label.minX >= marker.maxX {
-            return [CGPoint(x: marker.maxX + 2, y: marker.midY), CGPoint(x: label.minX - 2, y: y)]
-        }
-        return [CGPoint(x: marker.minX - 2, y: marker.midY), CGPoint(x: label.maxX + 2, y: y)]
+        path.addLine(to: last)
+        return path
     }
 
     static func segment(_ start: CGPoint, _ end: CGPoint, intersects rect: CGRect) -> Bool {
@@ -235,12 +258,7 @@ final class TimelineEventLabelsView: UIView {
                 lines[event.id] = line
                 layer.insertSublayer(line, at: 0)
             }
-            let path = UIBezierPath()
-            if let first = placement.connector.first {
-                path.move(to: first)
-                placement.connector.dropFirst().forEach { path.addLine(to: $0) }
-            }
-            line.path = path.cgPath
+            line.path = TimelineEventLabelLayout.roundedConnectorPath(placement.connector).cgPath
             line.strokeColor = UIColor(event.color.color).withAlphaComponent(0.65).cgColor
             line.fillColor = nil
             line.lineWidth = 1
