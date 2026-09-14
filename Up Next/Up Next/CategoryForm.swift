@@ -59,25 +59,40 @@ struct CategoryForm: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 0) {
-                    TextField("Category Name", text: $categoryName)
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        .frame(minHeight: 44)
+                VStack(spacing: 20) {
+                    VStack(spacing: 0) {
+                        TextField("Category Name", text: $categoryName)
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
+                            .frame(minHeight: 44)
 
-                    if !categoryName.isEmpty && !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName) {
-                        Text("Choose a unique category name. All Categories is reserved for widget filters.")
-                            .font(.footnote).foregroundStyle(.red).padding(.horizontal)
+                        if !categoryName.isEmpty && !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName) {
+                            Text("Choose a unique category name. All Categories is reserved for widget filters.")
+                                .font(.footnote).foregroundStyle(.red).padding(.horizontal)
+                        }
+                        Divider()
+                            .padding(.leading)
+
+                        ColorSelectionRow(color: categoryColor) {
+                            showColorPickerSheet = true
+                        }
+
+                        Divider()
+                            .padding(.leading)
+
+                        RepeatOptions(
+                            repeatOption: $repeatOption,
+                            showRepeatOptions: $showRepeatOptions,
+                            customRepeatCount: $customRepeatCount,
+                            repeatUnit: $repeatUnit,
+                            repeatUntilOption: $repeatUntilOption,
+                            repeatUntilCount: $repeatUntilCount,
+                            repeatUntil: $repeatUntil
+                        )
+                        .padding(.vertical, 6)
                     }
-                    Divider()
-                        .padding(.leading)
-
-                    ColorSelectionRow(color: categoryColor) {
-                        showColorPickerSheet = true
-                    }
-
-                    Divider()
-                        .padding(.leading)
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .cornerRadius(12)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Keywords")
@@ -103,23 +118,9 @@ struct CategoryForm: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding()
-
-                    Divider()
-                        .padding(.leading)
-
-                    RepeatOptions(
-                        repeatOption: $repeatOption,
-                        showRepeatOptions: $showRepeatOptions,
-                        customRepeatCount: $customRepeatCount,
-                        repeatUnit: $repeatUnit,
-                        repeatUntilOption: $repeatUntilOption,
-                        repeatUntilCount: $repeatUntilCount,
-                        repeatUntil: $repeatUntil
-                    )
-                    .padding(.vertical, 6)
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .cornerRadius(12)
                 }
-                .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(12)
             }
             .padding()
             .background(Color(UIColor.systemGroupedBackground))
