@@ -6,7 +6,11 @@ struct NewEventDraft {
     var dateOptions: DateOptions
     var categoryOptions: CategoryOptions
     var usesCustomRepeat = false
-    var requiresScheduleReview = false
+    var hasDateSelection = false
+    var hasCategorySelection = false
+    var hasRepeatSelection = false
+    var scheduleReviewMessage: String?
+    var requiresScheduleReview: Bool { scheduleReviewMessage != nil }
 
     init(title: String, date: Date, endDate: Date? = nil, category: String?, appData: AppData,
          recurrence: ParsedEventRecurrence? = nil) {
@@ -90,11 +94,26 @@ struct QuickEventOverrides {
             category: categoryName ?? taggedCategory ?? category, appData: appData,
             recurrence: parsed?.recurrence ?? QuickEventParser.inferredRecurrence(for: title))
         if let color { draft.categoryOptions.selectedColor = color }
-        // Keep incomplete/invalid scheduling input in the manual review flow;
-        // a plain title can use the default date displayed by the composer.
-        let scheduleHint = #"(?:^|\s)\d{1,4}[-/]\d*|\b(?:every|until|through|starting)\b|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d"#
-        draft.requiresScheduleReview = parsed == nil && (QuickEventParser.containsDateRange(text) || text.range(
-            of: scheduleHint, options: [.regularExpression, .caseInsensitive]) != nil)
+        draft.hasDateSelection = date != nil || parsed != nil
+        draft.hasCategorySelection = categoryName != nil || taggedCategory != nil
+        draft.hasRepeatSelection = repeatOptions != nil || parsed?.recurrence != nil ||
+            QuickEventParser.inferredRecurrence(for: title) != nil
+        // Invalid text stays in the composer until its schedule is corrected
+        // either in the text itself or through the relevant pill.
+        let rangeHint = QuickEventParser.containsDateRange(text)
+        let dateHint = #"(?:^|\s)\d{1,4}[-/]\d*|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d"#
+        let repeatHint = #"\b(?:every|until|through|starting)\b"#
+        let dateNeedsReview = parsed == nil && date == nil && (rangeHint || text.range(
+            of: dateHint, options: [.regularExpression, .caseInsensitive]) != nil)
+        let repeatNeedsReview = parsed == nil && repeatOptions == nil && !rangeHint && text.range(
+            of: repeatHint, options: [.regularExpression, .caseInsensitive]) != nil
+        if dateNeedsReview && repeatNeedsReview {
+            draft.scheduleReviewMessage = "Choose a date and repeat setting, or update the text."
+        } else if dateNeedsReview {
+            draft.scheduleReviewMessage = "Choose a date or update the date in the text."
+        } else if repeatNeedsReview {
+            draft.scheduleReviewMessage = "Choose a repeat setting or update the text."
+        }
         if let repeatOptions {
             draft.dateOptions.repeatOption = repeatOptions.repeatOption
             draft.dateOptions.customRepeatCount = repeatOptions.customRepeatCount

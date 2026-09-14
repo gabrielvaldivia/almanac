@@ -237,17 +237,24 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(empty.dateOptions.date, date(2026, 9, 13))
         XCTAssertEqual(empty.categoryOptions.selectedCategory, "Work")
         XCTAssertEqual(empty.dateOptions.repeatOption, .never)
+        XCTAssertFalse(empty.hasDateSelection)
+        XCTAssertFalse(empty.hasCategorySelection)
+        XCTAssertFalse(empty.hasRepeatSelection)
         let parsed = overrides.resolve("Dinner #Social tomorrow", category: nil, appData: data,
                                        now: date(2026, 9, 13), calendar: calendar)
         XCTAssertEqual(parsed.title, "Dinner")
         XCTAssertEqual(parsed.dateOptions.date, date(2026, 9, 14))
         XCTAssertEqual(parsed.categoryOptions.selectedCategory, "Social")
+        XCTAssertTrue(parsed.hasDateSelection)
+        XCTAssertTrue(parsed.hasCategorySelection)
+        XCTAssertFalse(parsed.hasRepeatSelection)
         let recurring = overrides.resolve("Dinner every other Saturday until December 15", category: nil,
                                           appData: data, now: date(2026, 9, 13), calendar: calendar)
         XCTAssertEqual(recurring.dateOptions.repeatOption, .custom)
         XCTAssertEqual(recurring.dateOptions.customRepeatCount, 2)
         XCTAssertEqual(recurring.dateOptions.repeatUntil, date(2026, 12, 15))
         XCTAssertTrue(recurring.usesCustomRepeat)
+        XCTAssertTrue(recurring.hasRepeatSelection)
     }
 
     func testComposerManualChoicesOverrideTextAndExplicitNoneOverridesDefault() {
@@ -266,6 +273,9 @@ final class QuickEventTests: XCTestCase {
         XCTAssertNil(draft.categoryOptions.selectedCategory)
         XCTAssertEqual(draft.dateOptions.repeatOption, .never)
         XCTAssertTrue(draft.usesCustomRepeat)
+        XCTAssertTrue(draft.hasDateSelection)
+        XCTAssertTrue(draft.hasCategorySelection)
+        XCTAssertTrue(draft.hasRepeatSelection)
         let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
                                           category: draft.categoryOptions, calendar: calendar)
         XCTAssertEqual(events.count, 1)
@@ -317,6 +327,12 @@ final class QuickEventTests: XCTestCase {
         }
         XCTAssertFalse(overrides.resolve("Dinner", category: nil, appData: data).requiresScheduleReview)
         XCTAssertFalse(overrides.resolve("Dinner tomorrow", category: nil, appData: data).requiresScheduleReview)
+        let correctedDate = QuickEventOverrides(date: date(2026, 9, 15))
+        XCTAssertFalse(correctedDate.resolve("Dinner 2/30", category: nil, appData: data).requiresScheduleReview)
+        XCTAssertFalse(correctedDate.resolve("Trip Friday to", category: nil, appData: data).requiresScheduleReview)
+        let correctedRepeat = QuickEventOverrides(repeatOptions: overrides.resolve("Dinner", category: nil, appData: data).dateOptions)
+        XCTAssertFalse(correctedRepeat.resolve("Dinner every", category: nil, appData: data).requiresScheduleReview)
+        XCTAssertTrue(correctedRepeat.resolve("Dinner 2/30", category: nil, appData: data).requiresScheduleReview)
     }
 
     func testQuickAndManualCreationPreserveEditableDetails() {

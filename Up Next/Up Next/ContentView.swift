@@ -17,12 +17,10 @@ struct ContentView: View {
     @State private var showingQuickEntry = false
     @Namespace private var composerTransition
     @State private var quickEventOverrides = QuickEventOverrides()
-    @State private var manualDraft: NewEventDraft?
+    @State private var attemptedQuickSubmit = false
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
     @State private var newEventEndDate: Date = Date()
-    @State private var newEventRecurrence: ParsedEventRecurrence?
-    @State private var showAddEventSheet: Bool = false
     @State private var selectedEvent: Event?
     private var editSheetPresented: Binding<Bool> {
         Binding(get: { selectedEvent != nil }, set: { if !$0 { selectedEvent = nil } })
@@ -32,7 +30,6 @@ struct ContentView: View {
     @State private var showEndDate: Bool = false
     @State private var showPastEventsView: Bool = false
     @State private var selectedCategoryFilter: String? = nil
-    @State private var selectedColor: CodableColor = CodableColor(color: .blue)
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
@@ -107,9 +104,6 @@ struct ContentView: View {
                     .padding(.vertical, 8)
             }
         }
-        .sheet(isPresented: $showAddEventSheet) {
-            addEventSheet
-        }
         .sheet(item: $selectedEvent) { event in
             EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
                           showEditSheet: editSheetPresented, saveEvents: appData.saveEvents)
@@ -124,7 +118,8 @@ struct ContentView: View {
                 QuickAddEventField(
                     text: $quickEventInput, isFocused: $isQuickEntryFocused,
                     overrides: $quickEventOverrides, draft: quickEventDraft,
-                    categories: simplifiedCategories, onSubmit: submitQuickEntry, onEdit: openEventDetails,
+                    categories: simplifiedCategories, onSubmit: submitQuickEntry,
+                    validationMessage: attemptedQuickSubmit ? quickEventDraft.scheduleReviewMessage ?? quickEventDraft.dateOptions.validationMessage : nil,
                     onDismiss: dismissQuickEntry
                 )
                 .modifier(FloatingControlSurface())
@@ -477,10 +472,8 @@ struct ContentView: View {
     private func submitQuickEntry() {
         let draft = quickEventDraft
         guard appData.storageError == nil, !draft.title.isEmpty else { return }
-        guard !draft.requiresScheduleReview, draft.dateOptions.validationMessage == nil else {
-            openEventDetails()
-            return
-        }
+        attemptedQuickSubmit = true
+        guard !draft.requiresScheduleReview, draft.dateOptions.validationMessage == nil else { return }
         appData.events.append(contentsOf: NewEventDraft.events(
             title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions))
         appData.saveEvents()
@@ -493,6 +486,7 @@ struct ContentView: View {
         isQuickEntryFocused = false
         quickEventInput = ""
         quickEventOverrides = QuickEventOverrides()
+        attemptedQuickSubmit = false
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
     }
 
@@ -524,38 +518,6 @@ struct ContentView: View {
 
     private var categoryTint: Color {
         quickEventDefaults.categoryOptions.selectedColor.color
-    }
-
-    private func openEventDetails() {
-        isQuickEntryFocused = false
-        let draft = quickEventDraft
-        manualDraft = draft
-        newEventTitle = draft.title
-        newEventDate = draft.dateOptions.date
-        newEventEndDate = draft.dateOptions.endDate
-        newEventRecurrence = nil
-        showEndDate = draft.dateOptions.showEndDate
-        selectedCategory = draft.categoryOptions.selectedCategory
-        selectedColor = draft.categoryOptions.selectedColor
-        showAddEventSheet = true
-    }
-
-    private var addEventSheet: some View {
-        AddEventView(
-            events: $appData.events,
-            selectedEvent: $selectedEvent,
-            newEventTitle: $newEventTitle,
-            newEventDate: $newEventDate,
-            newEventEndDate: $newEventEndDate,
-            showEndDate: $showEndDate,
-            showAddEventSheet: $showAddEventSheet,
-            selectedCategory: $selectedCategory,
-            selectedColor: $selectedColor,
-            initialDraft: $manualDraft,
-            initialRecurrence: newEventRecurrence,
-            onSave: resetQuickEntry,
-            appData: _appData
-        )
     }
 
     // View for each event row
@@ -630,18 +592,15 @@ struct ContentView: View {
     // Handle URL scheme for adding events
     func handleOpenURL(_ url: URL) {
         guard let link = DeepLink(url: url) else { return }
-        showAddEventSheet = false
+        dismissQuickEntry()
         selectedEvent = nil
         switch link {
         case .addEvent:
-            manualDraft = nil
-            newEventRecurrence = nil
-            newEventTitle = ""
-            newEventDate = Date()
-            newEventEndDate = Date()
-            showEndDate = false
-            selectedCategory = selectedCategoryFilter ?? (appData.defaultCategory.isEmpty ? nil : appData.defaultCategory)
-            showAddEventSheet = true
+            quickEventInput = ""
+            quickEventOverrides = QuickEventOverrides()
+            attemptedQuickSubmit = false
+            showingQuickEntry = true
+            isQuickEntryFocused = true
         case .event(let id):
             if let event = appData.events.first(where: { $0.id == id }) {
                 selectedEvent = event

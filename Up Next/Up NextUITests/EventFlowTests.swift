@@ -156,15 +156,7 @@ final class EventFlowTests: XCTestCase {
         screenshot.name = "Composer with event color beside text"
         screenshot.lifetime = .keepAlways
         add(screenshot)
-        app.buttons["manualEventInput"].tap()
-        XCTAssertTrue(app.navigationBars["Add Event"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["Color"].value as? String, "Orange")
-        let manualScreenshot = XCTAttachment(screenshot: app.screenshot())
-        manualScreenshot.name = "Manual event form preserves the selected orange color"
-        manualScreenshot.lifetime = .keepAlways
-        add(manualScreenshot)
-        app.navigationBars["Add Event"].buttons["Close"].tap()
-        input.tap()
+        XCTAssertFalse(app.buttons["manualEventInput"].exists)
         let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
@@ -185,7 +177,7 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
     }
 
-    func testComposerParsesPillsAndKeepsQuickEditsInManualForm() {
+    func testComposerParsesPillsAndSavesQuickEdits() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
@@ -195,17 +187,27 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Today")
         XCTAssertFalse(app.buttons["quickAddSubmit"].isEnabled)
         XCTAssertFalse(app.buttons["closeQuickEntry"].exists)
+        for id in ["quickEventDate", "quickEventCategory", "quickEventRepeat"] {
+            XCTAssertFalse(app.buttons[id].isSelected)
+        }
+        let defaultsScreenshot = XCTAttachment(screenshot: app.screenshot())
+        defaultsScreenshot.name = "Default composer with neutral pills"
+        defaultsScreenshot.lifetime = .keepAlways
+        add(defaultsScreenshot)
         let name = "Composer \(UUID().uuidString.prefix(6))"
         input.tap()
         input.typeText("\(name) #Social tomorrow")
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Tomorrow")
         XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        XCTAssertTrue(app.buttons["quickEventDate"].isSelected)
+        XCTAssertTrue(app.buttons["quickEventCategory"].isSelected)
+        XCTAssertFalse(app.buttons["quickEventRepeat"].isSelected)
         app.buttons["quickEventCategory"].tap()
         app.collectionViews.buttons["Work"].tap()
         app.buttons["quickEventRepeat"].tap()
         app.collectionViews.buttons["Weekly"].tap()
         XCTAssertEqual(app.buttons["quickEventRepeat"].value as? String, "Weekly")
-        // Explicit choices survive a text change and are shared with the full form.
+        // Explicit choices survive a text change and are saved directly.
         input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8) + "today")
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Today")
         XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Work")
@@ -213,12 +215,8 @@ final class EventFlowTests: XCTestCase {
         screenshot.name = "Composer with parsed date and editable pills"
         screenshot.lifetime = .keepAlways
         add(screenshot)
-        app.buttons["manualEventInput"].tap()
-        XCTAssertTrue(app.navigationBars["Add Event"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.textFields["Title"].value as? String, name)
-        XCTAssertTrue(app.staticTexts["Weekly"].exists)
-        XCTAssertTrue(app.staticTexts["Work"].exists)
-        app.navigationBars["Add Event"].buttons["Close"].tap()
+        XCTAssertFalse(app.buttons["manualEventInput"].exists)
+        XCTAssertTrue(app.buttons["quickEventRepeat"].isSelected)
         app.buttons["quickEventRepeat"].tap()
         app.collectionViews.buttons["Never"].tap()
         app.buttons["quickEventDate"].tap()
@@ -258,16 +256,10 @@ final class EventFlowTests: XCTestCase {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "Composer with date range and separate Edit control"
+        screenshot.name = "Composer with date range and inline controls"
         screenshot.lifetime = .keepAlways
         add(screenshot)
-        XCTAssertFalse(app.scrollViews["quickEventPills"].buttons["manualEventInput"].exists)
-        app.buttons["manualEventInput"].tap()
-        XCTAssertTrue(app.navigationBars["Add Event"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.textFields["Title"].value as? String, name)
-        XCTAssertEqual(app.buttons["Start date"].value as? String, formatter.string(from: start))
-        XCTAssertEqual(app.buttons["End date"].value as? String, formatter.string(from: end))
-        app.navigationBars["Add Event"].buttons["Close"].tap()
+        XCTAssertFalse(app.buttons["manualEventInput"].exists)
         app.buttons["quickEventDate"].tap()
         app.collectionViews.buttons["Choose Dates…"].tap()
         XCTAssertTrue(app.navigationBars["Dates"].waitForExistence(timeout: 5))
@@ -290,6 +282,23 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(plus.waitForExistence(timeout: 10))
         plus.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testInvalidScheduleCanBeCorrectedInComposer() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Trip 2/30")
+        app.buttons["quickAddSubmit"].tap()
+        XCTAssertTrue(app.staticTexts["quickEventValidation"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.navigationBars["Add Event"].exists)
+        app.buttons["quickEventDate"].tap()
+        app.collectionViews.buttons["Today"].tap()
+        XCTAssertFalse(app.staticTexts["quickEventValidation"].exists)
+        XCTAssertTrue(input.exists)
+        XCTAssertTrue(app.buttons["quickEventDate"].isSelected)
     }
 
     func testBirthdayReviewSelectionSaveAndRepeatedSync() {
@@ -380,14 +389,13 @@ final class EventFlowTests: XCTestCase {
         app.launch()
         let name = "Audit \(UUID().uuidString.prefix(8))", renamed = name + " edited"
         openComposer(app)
-        app.buttons["manualEventInput"].tap()
-        let title = app.textFields["Title"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5))
-        title.tap(); title.typeText(name)
-        app.navigationBars["Add Event"].buttons["Add"].tap()
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText(name)
+        app.buttons["quickAddSubmit"].tap()
         XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
         app.staticTexts[name].tap()
         XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        let title = app.textFields["Title"]
         title.tap()
         title.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: name.count))
         title.typeText(renamed)

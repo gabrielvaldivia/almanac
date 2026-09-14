@@ -7,7 +7,7 @@ struct QuickAddEventField: View {
     var draft: NewEventDraft
     var categories: [(name: String, color: Color)]
     var onSubmit: () -> Void
-    var onEdit: () -> Void
+    var validationMessage: String?
     var onDismiss: () -> Void
 
     @State private var dateDraft: QuickScheduleEditorDraft?
@@ -76,16 +76,6 @@ struct QuickAddEventField: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .accessibilityIdentifier("quickEventPills")
-                Button(action: onEdit) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Edit event details")
-                .accessibilityIdentifier("manualEventInput")
                 Button(action: onSubmit) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .semibold))
@@ -101,6 +91,14 @@ struct QuickAddEventField: View {
                 .accessibilityLabel("Submit event")
                 .accessibilityHint("Adds the event using the values shown in the composer.")
                 .accessibilityIdentifier("quickAddSubmit")
+            }
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("quickEventValidation")
             }
         }
         .padding(8)
@@ -128,13 +126,13 @@ struct QuickAddEventField: View {
         }
     }
 
-    private func pill(_ title: String, icon: String) -> some View {
+    private func pill(_ title: String, icon: String, isSelected: Bool) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
             Text(title)
         }
             .font(.caption.weight(.medium))
-            .foregroundStyle(.primary)
+            .foregroundStyle(isSelected ? Color.blue : Color(uiColor: .secondaryLabel))
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -168,7 +166,7 @@ struct QuickAddEventField: View {
         } label: {
             Circle()
                 .fill(selected.color)
-                .frame(width: 28, height: 28)
+                .frame(width: 20, height: 20)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
@@ -203,10 +201,11 @@ struct QuickAddEventField: View {
             if overrides.date != nil {
                 Button("Use Date from Text") { overrides.date = nil; overrides.endDate = nil }
             }
-        } label: { pill(dateLabel, icon: "calendar") }
+        } label: { pill(dateLabel, icon: "calendar", isSelected: draft.hasDateSelection) }
         .accessibilityLabel("Date")
         .accessibilityValue(dateLabel)
         .accessibilityIdentifier("quickEventDate")
+        .accessibilityAddTraits(draft.hasDateSelection ? .isSelected : [])
     }
 
     private var categoryMenu: some View {
@@ -214,23 +213,26 @@ struct QuickAddEventField: View {
             Button {
                 overrides.categoryName = ""
             } label: {
-                Label("None", systemImage: draft.categoryOptions.selectedCategory == nil ? "checkmark" : "tag")
+                if draft.categoryOptions.selectedCategory == nil { Label("None", systemImage: "checkmark") }
+                else { Text("None") }
             }
             ForEach(categories, id: \.name) { category in
                 Button {
                     overrides.categoryName = category.name
                 } label: {
-                    Label(category.name, systemImage: draft.categoryOptions.selectedCategory == category.name ? "checkmark" : "tag")
+                    if draft.categoryOptions.selectedCategory == category.name { Label(category.name, systemImage: "checkmark") }
+                    else { Text(category.name) }
                 }
             }
             if overrides.categoryName != nil {
                 Divider()
                 Button("Use Text or Default") { overrides.categoryName = nil }
             }
-        } label: { pill(draft.categoryOptions.selectedCategory ?? "None", icon: "tag") }
+        } label: { pill(draft.categoryOptions.selectedCategory ?? "None", icon: "tag", isSelected: draft.hasCategorySelection) }
         .accessibilityLabel("Category")
         .accessibilityValue(draft.categoryOptions.selectedCategory ?? "None")
         .accessibilityIdentifier("quickEventCategory")
+        .accessibilityAddTraits(draft.hasCategorySelection ? .isSelected : [])
     }
 
     private var repeatMenu: some View {
@@ -257,10 +259,11 @@ struct QuickAddEventField: View {
             if overrides.repeatOptions != nil {
                 Button("Use Text or Default") { overrides.repeatOptions = nil }
             }
-        } label: { pill(repeatLabel, icon: "repeat") }
+        } label: { pill(repeatLabel, icon: "repeat", isSelected: draft.hasRepeatSelection) }
         .accessibilityLabel("Repeat")
         .accessibilityValue(repeatLabel)
         .accessibilityIdentifier("quickEventRepeat")
+        .accessibilityAddTraits(draft.hasRepeatSelection ? .isSelected : [])
     }
 }
 

@@ -47,7 +47,6 @@
 		40FEEC492C291558008AA61D /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC482C291558008AA61D /* AppData.swift */; };
 		40FEEC4B2C2919E0008AA61D /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4A2C2919E0008AA61D /* Utilities.swift */; };
 		40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC4C2C291BA0008AA61D /* EventRow.swift */; };
-		40FEEC512C292612008AA61D /* AddEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC502C292612008AA61D /* AddEventView.swift */; };
 		40FEEC532C292617008AA61D /* EditEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40FEEC522C292617008AA61D /* EditEventView.swift */; };
 		3300964BAEB5833E280B7B48 /* RegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D72B9A22B982535A34BD94F /* RegressionTests.swift */; };
 		590233A1ECFCD0624510B31F /* NotificationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */; };
@@ -165,7 +164,6 @@
 		40FEEC482C291558008AA61D /* AppData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppData.swift; sourceTree = "<group>"; };
 		40FEEC4A2C2919E0008AA61D /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		40FEEC4C2C291BA0008AA61D /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
-		40FEEC502C292612008AA61D /* AddEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventView.swift; sourceTree = "<group>"; };
 		40FEEC522C292617008AA61D /* EditEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditEventView.swift; sourceTree = "<group>"; };
 		7D72B9A22B982535A34BD94F /* RegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/RegressionTests.swift"; sourceTree = SOURCE_ROOT; };
 		69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/NotificationPlan.swift"; sourceTree = SOURCE_ROOT; };
@@ -319,7 +317,6 @@
 				406191892C38FA6700BC3D4A /* SettingsView.swift */,
 				403EA2F22C2F69EE003207ED /* FontModifier.swift */,
 				409726472C2DE2CB0050988E /* CategoryPillsView.swift */,
-				40FEEC502C292612008AA61D /* AddEventView.swift */,
 				40FEEC522C292617008AA61D /* EditEventView.swift */,
 				40FEEC462C2911DD008AA61D /* CategoriesView.swift */,
 				40B4AEA92CBB998B00E4719E /* RepeatOptions.swift */,
@@ -560,7 +557,6 @@
 				403EA2F32C2F69EE003207ED /* FontModifier.swift in Sources */,
 				40FEEC532C292617008AA61D /* EditEventView.swift in Sources */,
 				40549BC22C290E9300DA0EB6 /* PastEventsView.swift in Sources */,
-				40FEEC512C292612008AA61D /* AddEventView.swift in Sources */,
 				40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */,
 				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
 				4038EA9E2C33832400E0CE8E /* EventLoader.swift in Sources */,
