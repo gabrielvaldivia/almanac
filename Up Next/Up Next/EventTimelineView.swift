@@ -119,6 +119,7 @@ struct TimelineAxisPeriod {
     let startDay: Int
     let endDay: Int // Exclusive; calendar months retain their real lengths.
     let title: String
+    let fullTitle: String
     let subtitle: String
     let compactSubtitle: String
     let accessibilityLabel: String
@@ -130,8 +131,9 @@ struct TimelineAxisPeriod {
               let firstPeriod = calendar.dateInterval(of: level == .weeks ? .weekOfYear : .month, for: firstDate) else { return [] }
         var start = firstPeriod.start
         var periods: [TimelineAxisPeriod] = []
-        let dayFormat = Date.FormatStyle(locale: calendar.locale ?? .current,
-                                         calendar: calendar, timeZone: calendar.timeZone).day()
+        let dateFormat = Date.FormatStyle(locale: calendar.locale ?? .current,
+                                          calendar: calendar, timeZone: calendar.timeZone)
+        let dayFormat = dateFormat.day()
         let monthDayFormat = dayFormat.month(.abbreviated)
         let accessibleFormat = Date.FormatStyle(date: .complete, time: .omitted,
                                                 locale: calendar.locale ?? .current,
@@ -140,7 +142,8 @@ struct TimelineAxisPeriod {
             let startDay = calendar.dateComponents([.day], from: anchor, to: start).day ?? 0
             if startDay > visibleDays.upperBound { break }
             let endDay = calendar.dateComponents([.day], from: anchor, to: interval.end).day ?? startDay + 1
-            let title = start.formatted(.dateTime.month(.abbreviated))
+            let title = start.formatted(dateFormat.month(.abbreviated))
+            let fullTitle = start.formatted(dateFormat.month(.wide))
             // Calendar intervals end at the next period's midnight. Display the
             // last included date, using calendar arithmetic across DST changes.
             let lastDate = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? start
@@ -148,7 +151,7 @@ struct TimelineAxisPeriod {
                 ? dayFormat : monthDayFormat
             let subtitle = level == .weeks ? "\(start.formatted(rangeFormat))–\(lastDate.formatted(rangeFormat))" : ""
             periods.append(TimelineAxisPeriod(
-                startDay: startDay, endDay: endDay, title: title, subtitle: subtitle,
+                startDay: startDay, endDay: endDay, title: title, fullTitle: fullTitle, subtitle: subtitle,
                 compactSubtitle: level == .weeks ? TimelineAxisDate.text(start, calendar: calendar) : "",
                 accessibilityLabel: level == .weeks
                     ? "\(start.formatted(accessibleFormat)) through \(lastDate.formatted(accessibleFormat))"
@@ -823,6 +826,7 @@ private final class TimelinePeriodView: UIView {
     private var containsToday = false
     private var labelAlpha: CGFloat = 1
     private var rangeText = ""
+    private var fullMonthText = ""
     private var compactText = ""
 
     override init(frame: CGRect) {
@@ -843,7 +847,8 @@ private final class TimelinePeriodView: UIView {
         self.labelAlpha = labelAlpha
         label.text = level == .months ? period.title : period.subtitle
         rangeText = period.subtitle
-        compactText = period.compactSubtitle
+        fullMonthText = period.fullTitle
+        compactText = level == .months ? period.title : period.compactSubtitle
         self.containsToday = containsToday
         label.textColor = containsToday ? tintColor : .secondaryLabel
         accessibilityLabel = period.accessibilityLabel
@@ -866,6 +871,11 @@ private final class TimelinePeriodView: UIView {
             // Keep complete ranges at close weekly zoom, including month names
             // for boundary weeks. Fall back to the numeric start date before text crowds.
             label.text = bounds.width >= ceil(rangeWidth) + 16 ? rangeText : compactText
+        } else {
+            let fullWidth = ceil((fullMonthText as NSString).size(withAttributes: [.font: TimelineAxisTypography.font]).width)
+            // Keep full names inside their own column, with the same padding
+            // used for placement. Abbreviate before adjacent labels can touch.
+            label.text = fullWidth + 8 <= visible.width ? fullMonthText : compactText
         }
         let labelHeight = level == .months ? TimelineAxisTypography.firstRowHeight : TimelineAxisTypography.secondRowHeight
         TimelineAxisTypography.place(label, in: visible,

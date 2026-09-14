@@ -230,6 +230,27 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testMonthNamesStayFullUntilTheTimelineIsTooCrowded() throws {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 100))
+        let calendar = Calendar.current
+        let september = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 1)))
+        let position = try XCTUnwrap(calendar.dateComponents([.day], from: timeline.anchor, to: september).day)
+        let fullName = september.formatted(.dateTime.month(.wide))
+        let shortName = september.formatted(.dateTime.month(.abbreviated))
+        timeline.layoutIfNeeded()
+        // Zoom out and back in: full names should return as soon as they fit.
+        for (spacing, expected): (CGFloat, String) in [(3.5, fullName), (44.0 / 30, shortName), (3.5, fullName)] {
+            timeline.beginZoom(at: 0)
+            timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 0)
+            timeline.endZoom()
+            timeline.setDayPosition(CGFloat(position))
+            timeline.layoutIfNeeded()
+            let labels = visibleAxisLabels(in: timeline).compactMap(\.text)
+            XCTAssertTrue(labels.contains(expected), "Expected \(expected) at \(spacing) pt/day, got \(labels)")
+        }
+    }
+
+    @MainActor
     func testAxisLabelsFitWithoutOverlapAtEveryZoomAndFractionalScrollOffset() {
         continueAfterFailure = false
         for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
