@@ -138,8 +138,12 @@ struct QuickAddEventField: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color(uiColor: .secondarySystemFill), in: Capsule())
+            .clipShape(Capsule())
+            // The lifted menu preview follows the visible pill, while the
+            // separate interaction shape below keeps its 44-point tap target.
+            .contentShape(.contextMenuPreview, Capsule())
             .frame(minHeight: 44)
-            .contentShape(Rectangle())
+            .contentShape(.interaction, Rectangle())
     }
 
     private var colorMenu: some View {
@@ -168,8 +172,9 @@ struct QuickAddEventField: View {
             Circle()
                 .fill(selected.color)
                 .frame(width: 20, height: 20)
+                .contentShape(.contextMenuPreview, Circle())
                 .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
+                .contentShape(.interaction, Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Event color")
@@ -203,6 +208,7 @@ struct QuickAddEventField: View {
                 Button("Use Date from Text") { overrides.date = nil; overrides.endDate = nil }
             }
         } label: { pill(dateLabel, icon: "calendar", isSelected: true) }
+        .buttonStyle(.plain)
         .accessibilityLabel("Date")
         .accessibilityValue(dateLabel)
         .accessibilityIdentifier("quickEventDate")
@@ -230,6 +236,7 @@ struct QuickAddEventField: View {
                 Button("Use Text or Default") { overrides.categoryName = nil }
             }
         } label: { pill(draft.categoryOptions.selectedCategory ?? "None", icon: "tag", isSelected: draft.hasCategorySelection) }
+        .buttonStyle(.plain)
         .accessibilityLabel("Category")
         .accessibilityValue(draft.categoryOptions.selectedCategory ?? "None")
         .accessibilityIdentifier("quickEventCategory")
@@ -261,6 +268,7 @@ struct QuickAddEventField: View {
                 Button("Use Text or Default") { overrides.repeatOptions = nil }
             }
         } label: { pill(repeatLabel, icon: "repeat", isSelected: draft.hasRepeatSelection) }
+        .buttonStyle(.plain)
         .accessibilityLabel("Repeat")
         .accessibilityValue(repeatLabel)
         .accessibilityIdentifier("quickEventRepeat")

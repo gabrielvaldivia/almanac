@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class EventFlowTests: XCTestCase {
     func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() {
@@ -143,6 +144,64 @@ final class EventFlowTests: XCTestCase {
             return !frame.isEmpty && frame == previousFrame
         }, object: timeline)
         XCTAssertEqual(XCTWaiter.wait(for: [settled], timeout: 5), .completed, file: file, line: line)
+    }
+
+    func testComposerMenusDismissWithoutLeavingRectangularHighlights() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        for (identifier, option) in [("quickEventRepeat", "Weekly"), ("quickEventCategory", "Work"), ("quickEventDate", "Tomorrow")] {
+            let pill = app.buttons[identifier]
+            let frame = pill.frame
+            let value = pill.value as? String
+            let before = app.screenshot()
+            pill.tap()
+            XCTAssertTrue(app.collectionViews.buttons[option].waitForExistence(timeout: 5))
+            // Dismiss without a selection, keeping the composer and its backdrop
+            // unchanged so the menu's returning highlight can be compared.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.15)).tap()
+            XCTAssertFalse(app.collectionViews.buttons[option].exists)
+            XCTAssertTrue(input.isHittable)
+            XCTAssertEqual(pill.value as? String, value)
+            let after = app.screenshot()
+            let attachment = XCTAttachment(screenshot: after)
+            attachment.name = "Composer immediately after dismissing \(identifier)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            XCTAssertEqual(pill.frame, frame)
+            XCTAssertEqual(previewMarginBrightness(after, frame: frame, screen: app.frame),
+                           previewMarginBrightness(before, frame: frame, screen: app.frame), accuracy: 0.04,
+                           "The transparent margin above the capsule must not retain a rectangular menu highlight")
+        }
+        app.staticTexts["appTitle"].tap()
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+    }
+
+    private func previewMarginBrightness(_ screenshot: XCUIScreenshot, frame: CGRect, screen: CGRect) -> Double {
+        guard let image = screenshot.image.cgImage else { XCTFail("Missing screenshot pixels"); return 0 }
+        let scale = CGFloat(image.width) / screen.width
+        let margin = CGRect(x: frame.minX + 2, y: frame.minY + 1, width: frame.width - 4, height: 4)
+            .applying(CGAffineTransform(scaleX: scale, y: scale)).integral
+        guard let sample = image.cropping(to: margin) else { XCTFail("Missing pill margin"); return 0 }
+        var pixels = [UInt8](repeating: 0, count: sample.width * sample.height * 4)
+        guard let context = CGContext(data: &pixels, width: sample.width, height: sample.height,
+                                      bitsPerComponent: 8, bytesPerRow: sample.width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            XCTFail("Unable to read pill background"); return 0
+        }
+        context.draw(sample, in: CGRect(x: 0, y: 0, width: sample.width, height: sample.height))
+        var total: Double = 0
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            let red = Double(pixels[index])
+            let green = Double(pixels[index + 1])
+            let blue = Double(pixels[index + 2])
+            total += (red + green + blue) / 3
+        }
+        return total / Double(sample.width * sample.height) / 255
     }
 
     func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
