@@ -154,6 +154,7 @@ struct ContentView: View {
                             .scrollTargetLayout()
                         }
                         .scrollPosition(id: $eventListPosition, anchor: .top)
+                        .coordinateSpace(name: "eventList")
                         .scrollDismissesKeyboard(.interactively)
                         .background(Color.clear)
                         .onChange(of: days.map(\.date), initial: true) {
@@ -429,11 +430,21 @@ struct ContentView: View {
     // View for each event row
     func eventRowView(key: String, events: [Event]) -> some View {
         HStack(alignment: .top) {
-            Text(key.uppercased())
-                .font(.system(.caption, design: .monospaced, weight: .medium))
-                .foregroundColor(.gray)
-                .frame(width: 100, alignment: .leading)
-                .padding(.vertical, 14)
+            GeometryReader { dayGeometry in
+                let dayFrame = dayGeometry.frame(in: .named("eventList"))
+                Text(key.uppercased())
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 14)
+                    .visualEffect { content, labelGeometry in
+                        // Keep the day beside its events, then let the next day
+                        // push it away at the bottom of this group.
+                        content.offset(y: min(max(0, -dayFrame.minY),
+                                              max(0, dayFrame.height - labelGeometry.size.height)))
+                    }
+            }
+            .frame(width: 100)
             VStack(alignment: .leading) {
                 ForEach(events, id: \.id) { event in
                     EventRow(
