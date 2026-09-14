@@ -550,10 +550,9 @@ private final class TimelineEventCardView: UIView {
 
     func setHighlighted(eventID: UUID?) {
         let highlighted = eventID != nil && event?.id == eventID
-        layer.borderWidth = highlighted ? 2 : 0.5
-        layer.borderColor = highlighted
-            ? event.map { UIColor($0.color.color).cgColor }
-            : UIColor.separator.withAlphaComponent(0.15).cgColor
+        backgroundColor = highlighted
+            ? event.map { UIColor($0.color.color).withAlphaComponent(0.2) }
+            : .secondarySystemGroupedBackground
         if highlighted { editButton.accessibilityTraits.insert(.selected) }
         else { editButton.accessibilityTraits.remove(.selected) }
     }

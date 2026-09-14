@@ -469,9 +469,7 @@ private final class TimelineEventButton: UIButton {
     private func updateSelectionAppearance() {
         guard let event = placement?.event else { return }
         let color = UIColor(event.color.color)
-        backgroundColor = color.withAlphaComponent(isSelected ? 0.4 : 0.2)
-        layer.borderColor = color.cgColor
-        layer.borderWidth = isSelected ? 2 : 0
+        backgroundColor = color.withAlphaComponent(isSelected ? 0.6 : 0.2)
         if isSelected { accessibilityTraits.insert(.selected) }
         else { accessibilityTraits.remove(.selected) }
     }

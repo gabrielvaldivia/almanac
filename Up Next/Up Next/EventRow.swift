@@ -12,6 +12,7 @@ import UIKit
 // EVENT ROW
 struct EventRow: View {
     var event: Event
+    var isHighlighted = false
     @Binding var selectedEvent: Event?
     @Binding var newEventTitle: String
     @Binding var newEventDate: Date
@@ -76,15 +77,16 @@ struct EventRow: View {
             .padding(.vertical, appData.eventStyle == "naked" ? 4 : 12)
             .padding(.horizontal, appData.eventStyle == "naked" ? 0 : 16)
         }
-        .background(
-            appData.eventStyle == "naked"
-                ? Color.clear
-                : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
-        )
+        .background(backgroundColor)
         .clipShape(Self.backgroundShape(for: appData.eventStyle))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+    }
+
+    private var backgroundColor: Color {
+        if isHighlighted { return event.color.color.opacity(colorScheme == .dark ? 0.4 : 0.24) }
+        return appData.eventStyle == "naked" ? .clear : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
     }
 
     private func editEvent() {

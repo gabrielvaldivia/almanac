@@ -429,6 +429,7 @@ struct ContentView: View {
                 ForEach(events, id: \.id) { event in
                     EventRow(
                         event: event,
+                        isHighlighted: highlightedEventID == event.id,
                         selectedEvent: $selectedEvent,
                         newEventTitle: $newEventTitle,
                         newEventDate: $newEventDate,
@@ -438,16 +439,6 @@ struct ContentView: View {
                         showEditSheet: editSheetPresented,
                         categories: simplifiedCategories
                     )
-                    .background {
-                        EventRow.backgroundShape(for: appData.eventStyle)
-                            .fill(event.color.color.opacity(highlightedEventID == event.id ? 0.18 : 0))
-                    }
-                    .overlay {
-                        EventRow.backgroundShape(for: appData.eventStyle)
-                            .strokeBorder(event.color.color, lineWidth: 2)
-                            .opacity(highlightedEventID == event.id ? 1 : 0)
-                            .allowsHitTesting(false)
-                    }
                     .accessibilityAddTraits(highlightedEventID == event.id ? .isSelected : [])
                     .id(event.id)
                     .listRowSeparator(.hidden)
