@@ -624,7 +624,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             (TimelineAxisDate.text($0, calendar: calendar) as NSString).size(withAttributes: [.font: axisFont]).width
         }.max() ?? 0
         let showsDayLabels = pointsPerDay >= ceil(dayWidth) + 4
-        let weekdayWidth = (DateFormatter().shortWeekdaySymbols ?? []).map {
+        let weekdayWidth = (DateFormatter().veryShortWeekdaySymbols ?? []).map {
             ($0 as NSString).size(withAttributes: [.font: axisFont]).width
         }.max() ?? 0
         let showsWeekdays = showsDayLabels && pointsPerDay >= ceil(weekdayWidth) + 8 &&
@@ -791,7 +791,7 @@ private final class TimelineDayView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func configure(date: Date, labelAlpha: CGFloat, showsWeekday: Bool, dividerAlpha: CGFloat, axisHeight: CGFloat) {
-        weekday.text = date.formatted(.dateTime.weekday(.abbreviated))
+        weekday.text = date.formatted(.dateTime.weekday(.narrow))
         number.text = TimelineAxisDate.text(date, includesMonth: false)
         self.labelAlpha = labelAlpha
         self.showsWeekday = showsWeekday
