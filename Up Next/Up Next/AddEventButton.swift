@@ -247,12 +247,12 @@ struct QuickAddEventField: View {
                         overrides.repeatOptions = options
                     }
                 } label: {
-                    Label(option.rawValue, systemImage: draft.dateOptions.repeatOption == option ? "checkmark" : "repeat")
+                    if draft.dateOptions.repeatOption == option {
+                        Label(option.rawValue, systemImage: "checkmark")
+                    } else {
+                        Text(option.rawValue)
+                    }
                 }
-            }
-            Button("Repeat Options…") {
-                isFocused = false
-                repeatDraft = QuickScheduleEditorDraft(options: draft.dateOptions)
             }
             if overrides.repeatOptions != nil {
                 Button("Use Text or Default") { overrides.repeatOptions = nil }
