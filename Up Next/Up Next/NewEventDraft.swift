@@ -87,7 +87,9 @@ struct QuickEventOverrides {
         }
         let parsed = QuickEventParser.parse(text, now: now, calendar: calendar)
         let title = parsed?.title ?? text
-        let inferredCategory = QuickEventCategoryMatcher.category(for: title, available: appData.categories.map(\.name))
+        let inferredCategory = QuickEventCategoryMatcher.category(
+            for: title, available: appData.categories.map(\.name),
+            keywordRules: appData.categories.map { (name: $0.name, keywords: $0.keywords) })
         var draft = NewEventDraft(
             title: title, date: date ?? parsed?.date ?? calendar.startOfDay(for: now),
             endDate: hasDateOverride ? endDate : parsed?.endDate,
@@ -127,10 +129,43 @@ struct QuickEventOverrides {
     }
 }
 
+enum CategoryKeywords {
+    static func parse(_ text: String) -> [String] {
+        var seen = Set<String>()
+        return text.components(separatedBy: .newlines.union(CharacterSet(charactersIn: ",")))
+            .compactMap { value in
+                let keyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                guard !keyword.isEmpty, seen.insert(normalized(keyword)).inserted else { return nil }
+                return keyword
+            }
+    }
+
+    static func normalized(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    static func matches(_ keyword: String, in normalizedTitle: String) -> Bool {
+        let words = normalized(keyword).split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return false }
+        let phrase = words.map { NSRegularExpression.escapedPattern(for: String($0)) }.joined(separator: #"\s+"#)
+        let pattern = #"(?<![\p{L}\p{N}_])"# + phrase + #"(?![\p{L}\p{N}_])"#
+        return normalizedTitle.range(of: pattern, options: .regularExpression) != nil
+    }
+}
+
 /// Match existing categories conservatively; explicit choices and tags are
 /// resolved separately and always take precedence over these suggestions.
 enum QuickEventCategoryMatcher {
-    static func category(for title: String, available: [String]) -> String? {
+    static func category(for title: String, available: [String],
+                         keywordRules: [(name: String, keywords: [String])] = []) -> String? {
+        let normalizedTitle = CategoryKeywords.normalized(title)
+        let customMatches = Set(keywordRules.filter { rule in
+            available.contains(rule.name) && rule.keywords.contains { CategoryKeywords.matches($0, in: normalizedTitle) }
+        }.map(\.name))
+        // User keywords take priority over built-in suggestions. Conflicting
+        // custom rules leave the choice to the user instead of guessing.
+        if !customMatches.isEmpty { return customMatches.count == 1 ? customMatches.first : nil }
         func matches(_ pattern: String) -> Bool {
             title.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
         }

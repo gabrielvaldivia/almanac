@@ -18,6 +18,28 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: "categories"), bad)
     }
 
+    func testCategoryKeywordsPersistAndOlderCategoriesLoadWithoutKeywords() throws {
+        let suite = "test.categoryKeywords.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let category = CategoryData(name: "Reading", color: CodableColor(color: .blue), repeatOption: .never,
+                                    showRepeatOptions: false, customRepeatCount: 1, repeatUnit: "Days",
+                                    repeatUntilOption: .indefinitely, repeatUntilCount: 1, repeatUntil: Date(),
+                                    keywords: ["book club", "reading"])
+        try CategoryStorage.save([category], defaults: defaults)
+        let stored = try XCTUnwrap(defaults.data(forKey: "categories"))
+        XCTAssertEqual(try CategoryStorage.decode(stored).first?.keywords, ["book club", "reading"])
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: stored) as? [[String: Any]])
+        legacy[0].removeValue(forKey: "keywords")
+        let decoded = try CategoryStorage.decode(JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertEqual(decoded.first?.name, "Reading")
+        XCTAssertEqual(decoded.first?.keywords, [])
+        var cleared = category
+        cleared.keywords = []
+        try CategoryStorage.save([cleared], defaults: defaults)
+        XCTAssertEqual(try CategoryStorage.decode(XCTUnwrap(defaults.data(forKey: "categories"))).first?.keywords, [])
+    }
+
     func testUnreadableEventsArePreservedAndCannotBeOverwritten() throws {
         let name = "test.storage.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!

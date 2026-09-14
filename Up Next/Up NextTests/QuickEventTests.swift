@@ -465,6 +465,54 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(QuickEventCategoryMatcher.category(for: "Alex’s birthday", available: ["Birthday"]), "Birthday")
     }
 
+    func testCustomCategoryKeywordsNormalizeAndMatchWholeWordsAndPhrases() {
+        let keywords = CategoryKeywords.parse(" book club, READING\nbook   club, café, C++,, \n")
+        XCTAssertEqual(keywords, ["book club", "READING", "café", "C++"])
+        let rules = [(name: "Literature", keywords: keywords)]
+        for title in ["BOOK CLUB with Alex", "Evening reading", "Meet at the cafe", "C++ class", "Book\nclub"] {
+            XCTAssertEqual(QuickEventCategoryMatcher.category(for: title, available: ["Literature"], keywordRules: rules), "Literature", title)
+        }
+        for title in ["Proofreading", "Book clubhouse", "Cafeteria", "C class", "Unrelated"] {
+            XCTAssertNil(QuickEventCategoryMatcher.category(for: title, available: ["Literature"], keywordRules: rules), title)
+        }
+        XCTAssertNil(QuickEventCategoryMatcher.category(for: "Reading", available: [], keywordRules: rules))
+        let conflict = rules + [(name: "Leisure", keywords: ["reading"])]
+        XCTAssertNil(QuickEventCategoryMatcher.category(for: "Reading", available: ["Literature", "Leisure"], keywordRules: conflict))
+    }
+
+    func testCustomKeywordsSelectSavedCategoryDetailsAndRespectTagsAndManualOverrides() throws {
+        let data = AppData()
+        let original = data.categories
+        defer { data.categories = original }
+        data.categories.append(("Books", .orange, .monthly, 1, "Months", .indefinitely, 1, Date(), ["book club", "dinner"]))
+        let input = "Book club tomorrow"
+        let draft = QuickEventOverrides().resolve(input, category: "Work", appData: data,
+                                                  now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(draft.title, "Book club")
+        XCTAssertEqual(draft.categoryOptions.selectedCategory, "Books")
+        XCTAssertEqual(draft.categoryOptions.selectedColor, CodableColor(color: .orange))
+        XCTAssertEqual(draft.dateOptions.repeatOption, .monthly)
+        XCTAssertTrue(draft.hasCategorySelection)
+        let saved = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                          category: draft.categoryOptions, calendar: calendar)
+        XCTAssertEqual(saved.first?.category, "Books")
+        XCTAssertEqual(saved.first?.color, CodableColor(color: .orange))
+        XCTAssertEqual(QuickEventOverrides().resolve("Dinner tomorrow", category: nil, appData: data).categoryOptions.selectedCategory, "Books",
+                       "Custom rules take priority over built-in Social suggestions")
+        XCTAssertEqual(QuickEventOverrides().resolve("Book club #Work tomorrow", category: nil, appData: data).categoryOptions.selectedCategory, "Work")
+        XCTAssertEqual(QuickEventOverrides(categoryName: "Work").resolve(input, category: nil, appData: data).categoryOptions.selectedCategory, "Work")
+        XCTAssertNil(QuickEventOverrides(categoryName: "").resolve(input, category: nil, appData: data).categoryOptions.selectedCategory)
+        data.loadCategories()
+        XCTAssertEqual(data.categories.last?.keywords, ["book club", "dinner"])
+        let index = try XCTUnwrap(data.categories.firstIndex { $0.name == "Books" })
+        data.categories[index].name = "Bookworms"
+        XCTAssertEqual(QuickEventOverrides().resolve(input, category: nil, appData: data).categoryOptions.selectedCategory, "Bookworms")
+        data.categories[index].keywords = []
+        data.loadCategories()
+        XCTAssertEqual(data.categories[index].keywords, [])
+        XCTAssertEqual(QuickEventOverrides().resolve(input, category: "Work", appData: data).categoryOptions.selectedCategory, "Work")
+    }
+
     func testCategoryInferenceUpdatesWithTextAndFallsBackToSelectedFilter() {
         let data = AppData()
         let overrides = QuickEventOverrides()

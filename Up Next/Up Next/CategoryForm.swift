@@ -4,6 +4,7 @@ struct CategoryForm: View {
     @EnvironmentObject var appData: AppData
     @Binding var showingSheet: Bool
     @State private var categoryName: String
+    @State private var keywordsText: String
     @State private var categoryColor: Color
     @State private var showColorPickerSheet = false
     @State private var repeatOption: RepeatOption
@@ -17,29 +18,12 @@ struct CategoryForm: View {
     private let originalName: String?
 
     var isEditing: Bool
-    var onSave:
-        (
-            (
-                name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-                repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-                repeatUntil: Date
-            )
-        ) -> Void
+    var onSave: (EventCategory) -> Void
 
     init(
         showingSheet: Binding<Bool>, isEditing: Bool = false,
-        editingCategory: (
-            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-            repeatUntil: Date
-        )? = nil,
-        onSave: @escaping (
-            (
-                name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-                repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-                repeatUntil: Date
-            )
-        ) -> Void
+        editingCategory: EventCategory? = nil,
+        onSave: @escaping (EventCategory) -> Void
     ) {
         self._showingSheet = showingSheet
         self.originalName = editingCategory?.name
@@ -47,6 +31,7 @@ struct CategoryForm: View {
         self.onSave = onSave
 
         if let category = editingCategory {
+            _keywordsText = State(initialValue: category.keywords.joined(separator: ", "))
             _categoryName = State(initialValue: category.name)
             _categoryColor = State(initialValue: category.color)
             _repeatOption = State(initialValue: category.repeatOption)
@@ -57,6 +42,7 @@ struct CategoryForm: View {
             _repeatUntilCount = State(initialValue: category.repeatUntilCount)
             _repeatUntil = State(initialValue: category.repeatUntil)
         } else {
+            _keywordsText = State(initialValue: "")
             _categoryName = State(initialValue: "")
             _categoryColor = State(
                 initialValue: CustomColorPickerSheet.predefinedColors.randomElement() ?? .blue)
@@ -89,6 +75,34 @@ struct CategoryForm: View {
                     ColorSelectionRow(color: categoryColor) {
                         showColorPickerSheet = true
                     }
+
+                    Divider()
+                        .padding(.leading)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Keywords")
+                            .font(.subheadline.weight(.medium))
+                        ZStack(alignment: .topLeading) {
+                            if keywordsText.isEmpty {
+                                Text("e.g. book, reading, book club")
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 8)
+                                    .allowsHitTesting(false)
+                            }
+                            TextEditor(text: $keywordsText)
+                                .scrollContentBackground(.hidden)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .accessibilityLabel("Keywords")
+                                .accessibilityIdentifier("categoryKeywords")
+                        }
+                        .frame(height: 96)
+                        Text("Automatically select this category when any keyword or phrase appears. Separate with commas or new lines.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
 
                     Divider()
                         .padding(.leading)
@@ -129,7 +143,8 @@ struct CategoryForm: View {
                                 repeatUnit: repeatUnit,
                                 repeatUntilOption: repeatUntilOption,
                                 repeatUntilCount: repeatUntilCount,
-                                repeatUntil: repeatUntil
+                                repeatUntil: repeatUntil,
+                                keywords: CategoryKeywords.parse(keywordsText)
                             ))
                         showingSheet = false
                     }

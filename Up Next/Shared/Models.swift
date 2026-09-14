@@ -215,6 +215,7 @@ struct CategoryData: Codable {
     let repeatUntilOption: RepeatUntilOption
     let repeatUntilCount: Int
     let repeatUntil: Date
+    var keywords: [String] = []
 }
 
 // Model for a color that can be encoded and decoded
@@ -263,11 +264,12 @@ struct CodableColor: Codable, Equatable {
 extension CategoryData {
     private enum CodingKeys: String, CodingKey {
         case name, color, repeatOption, showRepeatOptions, customRepeatCount, repeatUnit,
-             repeatUntilOption, repeatUntilCount, repeatUntil, calendarRepeatUntil
+             repeatUntilOption, repeatUntilCount, repeatUntil, calendarRepeatUntil, keywords
     }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         name = try values.decode(String.self, forKey: .name)
+        keywords = try values.decodeIfPresent([String].self, forKey: .keywords) ?? []
         color = try values.decode(CodableColor.self, forKey: .color)
         repeatOption = try values.decodeIfPresent(RepeatOption.self, forKey: .repeatOption) ?? .never
         showRepeatOptions = try values.decodeIfPresent(Bool.self, forKey: .showRepeatOptions) ?? false
@@ -282,6 +284,7 @@ extension CategoryData {
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(name, forKey: .name)
+        try values.encode(keywords, forKey: .keywords)
         try values.encode(color, forKey: .color)
         try values.encode(repeatOption, forKey: .repeatOption)
         try values.encode(showRepeatOptions, forKey: .showRepeatOptions)

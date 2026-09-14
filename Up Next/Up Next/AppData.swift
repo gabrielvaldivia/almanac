@@ -11,23 +11,23 @@ import SwiftUI
 import UserNotifications
 import WidgetKit
 
+typealias EventCategory = (
+    name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
+    repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
+    repeatUntil: Date, keywords: [String]
+)
+
 // Main class for managing app data
 class AppData: NSObject, ObservableObject {
     static let shared = AppData()  // Singleton instance
 
     @Published var events: [Event] = []
-    @Published var categories:
-        [(
-            name: String, color: Color, repeatOption: RepeatOption, customRepeatCount: Int,
-            repeatUnit: String, repeatUntilOption: RepeatUntilOption, repeatUntilCount: Int,
-            repeatUntil: Date
-        )] = [
-            ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date()),
-            ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date()),
-            ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()),
-            ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date()),
-        ]
-    {
+    @Published var categories: [EventCategory] = [
+        ("Work", .blue, .never, 1, "Days", .indefinitely, 1, Date(), []),
+        ("Social", .green, .never, 1, "Days", .indefinitely, 1, Date(), []),
+        ("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date(), []),
+        ("Holidays", .purple, .yearly, 1, "Years", .indefinitely, 1, Date(), []),
+    ] {
         didSet {
             if isDataLoaded {
                 if !isLoadingCategories { saveCategories() }
@@ -133,7 +133,7 @@ class AppData: NSObject, ObservableObject {
                 name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption,
                 showRepeatOptions: false, customRepeatCount: $0.customRepeatCount,
                 repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption,
-                repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil)
+                repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil, keywords: $0.keywords)
         }
         do {
             try CategoryStorage.save(categoryData)
@@ -157,7 +157,7 @@ class AppData: NSObject, ObservableObject {
                     repeatUnit: categoryData.repeatUnit,
                     repeatUntilOption: categoryData.repeatUntilOption,
                     repeatUntilCount: categoryData.repeatUntilCount,
-                    repeatUntil: categoryData.repeatUntil
+                    repeatUntil: categoryData.repeatUntil, keywords: categoryData.keywords
                 )
             }
         } catch {
@@ -222,7 +222,7 @@ class AppData: NSObject, ObservableObject {
         try eventStore.save(updated)
         events = updated
         if category == nil, !selectedIDs.isEmpty {
-            categories.append(("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()))
+            categories.append(("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date(), []))
         }
         let reviewed = reviewedBirthdayContactIDs.union(birthdays.map(\.id))
         AppPreferences.shared.set(Array(reviewed).sorted(), forKey: "reviewedBirthdayContactIDs")

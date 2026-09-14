@@ -66,17 +66,7 @@ struct CategoriesView: View {
             CategoryForm(
                 showingSheet: $showingAddCategorySheet,
                 onSave: { newCategory in
-                    appData.categories.append(
-                        (
-                            name: newCategory.name,
-                            color: newCategory.color,
-                            repeatOption: newCategory.repeatOption,
-                            customRepeatCount: newCategory.customRepeatCount,
-                            repeatUnit: newCategory.repeatUnit,
-                            repeatUntilOption: newCategory.repeatUntilOption,
-                            repeatUntilCount: newCategory.repeatUntilCount,
-                            repeatUntil: newCategory.repeatUntil
-                        ))
+                    appData.categories.append(newCategory)
                 }
             )
             .environmentObject(appData)

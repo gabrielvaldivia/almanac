@@ -396,6 +396,13 @@ final class EventFlowTests: XCTestCase {
         field.tap(); field.typeText(categoryName)
         app.buttons["Color"].tap()
         app.buttons["Green"].tap()
+        let keywords = app.textViews["categoryKeywords"]
+        XCTAssertTrue(keywords.waitForExistence(timeout: 5))
+        keywords.tap(); keywords.typeText("book club, reading")
+        let keywordScreenshot = XCTAttachment(screenshot: app.screenshot())
+        keywordScreenshot.name = "Category keywords text area"
+        keywordScreenshot.lifetime = .keepAlways
+        add(keywordScreenshot)
         save.tap()
         XCTAssertTrue(input.waitForExistence(timeout: 5))
         XCTAssertEqual(input.value as? String, "\(eventTitle) today")
@@ -418,6 +425,9 @@ final class EventFlowTests: XCTestCase {
         app.buttons["Delete Event"].tap()
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
         openComposer(app)
+        input.typeText("Book club tomorrow")
+        XCTAssertEqual(category.value as? String, categoryName, "Saved keywords should select the category after relaunch")
+        XCTAssertEqual(app.buttons["quickEventColor"].value as? String, "Green")
         category.tap()
         XCTAssertTrue(app.collectionViews.buttons[categoryName].exists)
         app.collectionViews.buttons[categoryName].tap()
@@ -691,11 +701,18 @@ final class EventFlowTests: XCTestCase {
         let field = app.textFields["Category Name"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap(); field.typeText(name)
+        let keywords = app.textViews["categoryKeywords"]
+        keywords.tap(); keywords.typeText("chapter")
         app.navigationBars["Add Category"].buttons["Save"].tap()
         app.buttons[name].tap()
         XCTAssertTrue(app.navigationBars["Edit Category"].waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String, name)
         field.tap(); field.typeText(" edited")
+        XCTAssertEqual(keywords.value as? String, "chapter")
+        keywords.tap()
+        // Focus first, then place the cursor after the existing first line.
+        keywords.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.2)).tap()
+        keywords.typeText(", library")
         app.navigationBars["Edit Category"].buttons["Save"].tap()
         XCTAssertTrue(app.buttons[renamed].waitForExistence(timeout: 5))
         app.terminate(); app.launch()
@@ -705,6 +722,7 @@ final class EventFlowTests: XCTestCase {
         app.buttons[renamed].tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String, renamed)
+        XCTAssertEqual(keywords.value as? String, "chapter, library")
         app.navigationBars["Edit Category"].buttons["Cancel"].tap()
         app.buttons[renamed].swipeLeft()
         app.buttons["Delete"].tap()
