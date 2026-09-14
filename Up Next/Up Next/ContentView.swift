@@ -472,7 +472,7 @@ struct ContentView: View {
                     .font(.system(.caption, design: .monospaced, weight: .medium))
                     .foregroundColor(.gray)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, appData.eventStyle == "naked" ? 6 : 14)
                     .visualEffect { content, labelGeometry in
                         // Keep the day beside its events, then let the next day
                         // push it away at the bottom of this group.
