@@ -191,11 +191,12 @@ struct ContentView: View {
                 .background(Color.black)
                 .environment(\.colorScheme, .dark)
 
-                Divider().accessibilityIdentifier("timelineListDivider")
                 eventList(days: days)
                     .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground))
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28))
             }
-            .background(Color(uiColor: .systemBackground))
+            .background(Color.black)
             .frame(height: geometry.size.height, alignment: .top)
             .clipped()
             .transaction { if reduceMotion { $0.animation = nil } }
