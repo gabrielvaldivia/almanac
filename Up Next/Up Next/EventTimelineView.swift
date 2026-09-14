@@ -121,7 +121,7 @@ struct EventTimelineView: View {
             .accessibilityIdentifier("timelineResizeHandle")
             .highPriorityGesture(handleGesture)
         }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .background(Color(uiColor: .systemBackground))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: laneCount)
         .transaction { transaction in
             // Resizing tracks the finger directly. Only release/tap transitions animate.
