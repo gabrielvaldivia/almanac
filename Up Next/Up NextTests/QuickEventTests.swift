@@ -280,6 +280,77 @@ final class QuickEventTests: XCTestCase {
         XCTAssertNil(events.first?.category)
     }
 
+    func testBirthdayKeywordSelectsCategoryColorAndRepeatAndSavesThem() throws {
+        let data = AppData()
+        let draft = QuickEventOverrides().resolve("Alex’s birthday 9/20", category: nil, appData: data,
+                                                  now: date(2026, 9, 13), calendar: calendar)
+        let birthdays = try XCTUnwrap(data.categories.first { $0.name == "Birthdays" })
+        XCTAssertEqual(draft.title, "Alex’s birthday")
+        XCTAssertEqual(draft.dateOptions.date, date(2026, 9, 20))
+        XCTAssertEqual(draft.categoryOptions.selectedCategory, birthdays.name)
+        XCTAssertEqual(draft.categoryOptions.selectedColor, CodableColor(color: birthdays.color))
+        XCTAssertTrue(draft.hasCategorySelection)
+        XCTAssertEqual(draft.dateOptions.repeatOption, .yearly)
+        XCTAssertTrue(draft.hasRepeatSelection)
+        let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                          category: draft.categoryOptions, calendar: calendar)
+        XCTAssertFalse(events.isEmpty)
+        XCTAssertTrue(events.allSatisfy { $0.category == birthdays.name && $0.color == draft.categoryOptions.selectedColor })
+    }
+
+    func testCategoryKeywordsUseOnlyExistingCategoriesAndAvoidAmbiguousMatches() {
+        let categories = ["Work", "Social", "Birthdays", "Holidays", "Anniversaries", "Movies", "Trips"]
+        for (title, expected) in [
+            ("Alex’s BIRTHDAY", "Birthdays"), ("Alex's bday", "Birthdays"),
+            ("Alex's b-day", "Birthdays"), ("Our anniversary", "Anniversaries"),
+            ("Christmas", "Holidays"), ("Team meeting", "Work"),
+            ("Dinner with Alex", "Social"), ("Movie with Alex", "Movies"),
+            ("Flight to Tampa", "Trips")
+        ] {
+            XCTAssertEqual(QuickEventCategoryMatcher.category(for: title, available: categories), expected, title)
+        }
+        for title in ["Buy a birthday gift", "Alex’s unbirthday", "Socialize", "Work dinner", "Dune"] {
+            XCTAssertNil(QuickEventCategoryMatcher.category(for: title, available: categories), title)
+        }
+        XCTAssertNil(QuickEventCategoryMatcher.category(for: "Alex’s birthday", available: ["Work", "Social"]))
+        XCTAssertEqual(QuickEventCategoryMatcher.category(for: "Dentist appointment", available: ["Appointments"]), "Appointments")
+        XCTAssertEqual(QuickEventCategoryMatcher.category(for: "Alex’s birthday", available: ["Birthday"]), "Birthday")
+    }
+
+    func testCategoryInferenceUpdatesWithTextAndFallsBackToSelectedFilter() {
+        let data = AppData()
+        let overrides = QuickEventOverrides()
+        let birthday = overrides.resolve("Alex’s birthday", category: "Work", appData: data)
+        XCTAssertEqual(birthday.categoryOptions.selectedCategory, "Birthdays")
+        XCTAssertTrue(birthday.hasCategorySelection)
+        let dinner = overrides.resolve("Dinner with Alex tomorrow", category: "Work", appData: data)
+        XCTAssertEqual(dinner.categoryOptions.selectedCategory, "Social")
+        let cleared = overrides.resolve("Alex tomorrow", category: "Work", appData: data)
+        XCTAssertEqual(cleared.categoryOptions.selectedCategory, "Work")
+        XCTAssertFalse(cleared.hasCategorySelection)
+        XCTAssertFalse(cleared.hasRepeatSelection)
+        XCTAssertEqual(cleared.dateOptions.repeatOption, .never)
+    }
+
+    func testManualCategoryTagsAndColorOverrideKeywordSuggestions() {
+        let data = AppData()
+        let tagged = QuickEventOverrides().resolve("Alex’s birthday #Social 9/20", category: nil, appData: data)
+        XCTAssertEqual(tagged.categoryOptions.selectedCategory, "Social")
+        XCTAssertEqual(tagged.title, "Alex’s birthday")
+        var overrides = QuickEventOverrides(categoryName: "Work", color: CodableColor(color: .orange))
+        let manual = overrides.resolve("Alex’s birthday #Social 9/20", category: nil, appData: data)
+        XCTAssertEqual(manual.categoryOptions.selectedCategory, "Work")
+        XCTAssertEqual(manual.categoryOptions.selectedColor, overrides.color)
+        overrides.categoryName = ""
+        let none = overrides.resolve("Alex’s birthday 9/20", category: "Birthdays", appData: data)
+        XCTAssertNil(none.categoryOptions.selectedCategory)
+        XCTAssertTrue(none.hasCategorySelection)
+        overrides.categoryName = nil
+        let inferredAgain = overrides.resolve("Alex’s birthday 9/20", category: nil, appData: data)
+        XCTAssertEqual(inferredAgain.categoryOptions.selectedCategory, "Birthdays")
+        XCTAssertEqual(inferredAgain.categoryOptions.selectedColor, overrides.color)
+    }
+
     func testComposerPreservesCustomRepeatCountAndResetsToParsedValues() {
         let data = AppData()
         var overrides = QuickEventOverrides()

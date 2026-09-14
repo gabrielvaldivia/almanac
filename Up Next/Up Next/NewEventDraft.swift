@@ -87,13 +87,14 @@ struct QuickEventOverrides {
         }
         let parsed = QuickEventParser.parse(text, now: now, calendar: calendar)
         let title = parsed?.title ?? text
+        let inferredCategory = QuickEventCategoryMatcher.category(for: title, available: appData.categories.map(\.name))
         var draft = NewEventDraft(
             title: title, date: date ?? parsed?.date ?? calendar.startOfDay(for: now),
             endDate: hasDateOverride ? endDate : parsed?.endDate,
-            category: categoryName ?? taggedCategory ?? category, appData: appData,
+            category: categoryName ?? taggedCategory ?? inferredCategory ?? category, appData: appData,
             recurrence: parsed?.recurrence ?? QuickEventParser.inferredRecurrence(for: title))
         if let color { draft.categoryOptions.selectedColor = color }
-        draft.hasCategorySelection = categoryName != nil || taggedCategory != nil
+        draft.hasCategorySelection = categoryName != nil || taggedCategory != nil || inferredCategory != nil
         draft.hasRepeatSelection = repeatOptions != nil || parsed?.recurrence != nil ||
             QuickEventParser.inferredRecurrence(for: title) != nil
         // Invalid text stays in the composer until its schedule is corrected
@@ -123,5 +124,46 @@ struct QuickEventOverrides {
             draft.usesCustomRepeat = true
         }
         return draft
+    }
+}
+
+/// Match existing categories conservatively; explicit choices and tags are
+/// resolved separately and always take precedence over these suggestions.
+enum QuickEventCategoryMatcher {
+    static func category(for title: String, available: [String]) -> String? {
+        func matches(_ pattern: String) -> Bool {
+            title.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+        func normalized(_ name: String) -> String {
+            name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        let occasions: [(names: [String], pattern: String)] = [
+            (["birthday", "birthdays"], #"\b(?:birthday|b[ -]?day)$"#),
+            (["anniversary", "anniversaries"], #"\banniversary$"#),
+            (["holiday", "holidays"], #"\b(?:holiday|christmas|thanksgiving|halloween|new year['’]?s(?: day| eve)?|easter|hanukkah|diwali)$"#)
+        ]
+        for occasion in occasions where matches(occasion.pattern) {
+            if let name = available.first(where: { occasion.names.contains(normalized($0)) }) { return name }
+        }
+        let aliases: [String: String] = [
+            "work": #"\b(?:meeting|conference|deadline|interview|workshop)\b"#,
+            "social": #"\b(?:dinner|lunch|brunch|party|reunion)\b"#,
+            "travel": #"\b(?:trip|flight|vacation)\b"#,
+            "trips": #"\b(?:trip|flight|vacation)\b"#,
+            "movies": #"\b(?:movie|film|cinema|premiere)\b"#,
+            "music": #"\b(?:concert|gig)\b"#
+        ]
+        let candidates = available.filter { name in
+            let key = normalized(name)
+            // Occasion categories often repeat yearly. Avoid classifying errands
+            // such as buying a birthday gift as the occasion itself.
+            guard !occasions.contains(where: { $0.names.contains(key) }), !key.isEmpty else { return false }
+            var names = [key]
+            if key.hasSuffix("ies") { names.append(String(key.dropLast(3)) + "y") }
+            else if key.count > 3 && key.hasSuffix("s") && !key.hasSuffix("ss") { names.append(String(key.dropLast())) }
+            let namePattern = #"\b(?:"# + names.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|") + #")\b"#
+            return matches(namePattern) || aliases[key].map(matches) == true
+        }
+        return candidates.count == 1 ? candidates.first : nil
     }
 }

@@ -234,6 +234,34 @@ final class EventFlowTests: XCTestCase {
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
     }
 
+    func testComposerAutomaticallySelectsBirthdayCategoryAndRespectsManualChoice() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Alex’s birthday 9/20")
+        let category = app.buttons["quickEventCategory"]
+        XCTAssertEqual(category.value as? String, "Birthdays")
+        XCTAssertTrue(category.isSelected)
+        XCTAssertEqual(app.buttons["quickEventColor"].value as? String, "Red")
+        XCTAssertEqual(app.buttons["quickEventRepeat"].value as? String, "Yearly")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Birthday category inferred from event text"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        category.tap()
+        app.collectionViews.buttons["Work"].tap()
+        input.typeText(XCUIKeyboardKey.delete.rawValue + "1")
+        XCTAssertEqual(category.value as? String, "Work")
+        category.tap()
+        app.collectionViews.buttons["None"].tap()
+        XCTAssertEqual(category.value as? String, "None")
+        category.tap()
+        app.collectionViews.buttons["Use Text or Default"].tap()
+        XCTAssertEqual(category.value as? String, "Birthdays")
+    }
+
     func testPlusComposerRecognizesDateRangeAndPreservesItInEditorAndSavedEvent() {
         continueAfterFailure = false
         let app = XCUIApplication()
