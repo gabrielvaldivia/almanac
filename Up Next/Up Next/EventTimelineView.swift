@@ -69,6 +69,7 @@ struct TimelineAxisPeriod {
     let endDay: Int // Exclusive; calendar months retain their real lengths.
     let title: String
     let subtitle: String
+    let compactSubtitle: String
     let accessibilityLabel: String
 
     static func make(level: TimelineZoomLevel, visibleDays: ClosedRange<Int>, anchor: Date,
@@ -78,18 +79,28 @@ struct TimelineAxisPeriod {
               let firstPeriod = calendar.dateInterval(of: level == .weeks ? .weekOfYear : .month, for: firstDate) else { return [] }
         var start = firstPeriod.start
         var periods: [TimelineAxisPeriod] = []
+        let dayFormat = Date.FormatStyle(locale: calendar.locale ?? .current,
+                                         calendar: calendar, timeZone: calendar.timeZone).day()
+        let monthDayFormat = dayFormat.month(.abbreviated)
+        let accessibleFormat = Date.FormatStyle(date: .complete, time: .omitted,
+                                                locale: calendar.locale ?? .current,
+                                                calendar: calendar, timeZone: calendar.timeZone)
         while let interval = calendar.dateInterval(of: level == .weeks ? .weekOfYear : .month, for: start) {
             let startDay = calendar.dateComponents([.day], from: anchor, to: start).day ?? 0
             if startDay > visibleDays.upperBound { break }
             let endDay = calendar.dateComponents([.day], from: anchor, to: interval.end).day ?? startDay + 1
             let title = start.formatted(.dateTime.month(.abbreviated))
-            let subtitle = level == .weeks
-                ? start.formatted(.dateTime.day())
-                : ""
+            // Calendar intervals end at the next period's midnight. Display the
+            // last included date, using calendar arithmetic across DST changes.
+            let lastDate = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? start
+            let rangeFormat = calendar.isDate(start, equalTo: lastDate, toGranularity: .month)
+                ? dayFormat : monthDayFormat
+            let subtitle = level == .weeks ? "\(start.formatted(rangeFormat))–\(lastDate.formatted(rangeFormat))" : ""
             periods.append(TimelineAxisPeriod(
                 startDay: startDay, endDay: endDay, title: title, subtitle: subtitle,
+                compactSubtitle: level == .weeks ? start.formatted(dayFormat) : "",
                 accessibilityLabel: level == .weeks
-                    ? "Week of \(start.formatted(date: .complete, time: .omitted))"
+                    ? "\(start.formatted(accessibleFormat)) through \(lastDate.formatted(accessibleFormat))"
                     : start.formatted(.dateTime.month(.wide).year())))
             guard interval.end > start else { break }
             start = interval.end
@@ -762,6 +773,8 @@ private final class TimelinePeriodView: UIView {
     private var containsToday = false
     private var labelAlpha: CGFloat = 1
     private var axisHeight: CGFloat = TimelineAxisTypography.height
+    private var rangeText = ""
+    private var compactText = ""
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -783,6 +796,8 @@ private final class TimelinePeriodView: UIView {
         self.labelAlpha = labelAlpha
         self.axisHeight = axisHeight
         label.text = level == .months ? period.title : period.subtitle
+        rangeText = period.subtitle
+        compactText = period.compactSubtitle
         self.containsToday = containsToday
         label.textColor = containsToday ? tintColor : .secondaryLabel
         accessibilityLabel = period.accessibilityLabel
@@ -799,6 +814,14 @@ private final class TimelinePeriodView: UIView {
         let labelWidth = max(frame.width, labelColumnWidth)
         let labelColumn = CGRect(x: frame.midX - labelWidth / 2, y: frame.minY, width: labelWidth, height: frame.height)
         let visible = labelColumn.intersection(viewport).offsetBy(dx: -frame.minX, dy: 0)
+        if level == .weeks {
+            let font = TimelineAxisTypography.font
+            let rangeWidth = max((rangeText as NSString).size(withAttributes: [.font: font]).width,
+                                 ("88–88" as NSString).size(withAttributes: [.font: font]).width)
+            // Keep complete ranges at close weekly zoom, including month names
+            // for boundary weeks. Fall back to the start day before text crowds.
+            label.text = bounds.width >= ceil(rangeWidth) + 16 ? rangeText : compactText
+        }
         // Use the widest two-digit date to fade all week numbers together as
         // their columns narrow. The active scale uses a single label row.
         let dateWidth = ("88" as NSString).size(withAttributes: [.font: TimelineAxisTypography.font]).width

@@ -271,7 +271,50 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(months.allSatisfy { $0.subtitle.isEmpty && !$0.title.contains("2026") })
         XCTAssertTrue(months.allSatisfy { $0.accessibilityLabel.contains("2026") })
         let weeks = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...150, anchor: first, calendar: calendar)
-        XCTAssertTrue(weeks.allSatisfy { Int($0.subtitle) != nil }, "Weekly ticks identify the start day without squeezed date ranges")
+        XCTAssertTrue(weeks.allSatisfy { $0.subtitle.contains("–") && !$0.subtitle.contains("2026") })
+        XCTAssertTrue(weeks.allSatisfy { Int($0.compactSubtitle) != nil }, "Dense weekly ticks retain a compact fallback")
+    }
+
+    func testWeeklyRangesIncludeTheLastDayAcrossMonthYearAndDSTBoundaries() {
+        var calendar = calendar
+        calendar.locale = Locale(identifier: "en_US")
+        calendar.firstWeekday = 1
+        let cases = [
+            (2026, 9, 13, "13–19"),
+            (2026, 9, 27, "Sep 27–Oct 3"),
+            (2026, 12, 27, "Dec 27–Jan 2"),
+            (2026, 3, 8, "8–14"),
+            (2026, 11, 1, "1–7")
+        ]
+        for (year, month, day, expected) in cases {
+            let start = calendar.date(from: DateComponents(year: year, month: month, day: day))!
+            let week = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...0, anchor: start, calendar: calendar).first!
+            XCTAssertEqual(week.subtitle, expected)
+            XCTAssertEqual(week.endDay - week.startDay, 7)
+            XCTAssertTrue(week.accessibilityLabel.contains("through"))
+        }
+        calendar.firstWeekday = 2
+        let september = calendar.date(from: DateComponents(year: 2026, month: 9, day: 14))!
+        XCTAssertEqual(TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...0, anchor: september,
+                                              calendar: calendar).first?.subtitle, "14–20")
+    }
+
+    @MainActor
+    func testCloseWeeklyZoomShowsDateRangesAboveBothSheetSizes() {
+        for height: CGFloat in [100, 600] {
+            let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
+            timeline.setExpanded(height > 100)
+            timeline.layoutIfNeeded()
+            timeline.beginZoom(at: 196)
+            timeline.changeZoom(scale: 0.6, at: 196)
+            timeline.endZoom()
+            timeline.layoutIfNeeded()
+            let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
+                .filter { !$0.isHidden && $0.alpha > 0 }
+            XCTAssertFalse(labels.isEmpty)
+            XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
+                          "Close weekly ticks should display the whole week above either sheet size")
+        }
     }
 
     @MainActor
