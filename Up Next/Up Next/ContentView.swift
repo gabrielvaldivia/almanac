@@ -148,8 +148,8 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(appData.storageError != nil)
-                .foregroundStyle(.tint)
-                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition, isInteractive: true))
+                .foregroundStyle(.white)
+                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition, isInteractive: true, tint: categoryTint))
                 .transition(.opacity)
                 .accessibilityLabel("Add event")
                 .accessibilityIdentifier("quickAddButton")

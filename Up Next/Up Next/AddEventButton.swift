@@ -315,16 +315,23 @@ struct FloatingControlSurface: ViewModifier {
     let id: String
     let namespace: Namespace.ID
     var isInteractive = false
+    var tint: Color?
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-                .glassEffect(.regular.interactive(isInteractive), in: RoundedRectangle(cornerRadius: 28))
+                .glassEffect(.regular.tint(tint).interactive(isInteractive), in: RoundedRectangle(cornerRadius: 28))
                 .glassEffectID(id, in: namespace)
         } else {
             content
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
+                .background {
+                    if let tint {
+                        RoundedRectangle(cornerRadius: 28).fill(tint)
+                    } else {
+                        RoundedRectangle(cornerRadius: 28).fill(.regularMaterial)
+                    }
+                }
                 .overlay {
                     RoundedRectangle(cornerRadius: 28)
                         .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
