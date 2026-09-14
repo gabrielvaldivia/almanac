@@ -75,6 +75,7 @@ struct QuickAddEventField: View {
                     }
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .padding(.leading, 8)
                 .accessibilityIdentifier("quickEventPills")
                 Button(action: onSubmit) {
                     Image(systemName: "arrow.up")
@@ -201,11 +202,11 @@ struct QuickAddEventField: View {
             if overrides.date != nil {
                 Button("Use Date from Text") { overrides.date = nil; overrides.endDate = nil }
             }
-        } label: { pill(dateLabel, icon: "calendar", isSelected: draft.hasDateSelection) }
+        } label: { pill(dateLabel, icon: "calendar", isSelected: true) }
         .accessibilityLabel("Date")
         .accessibilityValue(dateLabel)
         .accessibilityIdentifier("quickEventDate")
-        .accessibilityAddTraits(draft.hasDateSelection ? .isSelected : [])
+        .accessibilityAddTraits(.isSelected)
     }
 
     private var categoryMenu: some View {

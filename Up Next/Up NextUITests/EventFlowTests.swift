@@ -187,11 +187,12 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(app.buttons["quickEventDate"].value as? String, "Today")
         XCTAssertFalse(app.buttons["quickAddSubmit"].isEnabled)
         XCTAssertFalse(app.buttons["closeQuickEntry"].exists)
-        for id in ["quickEventDate", "quickEventCategory", "quickEventRepeat"] {
+        XCTAssertTrue(app.buttons["quickEventDate"].isSelected)
+        for id in ["quickEventCategory", "quickEventRepeat"] {
             XCTAssertFalse(app.buttons[id].isSelected)
         }
         let defaultsScreenshot = XCTAttachment(screenshot: app.screenshot())
-        defaultsScreenshot.name = "Default composer with neutral pills"
+        defaultsScreenshot.name = "Composer with active date and neutral optional pills"
         defaultsScreenshot.lifetime = .keepAlways
         add(defaultsScreenshot)
         let name = "Composer \(UUID().uuidString.prefix(6))"

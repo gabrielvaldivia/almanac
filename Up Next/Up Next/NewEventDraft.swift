@@ -6,7 +6,6 @@ struct NewEventDraft {
     var dateOptions: DateOptions
     var categoryOptions: CategoryOptions
     var usesCustomRepeat = false
-    var hasDateSelection = false
     var hasCategorySelection = false
     var hasRepeatSelection = false
     var scheduleReviewMessage: String?
@@ -94,7 +93,6 @@ struct QuickEventOverrides {
             category: categoryName ?? taggedCategory ?? category, appData: appData,
             recurrence: parsed?.recurrence ?? QuickEventParser.inferredRecurrence(for: title))
         if let color { draft.categoryOptions.selectedColor = color }
-        draft.hasDateSelection = date != nil || parsed != nil
         draft.hasCategorySelection = categoryName != nil || taggedCategory != nil
         draft.hasRepeatSelection = repeatOptions != nil || parsed?.recurrence != nil ||
             QuickEventParser.inferredRecurrence(for: title) != nil
