@@ -312,14 +312,26 @@ private struct QuickRepeatEditor: View {
 }
 
 struct FloatingControlSurface: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID
+    var isInteractive = false
+
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
-            .overlay {
-                RoundedRectangle(cornerRadius: 28)
-                    .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
-                    .allowsHitTesting(false)
-            }
-            .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.interactive(isInteractive), in: RoundedRectangle(cornerRadius: 28))
+                .glassEffectID(id, in: namespace)
+        } else {
+            content
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28)
+                        .strokeBorder(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+                        .allowsHitTesting(false)
+                }
+                .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
+                .matchedGeometryEffect(id: id, in: namespace, anchor: .bottomTrailing)
+        }
     }
 }

@@ -109,7 +109,18 @@ struct ContentView: View {
         .tint(categoryTint)
     }
 
+    @ViewBuilder
     private var floatingControls: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 16) {
+                floatingControlContent
+            }
+        } else {
+            floatingControlContent
+        }
+    }
+
+    private var floatingControlContent: some View {
         HStack(alignment: .bottom) {
             if showingQuickEntry {
                 QuickAddEventField(
@@ -120,8 +131,7 @@ struct ContentView: View {
                     onDismiss: dismissQuickEntry
                 )
                 .disabled(appData.storageError != nil)
-                .modifier(FloatingControlSurface())
-                .matchedGeometryEffect(id: "composer", in: composerTransition, anchor: .bottomTrailing)
+                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition))
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
             } else {
@@ -139,8 +149,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .disabled(appData.storageError != nil)
                 .foregroundStyle(.tint)
-                .modifier(FloatingControlSurface())
-                .matchedGeometryEffect(id: "composer", in: composerTransition, anchor: .bottomTrailing)
+                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition, isInteractive: true))
                 .transition(.opacity)
                 .accessibilityLabel("Add event")
                 .accessibilityIdentifier("quickAddButton")
@@ -397,7 +406,7 @@ struct ContentView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .modifier(FloatingControlSurface())
+        .modifier(FloatingControlSurface(id: "filter", namespace: composerTransition, isInteractive: true))
         .accessibilityLabel("Filter events")
         .accessibilityValue(selectedCategoryFilter ?? "All Events")
         .accessibilityIdentifier("eventFilter")
