@@ -292,7 +292,10 @@ struct ContentView: View {
                             Spacer(minLength: 100)
                         }
                     }
-                    .contentMargins(.top, 16, for: .scrollContent)
+                    // Naked rows have no inset card background to hide behind.
+                    // Keep their scroll inset within the 10-point interday gap
+                    // so returning to Today fully clears the preceding row.
+                    .contentMargins(.top, appData.eventStyle == "naked" ? 10 : 16, for: .scrollContent)
                     .accessibilityIdentifier("eventList")
                     .coordinateSpace(name: "eventList")
                     .scrollDismissesKeyboard(.interactively)

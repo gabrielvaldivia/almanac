@@ -77,8 +77,7 @@ struct EventRow: View {
             .padding(.vertical, appData.eventStyle == "naked" ? 4 : 12)
             .padding(.horizontal, appData.eventStyle == "naked" ? 0 : 16)
         }
-        .background(backgroundColor)
-        .clipShape(Self.backgroundShape(for: appData.eventStyle))
+        .background(backgroundColor, in: Self.backgroundShape(for: appData.eventStyle))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
