@@ -34,6 +34,15 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('ALMANAC_SIMULATOR=' + devices[0]['udid'] + '\n')
           PY
+      - name: Prepare simulator keyboard
+        if: matrix.suite.name == 'UI'
+        run: |
+          xcrun simctl bootstatus "$ALMANAC_SIMULATOR" -b
+          # Fresh iOS simulators can show the slide-to-type tutorial after
+          # typing begins. It intercepts the first submit tap without XCTest
+          # treating it as an alert, so complete this OS-only setup up front.
+          xcrun simctl spawn "$ALMANAC_SIMULATOR" defaults write \
+            com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool YES
       - name: Build app, widgets, and tests
         run: |
           xcodebuild -project 'Up Next/Up Next.xcodeproj' -scheme 'Up Next' \
