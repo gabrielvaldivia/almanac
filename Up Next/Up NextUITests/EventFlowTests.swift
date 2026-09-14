@@ -81,9 +81,9 @@ final class EventFlowTests: XCTestCase {
         XCTAssertFalse(app.staticTexts["timelineScaleHeader"].exists)
         let handle = app.buttons["eventSheetResizeHandle"]
         XCTAssertTrue(handle.waitForExistence(timeout: 5))
-        handle.tap()
-        XCTAssertEqual(handle.value as? String, "Small")
         let timeline = app.scrollViews["eventTimeline"]
+        resizeEventSheet(handle, timeline: timeline)
+        XCTAssertEqual(handle.value as? String, "Small")
         func assertScale(_ scale: String, file: StaticString = #filePath, line: UInt = #line) {
             let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "\(scale) view,"), object: timeline)
             XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 5), .completed, file: file, line: line)
@@ -99,7 +99,7 @@ final class EventFlowTests: XCTestCase {
         timeline.pinch(withScale: 0.15, velocity: -1)
         assertScale("Weeks")
         let weekDates = timeline.value as? String
-        handle.tap()
+        resizeEventSheet(handle, timeline: timeline)
         XCTAssertEqual(handle.value as? String, "Large")
         assertScale("Weeks")
         XCTAssertEqual(timeline.value as? String, weekDates)
@@ -107,7 +107,7 @@ final class EventFlowTests: XCTestCase {
         assertScale("Months")
         timeline.pinch(withScale: 5, velocity: 2)
         assertScale("Weeks")
-        handle.tap()
+        resizeEventSheet(handle, timeline: timeline)
         XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 0.7, velocity: -1)
         let transition = XCTAttachment(screenshot: app.screenshot())
@@ -116,11 +116,11 @@ final class EventFlowTests: XCTestCase {
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
         let monthDates = timeline.value as? String
-        handle.tap()
+        resizeEventSheet(handle, timeline: timeline)
         XCTAssertEqual(handle.value as? String, "Large")
         assertScale("Months")
         XCTAssertEqual(timeline.value as? String, monthDates)
-        handle.tap()
+        resizeEventSheet(handle, timeline: timeline)
         XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 5, velocity: 2)
         assertScale("Weeks")
@@ -132,7 +132,7 @@ final class EventFlowTests: XCTestCase {
         app.buttons["scrollToToday"].tap()
         let todayMonth = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", Date().formatted(.dateTime.year())), object: monthTitle)
         XCTAssertEqual(XCTWaiter.wait(for: [todayMonth], timeout: 5), .completed)
-        handle.tap()
+        resizeEventSheet(handle, timeline: timeline)
         XCTAssertEqual(handle.value as? String, "Large")
     }
 
@@ -162,8 +162,22 @@ final class EventFlowTests: XCTestCase {
             timeline.swipeLeft()
             XCTAssertNotEqual(timeline.value as? String, beforeScroll, "Single-finger scrolling must still work after pinching")
             app.buttons["scrollToToday"].tap()
-            handle.tap()
+            resizeEventSheet(handle, timeline: timeline)
         }
+    }
+
+    private func resizeEventSheet(_ handle: XCUIElement, timeline: XCUIElement,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        handle.tap()
+        // The sheet's value changes before its spring finishes. Pinching the
+        // destination frame too early puts one finger on the moving sheet.
+        var previousFrame: CGRect?
+        let settled = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let frame = timeline.frame
+            defer { previousFrame = frame }
+            return !frame.isEmpty && frame == previousFrame
+        }, object: timeline)
+        XCTAssertEqual(XCTWaiter.wait(for: [settled], timeout: 5), .completed, file: file, line: line)
     }
 
     func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
