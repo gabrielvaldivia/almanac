@@ -651,6 +651,8 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         let opacity = min(1, max(0, (expansionProgress - 0.35) / 0.65))
         let visible = labelEvents.filter { $0.frame.maxX >= bounds.minX && $0.frame.minX <= bounds.maxX }
         let titleBottom = eventLabels.update(events: visible, viewport: bounds, opacity: opacity, minimumY: titleMinimumY)
+        for entry in labelEvents { eventButtons[entry.event.id]?.frame = entry.frame }
+        for placement in eventLabels.placements { eventButtons[placement.id]?.frame = placement.marker }
         contentSize.height = max(bounds.height, markerContentHeight, titleBottom > 0 ? titleBottom + 16 : 0)
         eventLabels.frame = CGRect(origin: .zero, size: contentSize)
         for (id, button) in eventButtons {

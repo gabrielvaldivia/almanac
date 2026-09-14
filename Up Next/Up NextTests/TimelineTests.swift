@@ -19,7 +19,7 @@ final class TimelineTests: XCTestCase {
               color: CodableColor(color: .blue))
     }
 
-    func testExpandedTitlePrefersRightAndMovesBelowWhenAnotherDotBlocksIt() {
+    func testExpandedTitlePrefersRightAndMovesAboveWhenAnotherDotBlocksIt() {
         let first = TimelineLabelItem(id: UUID(), marker: CGRect(x: 20, y: 100, width: 20, height: 20),
                                       size: CGSize(width: 90, height: 20))
         let alone = TimelineEventLabelLayout.make(items: [first], horizontalBounds: 8...385)
@@ -29,9 +29,9 @@ final class TimelineTests: XCTestCase {
                                          size: CGSize(width: 120, height: 38))
         let crowded = TimelineEventLabelLayout.make(items: [first, neighbor], horizontalBounds: 8...385)
         let displaced = crowded.first { $0.id == first.id }!
-        XCTAssertGreaterThanOrEqual(displaced.frame.minY, first.marker.maxY + 6)
-        XCTAssertEqual(displaced.connector.first, CGPoint(x: first.marker.midX, y: first.marker.maxY + 2))
-        XCTAssertEqual(displaced.connector.last!.y, displaced.frame.minY - 2)
+        XCTAssertLessThanOrEqual(displaced.frame.maxY, first.marker.minY - TimelineEventLabelLayout.gap)
+        XCTAssertEqual(displaced.connector.first, CGPoint(x: first.marker.midX, y: first.marker.minY - 2))
+        XCTAssertEqual(displaced.connector.last!.y, displaced.frame.maxY + 2)
         XCTAssertFalse(displaced.frame.intersects(neighbor.marker))
     }
 
@@ -47,10 +47,62 @@ final class TimelineTests: XCTestCase {
             for (index, label) in placements.enumerated() {
                 XCTAssertGreaterThanOrEqual(label.frame.minX, 8)
                 XCTAssertLessThanOrEqual(label.frame.maxX, width - 8)
-                for item in items { XCTAssertFalse(label.frame.intersects(item.marker)) }
-                for other in placements.dropFirst(index + 1) { XCTAssertFalse(label.frame.intersects(other.frame)) }
+                XCTAssertEqual(label.marker.minX, items.first { $0.id == label.id }!.marker.minX, "An event must keep its calendar position")
+                for other in placements {
+                    XCTAssertFalse(label.frame.intersects(other.marker))
+                    if label.id != other.id { XCTAssertFalse(label.frame.intersects(other.frame)) }
+                    if let start = label.connector.first, let end = label.connector.last {
+                        XCTAssertEqual(label.connector.count, 2, "Connections must be direct")
+                        XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.frame))
+                        if label.id != other.id {
+                            XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.marker))
+                        }
+                    }
+                }
+                for other in placements.dropFirst(index + 1) {
+                    XCTAssertFalse(label.marker.intersects(other.marker))
+                    if let a = label.connector.first, let b = label.connector.last,
+                       let c = other.connector.first, let d = other.connector.last {
+                        XCTAssertFalse(TimelineEventLabelLayout.segmentsCross(a, b, c, d))
+                    }
+                }
             }
         }
+    }
+
+    @MainActor
+    func testBirthdayAndReleaseLabelsUseBothSidesWithDirectConnections() {
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 360))
+        container.backgroundColor = .systemBackground
+        let titles = TimelineEventLabelsView(frame: container.bounds)
+        container.addSubview(titles)
+        let names = ["Bryan Lewis’s birthday", "Zelda: Ocarina of Time", "GTA 6"]
+        let centers: [CGFloat] = [112, 132, 264]
+        let entries = names.enumerated().map { index, name in
+            (event: Event(title: name, date: Date(), color: CodableColor(color: index == 0 ? .red : .blue)),
+             frame: CGRect(x: centers[index] - 4.5, y: 175, width: 9, height: 9))
+        }
+        _ = titles.update(events: entries, viewport: container.bounds, opacity: 1, minimumY: 40)
+        let placements = titles.placements
+        XCTAssertEqual(placements.count, 3)
+        XCTAssertTrue(placements.contains { $0.frame.maxY < $0.marker.minY })
+        XCTAssertTrue(placements.contains { $0.frame.minY > $0.marker.maxY })
+        for placement in placements {
+            XCTAssertEqual(placement.marker.minY, 175, "This small cluster has room without moving its dots")
+            let entry = entries.first { $0.event.id == placement.id }!
+            let dot = UIView(frame: placement.marker)
+            dot.backgroundColor = UIColor(entry.event.color.color)
+            dot.layer.cornerRadius = 4.5
+            container.addSubview(dot)
+            XCTAssertLessThanOrEqual(placement.connector.count, 2)
+        }
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        layoutTree(container)
+        let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
+        let screenshot = XCTAttachment(image: image)
+        screenshot.name = "Birthday and releases with balanced direct labels"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
     func testExpandedTitlesRetainAFreePositionDuringSmallPansAndAvoidTheAxis() {

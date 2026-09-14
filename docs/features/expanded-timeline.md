@@ -23,8 +23,10 @@ Dots move down as the sheet shrinks, staying between the days and the sheet.
 Calendar dividers become more visible as the timeline grows.
 
 As the timeline expands, event titles appear beside their dots. Titles that
-would overlap another marker or title wrap and move below into free space,
-with a connector back to their event. Dense groups can scroll vertically.
+would overlap another marker or title wrap and use the space above or below.
+Labels and straight connectors are placed together so neither crosses another
+label or dot. Extremely crowded groups spread into rows while retaining each
+event's horizontal date position, and can scroll vertically.
 Tapping a title highlights and reveals the same event as tapping its dot.
 
 The plus button floats over the sheet, whose list reaches the bottom edge. Extra

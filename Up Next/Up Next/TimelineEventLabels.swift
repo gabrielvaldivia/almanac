@@ -8,106 +8,140 @@ struct TimelineLabelItem {
 
 struct TimelineLabelPlacement {
     let id: UUID
+    let marker: CGRect
     let frame: CGRect
     let connector: [CGPoint]
 }
 
-/// Titles prefer the space immediately to the right of their marker. A blocked
-/// title goes below it, finding the nearest free column before adding more rows.
+/// Place the title and its direct connection together. Reserve both so later
+/// titles cannot cover a connector, and never route a line around another label.
 enum TimelineEventLabelLayout {
-    static let gap: CGFloat = 6
+    static let gap: CGFloat = 10
 
     static func make(items: [TimelineLabelItem], horizontalBounds: ClosedRange<CGFloat>, minimumY: CGFloat = 0,
                      previous: [UUID: CGRect] = [:]) -> [TimelineLabelPlacement] {
-        let markers = items.map(\.marker)
-        var occupied = markers
+        var markers = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0.marker) })
         var result: [TimelineLabelPlacement] = []
         for item in items.sorted(by: {
             if $0.marker.minX != $1.marker.minX { return $0.marker.minX < $1.marker.minX }
             if $0.marker.minY != $1.marker.minY { return $0.marker.minY < $1.marker.minY }
             return $0.id.uuidString < $1.id.uuidString
         }) {
-            let marker = item.marker
+            var marker = item.marker
             let size = item.size
             func clampedX(_ x: CGFloat) -> CGFloat {
                 max(horizontalBounds.lowerBound, min(x, horizontalBounds.upperBound - size.width))
             }
-            func collisions(_ frame: CGRect) -> [CGRect] {
-                occupied.filter { $0.insetBy(dx: -gap / 2, dy: -gap / 2).intersects(frame) }
-            }
-            let right = CGRect(x: marker.maxX + gap, y: marker.midY - size.height / 2,
+            let right = CGRect(x: marker.maxX + 6, y: marker.midY - size.height / 2,
                                width: size.width, height: size.height)
-            let frame: CGRect
-            let retained = previous[item.id].map {
-                CGRect(x: clampedX($0.minX), y: $0.minY, width: $0.width, height: $0.height)
+            let otherMarkers = markers.filter { $0.key != item.id }.map(\.value)
+            let labels = result.map(\.frame)
+            let existingLines = result.compactMap { placement -> (CGPoint, CGPoint)? in
+                guard let first = placement.connector.first, let last = placement.connector.last else { return nil }
+                return (first, last)
             }
-            if let retained, retained.size == size, retained.minY >= minimumY,
-               (retained == right || retained.minY >= marker.maxY + gap), collisions(retained).isEmpty {
-                frame = retained
-            } else if right.minY >= minimumY && right.maxX <= horizontalBounds.upperBound &&
-                right.minX >= horizontalBounds.lowerBound && collisions(right).isEmpty {
-                frame = right
-            } else {
-                // Each failed position jumps past an obstacle; dense calendars
-                // can extend vertically instead of hiding or overlapping titles.
-                let columns = [marker.minX, marker.midX - size.width / 2, marker.maxX - size.width,
-                               horizontalBounds.lowerBound, horizontalBounds.upperBound - size.width]
-                var candidates: [CGRect] = []
-                for x in Set(columns.map(clampedX)) {
-                    var candidate = CGRect(x: x, y: max(minimumY, marker.maxY + gap), width: size.width, height: size.height)
-                    let blockers = occupied.filter {
-                        $0.maxX + gap / 2 > candidate.minX && $0.minX - gap / 2 < candidate.maxX
-                    }.sorted { $0.minY < $1.minY }
-                    for blocker in blockers {
-                        if blocker.maxY + gap / 2 <= candidate.minY { continue }
-                        if blocker.minY - gap / 2 >= candidate.maxY { break }
-                        candidate.origin.y = blocker.maxY + gap
-                    }
-                    candidates.append(candidate)
+            func connection(to frame: CGRect) -> [CGPoint] {
+                if frame == right { return [] }
+                return directConnection(marker: marker, label: frame)
+            }
+            func isFree(_ frame: CGRect) -> Bool {
+                guard frame.minX >= horizontalBounds.lowerBound, frame.maxX <= horizontalBounds.upperBound,
+                      frame.minY >= minimumY, frame.size == size,
+                      !(Array(markers.values) + labels).contains(where: {
+                          $0.insetBy(dx: -4, dy: -4).intersects(frame)
+                      }),
+                      !existingLines.contains(where: { segment($0.0, $0.1, intersects: frame.insetBy(dx: -4, dy: -4)) })
+                else { return false }
+                let points = connection(to: frame)
+                guard let start = points.first, let end = points.last else { return true }
+                return !(otherMarkers + labels).contains {
+                    segment(start, end, intersects: $0.insetBy(dx: -2, dy: -2))
+                } && !existingLines.contains {
+                    segmentsCross(start, end, $0.0, $0.1)
                 }
-                frame = candidates.min {
-                    let first = abs($0.midX - marker.midX) + ($0.minY - marker.maxY) * 2
-                    let second = abs($1.midX - marker.midX) + ($1.minY - marker.maxY) * 2
-                    return first == second ? $0.minX < $1.minX : first < second
-                }!
             }
-            let connector: [CGPoint]
-            if frame == right { connector = [] }
-            else {
-                let end = CGPoint(x: max(frame.minX + 4, min(marker.midX, frame.maxX - 4)), y: frame.minY - 2)
-                let start = CGPoint(x: marker.midX, y: marker.maxY + 2)
-                connector = route(from: start, to: end, marker: marker,
-                                  obstacles: occupied.filter { $0 != marker })
+            var candidates = [right]
+            let columns = [marker.midX - size.width / 2, marker.minX, marker.maxX - size.width].map(clampedX)
+            for distance: CGFloat in [gap, gap + size.height + gap, gap + (size.height + gap) * 2] {
+                // Try both sides of the timeline before moving farther away.
+                for y in [marker.minY - distance - size.height, marker.maxY + distance] {
+                    for x in columns { candidates.append(CGRect(origin: CGPoint(x: x, y: y), size: size)) }
+                }
             }
-            occupied.append(frame)
-            result.append(TimelineLabelPlacement(id: item.id, frame: frame, connector: connector))
+            candidates.append(CGRect(x: marker.minX - 6 - size.width, y: right.minY, width: size.width, height: size.height))
+            if let old = previous[item.id], old.size == size {
+                let retained = CGRect(x: clampedX(old.minX), y: old.minY, width: old.width, height: old.height)
+                // Preserve nearby placements while panning, but don't retain the
+                // long, tangled connections produced by a denser earlier scale.
+                if abs(retained.midY - marker.midY) <= size.height * 2 + gap * 3 {
+                    candidates.insert(retained, at: 0)
+                }
+            }
+            let frame: CGRect
+            if let available = candidates.first(where: isFree) {
+                frame = available
+            } else {
+                // A fully surrounded dot cannot have a clear straight leader.
+                // Keep its date (x) fixed and separate this event into a new row.
+                let rowTop = max(minimumY, markers.values.map(\.maxY).max() ?? minimumY,
+                                 labels.map(\.maxY).max() ?? minimumY) + gap * 2
+                frame = CGRect(x: clampedX(marker.midX - size.width / 2), y: rowTop,
+                               width: size.width, height: size.height)
+                marker.origin.y = frame.maxY + gap
+                markers[item.id] = marker
+            }
+            result.append(TimelineLabelPlacement(id: item.id, marker: marker, frame: frame, connector: connection(to: frame)))
         }
         return result
     }
 
-    private static func route(from start: CGPoint, to end: CGPoint, marker: CGRect, obstacles: [CGRect]) -> [CGPoint] {
-        func clear(_ points: [CGPoint]) -> Bool {
-            zip(points, points.dropFirst()).allSatisfy { a, b in
-                let segment = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
-                                     width: max(1, abs(a.x - b.x)), height: max(1, abs(a.y - b.y)))
-                return !obstacles.contains { $0.insetBy(dx: -1, dy: -1).intersects(segment) }
+    private static func directConnection(marker: CGRect, label: CGRect) -> [CGPoint] {
+        let inset = min(4, label.width / 2)
+        let x = max(label.minX + inset, min(marker.midX, label.maxX - inset))
+        if label.maxY <= marker.minY {
+            return [CGPoint(x: marker.midX, y: marker.minY - 2), CGPoint(x: x, y: label.maxY + 2)]
+        }
+        if label.minY >= marker.maxY {
+            return [CGPoint(x: marker.midX, y: marker.maxY + 2), CGPoint(x: x, y: label.minY - 2)]
+        }
+        let y = max(label.minY + 2, min(marker.midY, label.maxY - 2))
+        if label.minX >= marker.maxX {
+            return [CGPoint(x: marker.maxX + 2, y: marker.midY), CGPoint(x: label.minX - 2, y: y)]
+        }
+        return [CGPoint(x: marker.minX - 2, y: marker.midY), CGPoint(x: label.maxX + 2, y: y)]
+    }
+
+    static func segment(_ start: CGPoint, _ end: CGPoint, intersects rect: CGRect) -> Bool {
+        var lower: CGFloat = 0, upper: CGFloat = 1
+        for (origin, delta, minimum, maximum) in [
+            (start.x, end.x - start.x, rect.minX, rect.maxX),
+            (start.y, end.y - start.y, rect.minY, rect.maxY)
+        ] {
+            if abs(delta) < 0.0001 {
+                if origin < minimum || origin > maximum { return false }
+            } else {
+                let first = (minimum - origin) / delta, second = (maximum - origin) / delta
+                lower = max(lower, min(first, second))
+                upper = min(upper, max(first, second))
+                if lower > upper { return false }
             }
         }
-        let bendY = start.y + 1
-        let direct = [start, CGPoint(x: end.x, y: bendY), end]
-        if clear(direct) { return direct }
-        // Route around same-day stacks instead of drawing through their dots.
-        let columns = [marker.maxX + 3, marker.minX - 3, end.x,
-                       (obstacles.map(\.minX).min() ?? marker.minX) - 3,
-                       (obstacles.map(\.maxX).max() ?? marker.maxX) + 3]
-        for x in Set(columns).sorted(by: {
-            let first = abs($0 - start.x), second = abs($1 - start.x)
-            return first == second ? $0 < $1 : first < second
-        }) {
-            let points = [start, CGPoint(x: x, y: bendY), CGPoint(x: x, y: end.y), end]
-            if clear(points) { return points }
+        return true
+    }
+
+    static func segmentsCross(_ a: CGPoint, _ b: CGPoint, _ c: CGPoint, _ d: CGPoint) -> Bool {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let ex = d.x - c.x, ey = d.y - c.y
+        let determinant = dx * ey - dy * ex
+        if abs(determinant) < 0.0001 {
+            // Also reserve a little room between parallel connectors.
+            let bounds = CGRect(x: min(c.x, d.x), y: min(c.y, d.y),
+                                width: max(1, abs(ex)), height: max(1, abs(ey))).insetBy(dx: -2, dy: -2)
+            return segment(a, b, intersects: bounds)
         }
-        return direct
+        let t = ((c.x - a.x) * ey - (c.y - a.y) * ex) / determinant
+        let u = ((c.x - a.x) * dy - (c.y - a.y) * dx) / determinant
+        return (0...1).contains(t) && (0...1).contains(u)
     }
 }
 
@@ -213,7 +247,7 @@ final class TimelineEventLabelsView: UIView {
             line.lineJoin = .round
             line.lineCap = .round
         }
-        return placements.map(\.frame.maxY).max() ?? 0
+        return placements.map { max($0.frame.maxY, $0.marker.maxY) }.max() ?? 0
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
