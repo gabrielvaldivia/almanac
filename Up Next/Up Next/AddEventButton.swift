@@ -59,7 +59,7 @@ struct QuickAddEventField: View {
                     .fill(Color(uiColor: .tertiaryLabel))
                     .frame(width: 32, height: 4)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 24)
+                    .frame(height: 12)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -78,7 +78,6 @@ struct QuickAddEventField: View {
                     .accessibilityIdentifier("quickEventInput")
             }
             .padding(.trailing, 8)
-            .padding(.top, 4)
             .padding(.bottom, 4)
 
             HStack(spacing: 4) {
@@ -117,7 +116,9 @@ struct QuickAddEventField: View {
                     .accessibilityIdentifier("quickEventValidation")
             }
         }
-        .padding(8)
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
         .accessibilityAction(named: "Collapse event entry", onDismiss)
         .sheet(item: $dateDraft) { draft in
             QuickDateEditor(options: draft.options) { date, endDate in

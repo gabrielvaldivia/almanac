@@ -121,19 +121,33 @@ struct ContentView: View {
         .tint(categoryTint)
     }
 
-    @ViewBuilder
     private var floatingControls: some View {
-        if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: 16) {
-                floatingControlContent
+        ZStack(alignment: .bottomTrailing) {
+            if !showingQuickEntry {
+                filterMenu
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
             }
-        } else {
-            floatingControlContent
+            // Keep the filter outside the morphing glass container. The plus
+            // and composer share a stable slot anchored to the trailing edge.
+            composerControls
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
-    private var floatingControlContent: some View {
-        HStack(alignment: .bottom) {
+    @ViewBuilder
+    private var composerControls: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 16) {
+                composerControlContent
+            }
+        } else {
+            composerControlContent
+        }
+    }
+
+    private var composerControlContent: some View {
+        ZStack(alignment: .bottomTrailing) {
             if showingQuickEntry {
                 QuickAddEventField(
                     text: $quickEventInput, isFocused: $isQuickEntryFocused,
@@ -149,9 +163,6 @@ struct ContentView: View {
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
             } else {
-                filterMenu
-                    .transition(.opacity)
-                Spacer()
                 Button {
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
                 } label: {
