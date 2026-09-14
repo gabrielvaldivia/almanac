@@ -242,6 +242,10 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var indexedEvents: [TimelineEventPlacement] = []
     private var dayViews: [Int: TimelineDayView] = [:]
     private var periodViews: [String: TimelinePeriodView] = [:]
+    private let eventLabels = TimelineEventLabelsView()
+    private var labelEvents: [(event: Event, frame: CGRect)] = []
+    private var markerContentHeight: CGFloat = 0
+    private var titleMinimumY: CGFloat = 0
     private let todayLine = UIView()
     private let zoomGesture = UIPinchGestureRecognizer()
     private var pinch: (width: CGFloat, day: CGFloat, focusedDay: CGFloat)?
@@ -326,6 +330,12 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         todayLine.backgroundColor = tintColor
         todayLine.isUserInteractionEnabled = false
         addSubview(todayLine)
+        addSubview(eventLabels)
+        eventLabels.onSelect = { [weak self] id in
+            guard let self, let button = self.eventButtons[id] else { return }
+            self.prepareSelectionFeedback()
+            self.selectedEvent(button)
+        }
         registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: TimelineScrollView, _: UITraitCollection) in
             view.needsEventLayout = true
             view.setNeedsLayout()
@@ -500,6 +510,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         // Fractional pans still change how much room an edge label has.
         for view in dayViews.values { view.layoutLabels(in: bounds) }
         for view in periodViews.values { view.layoutLabels(in: bounds) }
+        layoutEventTitles()
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -536,6 +547,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             (TimelineAxisTypography.firstRowHeight + 4) * weights.weeks
         let centeredTop = max(axisHeight + 4, (axisHeight + bounds.height - markerHeight) / 2)
         let markerTop = axisHeight + 4 + (centeredTop - axisHeight - 4) * expansionProgress
+        titleMinimumY = axisHeight + 8
         // Only one hierarchy occupies the text rows. Keep labels visible even
         // when a pinch stops exactly between scales; the grid remains continuous.
         let minimumDayWidth = ceil(("88" as NSString).size(withAttributes: [.font: TimelineAxisTypography.font]).width) + 12
@@ -594,6 +606,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         for id in Array(eventButtons.keys) where !visibleIDs.contains(id) {
             eventButtons.removeValue(forKey: id)?.removeFromSuperview()
         }
+        labelEvents = []
         for placement in layout.placements {
             let button = eventButtons[placement.event.id] ?? TimelineEventButton(type: .custom)
             if eventButtons[placement.event.id] == nil {
@@ -618,7 +631,10 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             button.accessibilityLabel = placement.event.title
             button.accessibilityValue = placement.event.date.formatted(date: .abbreviated, time: .omitted)
             button.accessibilityHint = "Show event"
+            labelEvents.append((placement.event, button.frame))
         }
+        markerContentHeight = markerTop + markerHeight + 4
+        bringSubviewToFront(eventLabels)
 
         accessibilityHint = "Pinch to zoom between days, weeks, and months. Swipe to move through dates."
         let showsToday = visibleDays.contains(todayDay)
@@ -628,6 +644,21 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 guard let self, let visible = self.reportedTodayVisibility else { return }
                 self.onTodayVisibilityChange?(visible)
             }
+        }
+    }
+
+    private func layoutEventTitles() {
+        let opacity = min(1, max(0, (expansionProgress - 0.35) / 0.65))
+        let visible = labelEvents.filter { $0.frame.maxX >= bounds.minX && $0.frame.minX <= bounds.maxX }
+        let titleBottom = eventLabels.update(events: visible, viewport: bounds, opacity: opacity, minimumY: titleMinimumY)
+        contentSize.height = max(bounds.height, markerContentHeight, titleBottom > 0 ? titleBottom + 16 : 0)
+        eventLabels.frame = CGRect(origin: .zero, size: contentSize)
+        for (id, button) in eventButtons {
+            // Expose a single accessible control for each event when its title is visible.
+            let titleVisible = opacity > 0.01 && eventLabels.placements.contains {
+                $0.id == id && $0.frame.intersects(bounds)
+            }
+            button.isAccessibilityElement = !titleVisible
         }
     }
 

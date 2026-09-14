@@ -19,6 +19,93 @@ final class TimelineTests: XCTestCase {
               color: CodableColor(color: .blue))
     }
 
+    func testExpandedTitlePrefersRightAndMovesBelowWhenAnotherDotBlocksIt() {
+        let first = TimelineLabelItem(id: UUID(), marker: CGRect(x: 20, y: 100, width: 20, height: 20),
+                                      size: CGSize(width: 90, height: 20))
+        let alone = TimelineEventLabelLayout.make(items: [first], horizontalBounds: 8...385)
+        XCTAssertEqual(alone[0].frame.minX, first.marker.maxX + 6)
+        XCTAssertEqual(alone[0].frame.midY, first.marker.midY)
+        let neighbor = TimelineLabelItem(id: UUID(), marker: CGRect(x: 64, y: 100, width: 20, height: 20),
+                                         size: CGSize(width: 120, height: 38))
+        let crowded = TimelineEventLabelLayout.make(items: [first, neighbor], horizontalBounds: 8...385)
+        let displaced = crowded.first { $0.id == first.id }!
+        XCTAssertGreaterThanOrEqual(displaced.frame.minY, first.marker.maxY + 6)
+        XCTAssertEqual(displaced.connector.first, CGPoint(x: first.marker.midX, y: first.marker.maxY + 2))
+        XCTAssertEqual(displaced.connector.last!.y, displaced.frame.minY - 2)
+        XCTAssertFalse(displaced.frame.intersects(neighbor.marker))
+    }
+
+    func testExpandedTitlesAvoidDotsAndEachOtherForStacksLongNamesAndNarrowViewports() {
+        for width: CGFloat in [320, 393, 600] {
+            let items = (0..<45).map { index in
+                TimelineLabelItem(id: UUID(), marker: CGRect(x: CGFloat(index / 5) * 32 + 8,
+                    y: 150 + CGFloat(index % 5) * 24, width: 20, height: 20),
+                    size: CGSize(width: min(150, width * 0.46), height: index.isMultiple(of: 3) ? 58 : 20))
+            }
+            let placements = TimelineEventLabelLayout.make(items: items, horizontalBounds: 8...(width - 8))
+            XCTAssertEqual(placements.count, items.count)
+            for (index, label) in placements.enumerated() {
+                XCTAssertGreaterThanOrEqual(label.frame.minX, 8)
+                XCTAssertLessThanOrEqual(label.frame.maxX, width - 8)
+                for item in items { XCTAssertFalse(label.frame.intersects(item.marker)) }
+                for other in placements.dropFirst(index + 1) { XCTAssertFalse(label.frame.intersects(other.frame)) }
+            }
+        }
+    }
+
+    func testExpandedTitlesRetainAFreePositionDuringSmallPansAndAvoidTheAxis() {
+        let item = TimelineLabelItem(id: UUID(), marker: CGRect(x: 80, y: 100, width: 20, height: 20),
+                                     size: CGSize(width: 150, height: 120))
+        let initial = TimelineEventLabelLayout.make(items: [item], horizontalBounds: 8...385, minimumY: 60)[0]
+        XCTAssertGreaterThanOrEqual(initial.frame.minY, item.marker.maxY + 6, "A tall title must not cover the calendar axis")
+        let moved = TimelineEventLabelLayout.make(items: [item], horizontalBounds: 12...389, minimumY: 60,
+                                                  previous: [item.id: initial.frame])[0]
+        XCTAssertEqual(moved.frame, initial.frame, "A small pan must not make labels jump to another column")
+    }
+
+    @MainActor
+    func testExpandedTitlesFollowPanZoomAndSelectionAndDisappearWhenCollapsed() {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
+        let events = (0..<8).map { day in
+            Event(title: "Event \(day) with a longer title", date: Calendar.current.date(byAdding: .day, value: day / 2, to: timeline.anchor)!,
+                  color: CodableColor(color: .blue))
+        }
+        timeline.update(events: events)
+        timeline.setExpanded(true)
+        timeline.layoutIfNeeded()
+        let overlay = timeline.subviews.compactMap { $0 as? TimelineEventLabelsView }.first!
+        XCTAssertFalse(overlay.placements.isEmpty)
+        for scale: CGFloat in [1, 0.15, 0.03] {
+            timeline.beginZoom(at: 0)
+            timeline.changeZoom(scale: scale, at: 0)
+            timeline.endZoom()
+            for day: CGFloat in [0, 0.25, 1.7] {
+                timeline.setDayPosition(day)
+                timeline.layoutIfNeeded()
+                let markers = timeline.subviews.compactMap { $0 as? UIButton }
+                for (index, placement) in overlay.placements.enumerated() {
+                    for marker in markers { XCTAssertFalse(placement.frame.intersects(marker.frame)) }
+                    for other in overlay.placements.dropFirst(index + 1) {
+                        XCTAssertFalse(placement.frame.intersects(other.frame))
+                    }
+                    XCTAssertGreaterThanOrEqual(placement.frame.minX, timeline.bounds.minX)
+                    XCTAssertLessThanOrEqual(placement.frame.maxX, timeline.bounds.maxX)
+                    XCTAssertLessThanOrEqual(placement.frame.maxY, timeline.contentSize.height)
+                }
+            }
+        }
+        var selected: UUID?
+        timeline.onSelectEvent = { selected = $0.id }
+        let title = overlay.subviews.compactMap { $0 as? UIButton }.first!
+        title.sendActions(for: .touchUpInside)
+        XCTAssertNotNil(selected)
+        XCTAssertEqual(timeline.highlightedEventID, selected)
+        timeline.setExpanded(false)
+        timeline.layoutIfNeeded()
+        XCTAssertTrue(overlay.placements.isEmpty)
+        XCTAssertEqual(overlay.alpha, 0)
+    }
+
     func testRecyclingPreservesDatesAndFractionalPositionInBothDirections() {
         for direction: CGFloat in [-1, 1] {
             var window = TimelineScrollWindow()
@@ -213,6 +300,12 @@ final class TimelineTests: XCTestCase {
             let markers = timeline.subviews.compactMap { $0 as? UIButton }
             XCTAssertLessThan(markers.count, 280)
             XCTAssertLessThan(timeline.subviews.count, 300)
+            let titles = timeline.subviews.compactMap { $0 as? TimelineEventLabelsView }.first!
+            XCTAssertLessThan(titles.subviews.count, markers.count)
+            for title in titles.subviews {
+                XCTAssertTrue(title.frame.intersects(timeline.bounds.insetBy(dx: 0, dy: -80)),
+                              "Titles outside the vertical viewport must be recycled")
+            }
             for (index, marker) in markers.enumerated() {
                 for other in markers.dropFirst(index + 1) { XCTAssertFalse(marker.frame.intersects(other.frame)) }
             }

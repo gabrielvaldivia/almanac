@@ -6,7 +6,7 @@ final class EventFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         let prefix = "Sheet \(UUID().uuidString.prefix(6))"
-        let names = ["\(prefix) First", "\(prefix) Second", "\(prefix) Later"]
+        let names = ["\(prefix) First planning session", "\(prefix) Second", "\(prefix) Later"]
         for (index, name) in names.enumerated() {
             openComposer(app)
             let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
@@ -32,6 +32,12 @@ final class EventFlowTests: XCTestCase {
         XCTAssertGreaterThan(handle.frame.midY, originalHandleY)
         XCTAssertGreaterThan(timeline.frame.height, originalTimelineHeight)
         XCTAssertFalse(app.scrollViews["timelineEventCards"].exists, "Both sizes use the same event list")
+        let timelineTitles = timeline.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "timelineEventTitle-"))
+        XCTAssertTrue(timelineTitles.firstMatch.waitForExistence(timeout: 5))
+        screenshot("Expanded timeline with connected event titles")
+        timelineTitles.matching(NSPredicate(format: "label == %@", names[0])).firstMatch.tap()
+        XCTAssertTrue(list.staticTexts[names[0]].isHittable)
+        XCTAssertFalse(app.navigationBars["Edit Event"].exists, "A timeline title reveals and highlights its event")
         let smallSheetTop = handle.frame.midY
         timeline.swipeLeft()
         XCTAssertEqual(handle.frame.midY, smallSheetTop, accuracy: 1)

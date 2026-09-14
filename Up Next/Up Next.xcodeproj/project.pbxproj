@@ -82,6 +82,7 @@
 		A109BF600000000000000002 /* QuickEventParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000001 /* QuickEventParser.swift */; };
 		A109BF600000000000000004 /* NewEventDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000003 /* NewEventDraft.swift */; };
 		A109BF600000000000000008 /* QuickDateEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000007 /* QuickDateEditor.swift */; };
+		A109BF600000000000000010 /* TimelineEventLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000009 /* TimelineEventLabels.swift */; };
 		A109BF600000000000000006 /* QuickEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109BF600000000000000005 /* QuickEventTests.swift */; };
 		D31E01000000000000000002 /* EventTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000001 /* EventTimelineView.swift */; };
 		D31E01000000000000000004 /* TimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000003 /* TimelineTests.swift */; };
@@ -189,6 +190,7 @@
 		A109BF600000000000000001 /* QuickEventParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/QuickEventParser.swift"; sourceTree = SOURCE_ROOT; };
 		A109BF600000000000000003 /* NewEventDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/NewEventDraft.swift"; sourceTree = SOURCE_ROOT; };
 		A109BF600000000000000007 /* QuickDateEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/QuickDateEditor.swift"; sourceTree = SOURCE_ROOT; };
+		A109BF600000000000000009 /* TimelineEventLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/TimelineEventLabels.swift"; sourceTree = SOURCE_ROOT; };
 		A109BF600000000000000005 /* QuickEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/QuickEventTests.swift"; sourceTree = SOURCE_ROOT; };
 		D31E01000000000000000001 /* EventTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/EventTimelineView.swift"; sourceTree = SOURCE_ROOT; };
 		D31E01000000000000000003 /* TimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/TimelineTests.swift"; sourceTree = SOURCE_ROOT; };
@@ -274,6 +276,7 @@
 				A109BF600000000000000005 /* QuickEventTests.swift */,
 				A109BF600000000000000003 /* NewEventDraft.swift */,
 				A109BF600000000000000007 /* QuickDateEditor.swift */,
+				A109BF600000000000000009 /* TimelineEventLabels.swift */,
 				A109BF600000000000000001 /* QuickEventParser.swift */,
 				54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */,
 				43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */,
@@ -546,6 +549,7 @@
 				787B0AAD2805E72D9B040DFC /* EventStore.swift in Sources */,
 				A109BF600000000000000004 /* NewEventDraft.swift in Sources */,
 				A109BF600000000000000008 /* QuickDateEditor.swift in Sources */,
+				A109BF600000000000000010 /* TimelineEventLabels.swift in Sources */,
 				A109BF600000000000000002 /* QuickEventParser.swift in Sources */,
 				25168B30958C3883582A3A8B /* EventWindow.swift in Sources */,
 				DCCB36AF7935BC806656C34E /* DeepLink.swift in Sources */,
