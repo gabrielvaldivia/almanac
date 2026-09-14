@@ -139,11 +139,11 @@ private enum TimelineAxisTypography {
     static var height: CGFloat { firstRowHeight + 4 + secondRowHeight }
 
     static func place(_ label: UILabel, in available: CGRect, y: CGFloat, height: CGFloat,
-                      alpha: CGFloat, centeredAt center: CGFloat? = nil) {
+                      alpha: CGFloat, centeredAt center: CGFloat? = nil, horizontalPadding: CGFloat = 4) {
         guard !available.isNull, !available.isEmpty else { label.isHidden = true; return }
         label.font = font
         let width = ceil(label.intrinsicContentSize.width)
-        let usable = available.insetBy(dx: 4, dy: 0)
+        let usable = available.insetBy(dx: horizontalPadding, dy: 0)
         guard !usable.isNull, !usable.isEmpty else { label.isHidden = true; return }
         let x = center.map { $0 - width / 2 } ?? usable.midX - width / 2
         let frame = CGRect(x: x, y: y, width: width, height: height)
@@ -561,23 +561,32 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         titleMinimumY = axisHeight + 8
         // Only one hierarchy occupies the text rows. Keep labels visible even
         // when a pinch stops exactly between scales; the grid remains continuous.
-        let minimumDayWidth = ceil(("88" as NSString).size(withAttributes: [.font: TimelineAxisTypography.font]).width) + 12
-        let showsDayLabels = weights.level == .days && pointsPerDay >= minimumDayWidth
-        let dayLabelAlpha: CGFloat = showsDayLabels ? max(0.5, weights.days) : 0
-        let periodLabelAlpha: CGFloat = showsDayLabels ? 0 : max(0.5, 1 - weights.days)
+        let axisFont = TimelineAxisTypography.font
+        let dateWidth = (1...31).map {
+            ($0.formatted() as NSString).size(withAttributes: [.font: axisFont]).width
+        }.max() ?? 0
+        let showsDayLabels = pointsPerDay >= ceil(dateWidth) + 4
+        let weekdayWidth = (DateFormatter().shortWeekdaySymbols ?? []).map {
+            ($0 as NSString).size(withAttributes: [.font: axisFont]).width
+        }.max() ?? 0
+        let showsWeekdays = showsDayLabels && pointsPerDay >= ceil(weekdayWidth) + 8 &&
+            axisHeight >= TimelineAxisTypography.height
+        let dayLabelAlpha: CGFloat = showsDayLabels ? 1 : 0
+        let periodLabelAlpha: CGFloat = showsDayLabels ? 0 : 1
+        let needsDayViews = showsDayLabels || weights.days > 0
         contentSize = CGSize(width: scrollWindow.contentWidth,
                              height: max(bounds.height, markerTop + markerHeight + 4))
-        for day in Array(dayViews.keys) where weights.days == 0 || !bufferedDays.contains(day) {
+        for day in Array(dayViews.keys) where !needsDayViews || !bufferedDays.contains(day) {
             dayViews.removeValue(forKey: day)?.removeFromSuperview()
         }
-        for day in bufferedDays where weights.days > 0 {
+        for day in bufferedDays where needsDayViews {
             guard let date = calendar.date(byAdding: .day, value: day, to: anchor) else { continue }
             let dayView = dayViews[day] ?? TimelineDayView()
             if dayViews[day] == nil {
                 dayViews[day] = dayView
                 addSubview(dayView)
             }
-            dayView.configure(date: date, labelAlpha: dayLabelAlpha,
+            dayView.configure(date: date, labelAlpha: dayLabelAlpha, showsWeekday: showsWeekdays,
                               dividerAlpha: max(0, weights.days * 2 - 1) * expansionProgress, axisHeight: axisHeight)
             dayView.frame = CGRect(x: CGFloat(day - scrollWindow.firstDay) * pointsPerDay,
                                    y: 0, width: pointsPerDay, height: expansionProgress > 0 ? contentSize.height : axisHeight)
@@ -712,6 +721,8 @@ private final class TimelineDayView: UIView {
     private let number = UILabel()
     private let dayLine = UIView()
     private var isToday = false
+    private var showsWeekday = true
+    private var showsTodayCircle = false
     private var labelAlpha: CGFloat = 1
     private var axisHeight: CGFloat = TimelineAxisTypography.height
 
@@ -732,33 +743,43 @@ private final class TimelineDayView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(date: Date, labelAlpha: CGFloat, dividerAlpha: CGFloat, axisHeight: CGFloat) {
+    func configure(date: Date, labelAlpha: CGFloat, showsWeekday: Bool, dividerAlpha: CGFloat, axisHeight: CGFloat) {
         weekday.text = date.formatted(.dateTime.weekday(.abbreviated))
         number.text = date.formatted(.dateTime.day())
         self.labelAlpha = labelAlpha
+        self.showsWeekday = showsWeekday
         self.axisHeight = axisHeight
         isToday = Calendar.current.isDateInToday(date)
-        number.backgroundColor = isToday ? tintColor : .clear
-        number.textColor = isToday ? .white : .label
+        updateTodayAppearance()
         accessibilityLabel = date.formatted(date: .complete, time: .omitted)
         dayLine.alpha = dividerAlpha * 0.85
     }
 
     override func tintColorDidChange() {
         super.tintColorDidChange()
-        number.backgroundColor = isToday ? tintColor : .clear
+        updateTodayAppearance()
+    }
+
+    private func updateTodayAppearance() {
+        number.backgroundColor = isToday && showsTodayCircle ? tintColor : .clear
+        number.textColor = isToday ? (showsTodayCircle ? .white : tintColor) : .label
     }
 
     func layoutLabels(in viewport: CGRect) {
         let visible = frame.intersection(viewport).offsetBy(dx: -frame.minX, dy: 0)
         TimelineAxisTypography.place(weekday, in: visible, y: 0, height: TimelineAxisTypography.firstRowHeight,
-                                     alpha: labelAlpha, centeredAt: bounds.midX)
-        TimelineAxisTypography.place(number, in: visible, y: TimelineAxisTypography.firstRowHeight + 4,
-                                     height: TimelineAxisTypography.secondRowHeight, alpha: labelAlpha, centeredAt: bounds.midX)
+                                     alpha: showsWeekday ? labelAlpha : 0, centeredAt: bounds.midX)
+        TimelineAxisTypography.place(number, in: visible, y: axisHeight - TimelineAxisTypography.secondRowHeight,
+                                     height: TimelineAxisTypography.secondRowHeight, alpha: labelAlpha, centeredAt: bounds.midX,
+                                     horizontalPadding: 2)
         let diameter = max(TimelineAxisTypography.secondRowHeight, ceil(number.intrinsicContentSize.width) + 4)
-        number.frame = CGRect(x: bounds.midX - diameter / 2, y: number.frame.minY, width: diameter, height: diameter)
-        number.layer.cornerRadius = diameter / 2
-        number.isHidden = number.isHidden || number.frame.minX < visible.minX + 2 || number.frame.maxX > visible.maxX - 2
+        showsTodayCircle = isToday && diameter + 4 <= bounds.width
+        if showsTodayCircle {
+            number.frame = CGRect(x: bounds.midX - diameter / 2, y: number.frame.minY, width: diameter, height: diameter)
+            number.isHidden = number.isHidden || number.frame.minX < visible.minX + 2 || number.frame.maxX > visible.maxX - 2
+        }
+        number.layer.cornerRadius = showsTodayCircle ? diameter / 2 : 0
+        updateTodayAppearance()
         accessibilityElementsHidden = weekday.isHidden && number.isHidden
         dayLine.frame = CGRect(x: bounds.width - 0.75, y: axisHeight + 8,
                                width: 0.75, height: max(0, bounds.height - axisHeight - 8))

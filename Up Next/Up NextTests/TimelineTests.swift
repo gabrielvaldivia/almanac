@@ -361,20 +361,32 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testCloseWeeklyZoomShowsDateRangesAboveBothSheetSizes() {
+    func testCloseWeeklyZoomKeepsEveryDayUntilNumbersWouldOverlapAboveBothSheetSizes() {
         for height: CGFloat in [100, 600] {
             let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
             timeline.setExpanded(height > 100)
             timeline.layoutIfNeeded()
-            timeline.beginZoom(at: 196)
-            timeline.changeZoom(scale: 0.6, at: 196)
-            timeline.endZoom()
-            timeline.layoutIfNeeded()
-            let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
-                .filter { !$0.isHidden && $0.alpha > 0 }
-            XCTAssertFalse(labels.isEmpty)
-            XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
-                          "Close weekly ticks should display the whole week above either sheet size")
+            for spacing: CGFloat in [26.4, 24, 23, 18] {
+                timeline.beginZoom(at: 196)
+                timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 196)
+                timeline.endZoom()
+                timeline.setDayPosition(0)
+                timeline.layoutIfNeeded()
+                let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
+                    .filter { !$0.isHidden && $0.alpha > 0 }
+                XCTAssertFalse(labels.isEmpty)
+                if spacing >= 23 {
+                    XCTAssertTrue(labels.allSatisfy { Int($0.text ?? "") != nil })
+                    for day in 0..<Int(floor(timeline.bounds.width / spacing)) {
+                        let date = Calendar.current.date(byAdding: .day, value: day, to: timeline.anchor)!
+                        XCTAssertTrue(labels.contains { $0.text == date.formatted(.dateTime.day()) },
+                                      "Every fully visible day must have its number, including today")
+                    }
+                } else {
+                    XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
+                                  "Use weekly ranges once individual day numbers would overlap")
+                }
+            }
         }
     }
 
@@ -389,7 +401,7 @@ final class TimelineTests: XCTestCase {
                     timeline.layoutIfNeeded()
                     // Include the exact week/month blend that previously drew both
                     // month names on top of one another, and densely spaced weekdays.
-                    for spacing: CGFloat in [44, 39, 34, 31, 29, 24, 18, 10, 6.6, 5.3, 4.5, 3.6, 2.8, 44.0 / 30] {
+                    for spacing: CGFloat in [44, 39, 34, 31, 29, 26.4, 24, 23, 22, 21, 20, 18, 10, 6.6, 5.3, 4.5, 3.6, 2.8, 44.0 / 30] {
                         timeline.beginZoom(at: width / 2)
                         timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: width / 2)
                         timeline.endZoom()
