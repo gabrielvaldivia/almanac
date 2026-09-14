@@ -27,22 +27,57 @@ struct TimelineScrollWindow {
     }
 }
 
+enum TimelinePresentation: CaseIterable {
+    case collapsed, compact, expanded
+}
+
+struct TimelinePanelHeights {
+    let compact: CGFloat
+    let expanded: CGFloat
+
+    init(compact: CGFloat, expanded: CGFloat) {
+        self.expanded = max(0, expanded)
+        self.compact = min(max(0, compact), self.expanded)
+    }
+
+    func height(for presentation: TimelinePresentation) -> CGFloat {
+        switch presentation {
+        case .collapsed: return 0
+        case .compact: return compact
+        case .expanded: return expanded
+        }
+    }
+
+    func nearest(to height: CGFloat) -> TimelinePresentation {
+        if height < compact / 2 { return .collapsed }
+        if height > (compact + expanded) / 2 { return .expanded }
+        return .compact
+    }
+}
+
 struct EventTimelineView: View {
     var events: [Event]
     var tint: Color
     var scrollToTodayRequest: UUID?
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
+    var onEditEvent: (Event) -> Void
+    var maximumHeight: CGFloat
+    @Binding var presentation: TimelinePresentation
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var laneCount = 0
-    @State private var isCollapsed = false
     @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
     private var handleDrag: TimelineHandleDrag?
 
     private let topPadding: CGFloat = 4
-    private var expandedHeight: CGFloat { TimelineLayout.height(for: laneCount) + topPadding }
-    private var visibleHeight: CGFloat { handleDrag?.height ?? (isCollapsed ? 0 : expandedHeight) }
+    private var heights: TimelinePanelHeights {
+        TimelinePanelHeights(compact: TimelineLayout.height(for: laneCount) + topPadding,
+                             expanded: maximumHeight)
+    }
+    private var visibleHeight: CGFloat { handleDrag?.height ?? heights.height(for: presentation) }
+    private var isCollapsed: Bool { presentation == .collapsed }
+    private var isExpanded: Bool { presentation == .expanded }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,10 +88,12 @@ struct EventTimelineView: View {
                 animateScrolling: !reduceMotion,
                 onTodayVisibilityChange: onTodayVisibilityChange,
                 onSelectEvent: onSelectEvent,
+                onEditEvent: onEditEvent,
                 onLaneCountChange: { laneCount = $0 },
-                onCollapse: setCollapsed
+                onCollapse: { setPresentation($0 ? .collapsed : .compact) },
+                isExpanded: isExpanded
             )
-            .frame(height: (handleDrag?.expandedHeight ?? expandedHeight) - topPadding)
+            .frame(height: max(0, max(heights.compact, visibleHeight) - topPadding))
             .padding(.top, topPadding)
             .frame(height: visibleHeight, alignment: .top)
             .clipped()
@@ -64,7 +101,7 @@ struct EventTimelineView: View {
             .accessibilityHidden(isCollapsed && handleDrag == nil)
 
             Button {
-                setCollapsed(!isCollapsed)
+                setPresentation(isCollapsed ? .compact : (isExpanded ? .compact : .collapsed))
             } label: {
                 Capsule()
                     .fill(.tertiary)
@@ -74,8 +111,11 @@ struct EventTimelineView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isCollapsed ? "Show timeline" : "Hide timeline")
-            .accessibilityHint(isCollapsed ? "Tap or drag down to reveal the timeline" : "Tap or drag up to hide the timeline")
+            .accessibilityLabel(isCollapsed ? "Show timeline" : (isExpanded ? "Reduce timeline" : "Hide timeline"))
+            .accessibilityHint("Drag down to fill the screen with the timeline. Drag up to show the event list.")
+            .accessibilityValue(isExpanded ? "Full timeline" : (isCollapsed ? "Collapsed" : "Compact"))
+            .accessibilityAction(named: Text("Expand timeline")) { setPresentation(.expanded) }
+            .accessibilityAction(named: Text("Show event list")) { setPresentation(.compact) }
             .accessibilityIdentifier("timelineResizeHandle")
             .highPriorityGesture(handleGesture)
         }
@@ -86,7 +126,7 @@ struct EventTimelineView: View {
             if handleDrag != nil || reduceMotion { transaction.animation = nil }
         }
         .onChange(of: scrollToTodayRequest) {
-            setCollapsed(false)
+            if isCollapsed { setPresentation(.compact) }
         }
     }
 
@@ -96,32 +136,34 @@ struct EventTimelineView: View {
             .updating($handleDrag) { value, state, transaction in
                 if state == nil {
                     guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                    state = TimelineHandleDrag(expandedHeight: expandedHeight,
-                                               startHeight: isCollapsed ? 0 : expandedHeight)
+                    state = TimelineHandleDrag(heights: heights, startHeight: heights.height(for: presentation))
                 }
                 state?.translation = value.translation.height
                 transaction.animation = nil
             }
             .onEnded { value in
-                guard let handleDrag else { return }
-                let projectedHeight = handleDrag.startHeight + value.predictedEndTranslation.height
-                setCollapsed(projectedHeight < handleDrag.expandedHeight / 2)
+                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                // GestureState may already have reset when onEnded runs. The
+                // settled presentation remains the drag's starting position.
+                let stops = handleDrag?.heights ?? heights
+                let startHeight = handleDrag?.startHeight ?? stops.height(for: presentation)
+                setPresentation(stops.nearest(to: startHeight + value.predictedEndTranslation.height))
             }
     }
 
-    private func setCollapsed(_ collapsed: Bool) {
+    private func setPresentation(_ presentation: TimelinePresentation) {
         withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) {
-            isCollapsed = collapsed
+            self.presentation = presentation
         }
     }
 }
 
 private struct TimelineHandleDrag {
-    let expandedHeight: CGFloat
+    let heights: TimelinePanelHeights
     let startHeight: CGFloat
     var translation: CGFloat = 0
 
-    var height: CGFloat { min(expandedHeight, max(0, startHeight + translation)) }
+    var height: CGFloat { min(heights.expanded, max(0, startHeight + translation)) }
 }
 
 private struct TimelineScroller: UIViewRepresentable {
@@ -131,8 +173,10 @@ private struct TimelineScroller: UIViewRepresentable {
     var animateScrolling: Bool
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
+    var onEditEvent: (Event) -> Void
     var onLaneCountChange: (Int) -> Void
     var onCollapse: (Bool) -> Void
+    var isExpanded: Bool
 
     final class Coordinator {
         var lastScrollToTodayRequest: UUID?
@@ -140,17 +184,19 @@ private struct TimelineScroller: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIView(context: Context) -> TimelineScrollView {
-        TimelineScrollView()
+    func makeUIView(context: Context) -> TimelineContainerView {
+        TimelineContainerView()
     }
 
-    func updateUIView(_ scrollView: TimelineScrollView, context: Context) {
-        scrollView.tintColor = UIColor(tint)
-        scrollView.onSelectEvent = onSelectEvent
+    func updateUIView(_ container: TimelineContainerView, context: Context) {
+        let scrollView = container.timeline
+        container.tintColor = UIColor(tint)
+        container.onSelectEvent = onSelectEvent
+        container.onEditEvent = onEditEvent
         scrollView.onLaneCountChange = onLaneCountChange
         scrollView.onCollapse = onCollapse
         scrollView.onTodayVisibilityChange = onTodayVisibilityChange
-        scrollView.update(events: events)
+        container.update(events: events, expanded: isExpanded)
         if let scrollToTodayRequest, context.coordinator.lastScrollToTodayRequest != scrollToTodayRequest {
             context.coordinator.lastScrollToTodayRequest = scrollToTodayRequest
             scrollView.scrollToToday(animated: animateScrolling)
@@ -165,8 +211,10 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var onLaneCountChange: ((Int) -> Void)?
     var onCollapse: ((Bool) -> Void)?
     var onTodayVisibilityChange: ((Bool) -> Void)?
+    var onScrollPositionChange: ((CGFloat) -> Void)?
+    var onBeginDragging: (() -> Void)?
 
-    private let anchor = Calendar.current.startOfDay(for: Date())
+    let anchor = Calendar.current.startOfDay(for: Date())
     private var scrollWindow = TimelineScrollWindow()
     private var events: [Event] = []
     private var indexedEvents: [TimelineEventPlacement] = []
@@ -177,6 +225,35 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var reportedTodayVisibility: Bool?
     private var isLayingOut = false
     private var needsEventLayout = true
+    private var renderedSize: CGSize = .zero
+    private var expanded = false
+    var bottomOverlayHeight: CGFloat = 0
+
+    var dayPosition: CGFloat {
+        CGFloat(scrollWindow.firstDay) + contentOffset.x / TimelineScrollWindow.dayWidth
+    }
+
+    func setDayPosition(_ position: CGFloat) {
+        let index = position - CGFloat(scrollWindow.firstDay)
+        if index < 30 || index > CGFloat(TimelineScrollWindow.dayCount - 30) {
+            scrollWindow.firstDay = Int(floor(position)) - TimelineScrollWindow.centerDay
+            needsEventLayout = true
+        }
+        contentOffset.x = (position - CGFloat(scrollWindow.firstDay)) * TimelineScrollWindow.dayWidth
+        setNeedsLayout()
+    }
+
+    func setExpanded(_ expanded: Bool) {
+        guard self.expanded != expanded else { return }
+        self.expanded = expanded
+        for gesture in gestureRecognizers ?? [] where gesture is UISwipeGestureRecognizer {
+            gesture.isEnabled = !expanded
+        }
+        if !expanded { contentOffset.y = 0 }
+        showsVerticalScrollIndicator = expanded
+        needsEventLayout = true
+        setNeedsLayout()
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -244,27 +321,33 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         isLayingOut = true
         defer { isLayingOut = false }
 
-        contentSize = CGSize(width: scrollWindow.contentWidth, height: bounds.height)
         let oldFirstDay = scrollWindow.firstDay
         let offset = scrollWindow.recenter(offset: contentOffset.x)
         if oldFirstDay != scrollWindow.firstDay {
-            contentOffset = CGPoint(x: offset, y: 0)
+            contentOffset = CGPoint(x: offset, y: contentOffset.y)
             needsEventLayout = true
         }
 
         let visibleDays = scrollWindow.visibleDays(offset: offset, width: bounds.width)
-        guard visibleDays != renderedDays || needsEventLayout else { return }
+        guard visibleDays != renderedDays || needsEventLayout || renderedSize != bounds.size else { return }
         renderedDays = visibleDays
+        renderedSize = bounds.size
         needsEventLayout = false
         render(visibleDays: visibleDays)
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        onScrollPositionChange?(dayPosition)
         setNeedsLayout()
     }
 
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { onBeginDragging?() }
+
     private func render(visibleDays: ClosedRange<Int>) {
         let calendar = Calendar.current
+        let layout = TimelineLayout.make(indexedEvents: indexedEvents, visibleDays: visibleDays)
+        contentSize = CGSize(width: scrollWindow.contentWidth,
+                             height: expanded ? max(bounds.height, TimelineLayout.height(for: layout.laneCount) + bottomOverlayHeight) : bounds.height)
         let bufferedDays = (visibleDays.lowerBound - 1)...(visibleDays.upperBound + 1)
         for day in Array(dayViews.keys) where !bufferedDays.contains(day) {
             dayViews.removeValue(forKey: day)?.removeFromSuperview()
@@ -276,12 +359,11 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 dayViews[day] = dayView
                 addSubview(dayView)
             }
-            dayView.configure(date: date)
+            dayView.configure(date: date, expanded: expanded)
             dayView.frame = CGRect(x: CGFloat(day - scrollWindow.firstDay) * TimelineScrollWindow.dayWidth,
-                                   y: 0, width: TimelineScrollWindow.dayWidth, height: 44)
+                                   y: 0, width: TimelineScrollWindow.dayWidth, height: expanded ? contentSize.height : 44)
         }
 
-        let layout = TimelineLayout.make(indexedEvents: indexedEvents, visibleDays: visibleDays)
         let visibleIDs = Set(layout.placements.map { $0.event.id })
         for id in Array(eventButtons.keys) where !visibleIDs.contains(id) {
             eventButtons.removeValue(forKey: id)?.removeFromSuperview()
@@ -353,6 +435,7 @@ private final class TimelineDayView: UIView {
     private let weekday = UILabel()
     private let number = UILabel()
     private var isToday = false
+    private let dayLine = UIView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -367,17 +450,21 @@ private final class TimelineDayView: UIView {
         number.clipsToBounds = true
         addSubview(weekday)
         addSubview(number)
+        dayLine.backgroundColor = .separator
+        dayLine.alpha = 0.25
+        addSubview(dayLine)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(date: Date) {
+    func configure(date: Date, expanded: Bool) {
         weekday.text = date.formatted(.dateTime.weekday(.abbreviated))
         number.text = date.formatted(.dateTime.day())
         isToday = Calendar.current.isDateInToday(date)
         number.backgroundColor = isToday ? tintColor : .clear
         number.textColor = isToday ? .white : .label
         accessibilityLabel = date.formatted(date: .complete, time: .omitted)
+        dayLine.isHidden = !expanded
     }
 
     override func tintColorDidChange() {
@@ -389,5 +476,6 @@ private final class TimelineDayView: UIView {
         super.layoutSubviews()
         weekday.frame = CGRect(x: 0, y: 0, width: bounds.width, height: 16)
         number.frame = CGRect(x: (bounds.width - 24) / 2, y: 20, width: 24, height: 24)
+        dayLine.frame = CGRect(x: bounds.width - 0.5, y: 52, width: 0.5, height: max(0, bounds.height - 52))
     }
 }

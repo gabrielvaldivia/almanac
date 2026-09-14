@@ -1,6 +1,71 @@
 import XCTest
 
 final class EventFlowTests: XCTestCase {
+    func testExpandTimelineScrollFloatingStacksAndOpenStackedEvent() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let prefix = "Timeline \(UUID().uuidString.prefix(6))"
+        let names = ["\(prefix) Alpha", "\(prefix) Beta", "\(prefix) Later"]
+        let input = app.textFields["quickEventInput"]
+        XCTAssertTrue(input.waitForExistence(timeout: 10))
+        for (index, name) in names.enumerated() {
+            input.tap()
+            input.typeText("\(name) \(index == 2 ? "tomorrow" : "today")")
+            app.buttons["quickAddSubmit"].tap()
+        }
+        if app.buttons["closeQuickEntry"].exists { app.buttons["closeQuickEntry"].tap() }
+
+        let handle = app.buttons["timelineResizeHandle"]
+        XCTAssertTrue(handle.waitForExistence(timeout: 5))
+        let destination = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+        handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: destination)
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "Full timeline"), object: handle)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed)
+
+        let cards = app.scrollViews["timelineEventCards"]
+        XCTAssertTrue(cards.waitForExistence(timeout: 5))
+        XCTAssertTrue(cards.buttons["timelineStackEvents"].firstMatch.isHittable)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Expanded timeline with floating same-day stack"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        let timeline = app.scrollViews["eventTimeline"]
+        let originalDates = timeline.value as? String
+        timeline.swipeLeft()
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", originalDates ?? ""), object: timeline)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        XCTAssertEqual(cards.value as? String, "Page 2 of 2")
+        let movedDates = timeline.value as? String
+        cards.swipeRight()
+        let followedCards = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", movedDates ?? ""), object: timeline)
+        XCTAssertEqual(XCTWaiter.wait(for: [followedCards], timeout: 5), .completed)
+        XCTAssertEqual(cards.value as? String, "Page 1 of 2")
+        let frontCard = cards.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "timelineCard-"))
+            .allElementsBoundByIndex.first { $0.isHittable }
+        XCTAssertNotNil(frontCard)
+        XCTAssertGreaterThanOrEqual(frontCard!.frame.minX, cards.frame.minX)
+        XCTAssertLessThanOrEqual(frontCard!.frame.maxX, cards.frame.maxX)
+        if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
+        cards.buttons["timelineStackEvents"].firstMatch.tap()
+        app.collectionViews.buttons[names[1]].tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["Title"].value as? String, names[1])
+        app.navigationBars["Edit Event"].buttons["Close"].tap()
+
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Compact")
+        for name in names {
+            let title = app.staticTexts[name].firstMatch
+            XCTAssertTrue(title.waitForExistence(timeout: 5))
+            title.tap()
+            app.buttons["Delete Event"].tap()
+            app.alerts["Delete Event"].buttons["Delete this event"].tap()
+        }
+    }
+
     func testBirthdayReviewSelectionSaveAndRepeatedSync() {
         continueAfterFailure = false
         let app = XCUIApplication()

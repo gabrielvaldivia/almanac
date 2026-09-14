@@ -32,6 +32,7 @@ struct ContentView: View {
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
+    @State private var timelinePresentation: TimelinePresentation = .compact
     @State private var scrollToTodayRequest: UUID?
     @State private var eventDetails = EventDetails(
         title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
@@ -113,48 +114,57 @@ struct ContentView: View {
     private var mainContent: some View {
         let days = EventListDay.group(events: timelineEvents)
 
-        return VStack(spacing: 0) {
-            EventTimelineView(
-                events: timelineEvents,
-                tint: categoryTint,
-                scrollToTodayRequest: scrollToTodayRequest,
-                onTodayVisibilityChange: { timelineShowsToday = $0 },
-                onSelectEvent: selectTimelineEvent
-            )
-            Divider()
+        return GeometryReader { geometry in
+            VStack(spacing: 0) {
+                EventTimelineView(
+                    events: timelineEvents,
+                    tint: categoryTint,
+                    scrollToTodayRequest: scrollToTodayRequest,
+                    onTodayVisibilityChange: { timelineShowsToday = $0 },
+                    onSelectEvent: selectTimelineEvent,
+                    onEditEvent: { selectedEvent = $0 },
+                    maximumHeight: max(0, geometry.size.height - 24),
+                    presentation: $timelinePresentation
+                )
+                if timelinePresentation != .expanded {
+                    Divider()
 
-            if days.isEmpty {
-                emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
-            } else {
-                if let visibleDate = eventListPosition ?? EventListDay.initialDate(in: days) {
-                    Text(itemDateFormatter.string(from: visibleDate))
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.vertical, 10)
-                        .background(Color(uiColor: .systemBackground))
-                        .accessibilityAddTraits(.isHeader)
-                }
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(days) { day in
-                            eventRowView(key: day.date.relativeDate(), events: day.events)
+                    if days.isEmpty {
+                        emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
+                    } else {
+                        if let visibleDate = eventListPosition ?? EventListDay.initialDate(in: days) {
+                            Text(itemDateFormatter.string(from: visibleDate))
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal)
-                                .padding(.bottom, 10)
-                                .id(day.date)
+                                .padding(.vertical, 10)
+                                .background(Color(uiColor: .systemBackground))
+                                .accessibilityAddTraits(.isHeader)
                         }
-                        Spacer(minLength: 16)
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(days) { day in
+                                    eventRowView(key: day.date.relativeDate(), events: day.events)
+                                        .padding(.horizontal)
+                                        .padding(.bottom, 10)
+                                        .id(day.date)
+                                }
+                                Spacer(minLength: 16)
+                            }
+                            .scrollTargetLayout()
+                        }
+                        .scrollPosition(id: $eventListPosition, anchor: .top)
+                        .scrollDismissesKeyboard(.interactively)
+                        .background(Color.clear)
+                        .onChange(of: days.map(\.date), initial: true) {
+                            guard !days.contains(where: { $0.date == eventListPosition }) else { return }
+                            eventListPosition = EventListDay.initialDate(in: days)
+                        }
                     }
-                    .scrollTargetLayout()
-                }
-                .scrollPosition(id: $eventListPosition, anchor: .top)
-                .scrollDismissesKeyboard(.interactively)
-                .background(Color.clear)
-                .onChange(of: days.map(\.date), initial: true) {
-                    guard !days.contains(where: { $0.date == eventListPosition }) else { return }
-                    eventListPosition = EventListDay.initialDate(in: days)
                 }
             }
+            .frame(height: geometry.size.height, alignment: .top)
+            .clipped()
         }
         .safeAreaInset(edge: .top) {
             if let error = appData.storageError {
