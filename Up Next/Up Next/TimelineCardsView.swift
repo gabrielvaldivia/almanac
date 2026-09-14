@@ -80,9 +80,8 @@ final class TimelineContainerView: UIView {
             self.onSelectEvent?(event)
         }
         cards.onEditEvent = { [weak self] in self?.onEditEvent?($0) }
-        cards.onStackExpansionChange = { [weak self] in
+        cards.onPreferredHeightChange = { [weak self] in
             self?.setNeedsLayout()
-            self?.layoutIfNeeded()
         }
     }
 
@@ -109,7 +108,7 @@ final class TimelineContainerView: UIView {
         monthLabel.frame = CGRect(x: 16, y: 0, width: max(0, bounds.width - 32), height: headerHeight)
         timeline.frame = CGRect(x: 0, y: headerHeight, width: bounds.width, height: max(0, bounds.height - headerHeight))
         updateMonth()
-        let cardHeight = min(max(0, bounds.height - 52), cards.preferredHeight)
+        let cardHeight = cards.preferredHeight(for: bounds.width, maximumHeight: max(0, bounds.height - 52))
         cards.frame = CGRect(x: 0, y: bounds.height - cardHeight, width: bounds.width, height: cardHeight)
         emptyLabel.frame = CGRect(x: 16, y: max(52, bounds.height - 80), width: max(0, bounds.width - 32), height: 44)
         timeline.bottomOverlayHeight = expanded ? cardHeight : 0
@@ -140,13 +139,31 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
             for stack in stacks.values { stack.setHighlighted(eventID: highlightedEventID) }
         }
     }
-    var onStackExpansionChange: (() -> Void)?
+    var onPreferredHeightChange: (() -> Void)?
     private(set) var expandedDate: Date?
-    var preferredHeight: CGFloat {
-        guard let group = groups.first(where: { $0.date == expandedDate }) else {
-            return TimelineCardStackView.preferredHeight
+
+    func preferredHeight(for viewportWidth: CGFloat, maximumHeight: CGFloat) -> CGFloat {
+        let width = min(420, max(0, viewportWidth - 32))
+        if let group = groups.first(where: { $0.date == expandedDate }) {
+            var height: CGFloat = 56
+            for event in group.events {
+                height += TimelineEventCardLayout(event: event, width: width, traits: traitCollection).height + 12
+                // Busy days scroll vertically; only measure enough rows to fill the viewport.
+                if height >= maximumHeight { return maximumHeight }
+            }
+            return height
         }
-        return 56 + CGFloat(group.events.count) * (TimelineEventCardView.preferredHeight + 12)
+        guard !groups.isEmpty else { return 0 }
+        let position = needsPageLayout ? round(positions.fraction(for: currentDay)) : contentOffset.x / pitch
+        let first = min(groups.count - 1, max(0, Int(floor(position))))
+        let last = min(groups.count - 1, max(first, Int(ceil(position))))
+        // During a swipe, both neighboring cards need room for their full content.
+        let height = groups[first...last].map { group in
+            let front = group.events.first(where: { $0.id == selectedEvents[group.date] }) ?? group.events[0]
+            return TimelineEventCardLayout(event: front, width: width, stackCount: group.events.count,
+                                           traits: traitCollection).height + 40
+        }.max() ?? 0
+        return min(maximumHeight, height)
     }
     private(set) var groups: [EventListDay] = []
     private var positions = TimelineCardPositions(days: [])
@@ -177,6 +194,10 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
         scrollsToTop = false
         backgroundColor = .clear
         accessibilityIdentifier = "timelineEventCards"
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: TimelineCardsScrollView, _) in
+            view.onPreferredHeightChange?()
+            view.setNeedsLayout()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -218,6 +239,7 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
         if let expandedDate, groups.indices.contains(page), groups[page].date != expandedDate { collapseStack() }
         guard page != targetPage else { return }
         targetPage = page
+        onPreferredHeightChange?()
         applyingPosition = true
         setContentOffset(CGPoint(x: CGFloat(page) * pitch, y: 0),
                          animated: animated && window != nil && !UIAccessibility.isReduceMotionEnabled)
@@ -229,11 +251,13 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
         guard let index = groups.firstIndex(where: { $0.events.contains { $0.id == event.id } }) else { return }
         if let expandedDate, expandedDate != groups[index].date { collapseStack() }
         selectedEvents[groups[index].date] = event.id
+        onPreferredHeightChange?()
         followingTimeline = false
         targetPage = nil
         // Moving the cards also moves the timeline to this day.
         setContentOffset(CGPoint(x: CGFloat(index) * pitch, y: 0), animated: !UIAccessibility.isReduceMotionEnabled)
         setNeedsLayout()
+        superview?.layoutIfNeeded()
         layoutIfNeeded()
         stacks[groups[index].date]?.show(event: event)
     }
@@ -243,7 +267,8 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
         stopScrolling()
         expandedDate = expandedDate == date ? nil : date
         setNeedsLayout()
-        onStackExpansionChange?()
+        onPreferredHeightChange?()
+        superview?.layoutIfNeeded()
         layoutIfNeeded()
         UISelectionFeedbackGenerator().selectionChanged()
         if expandedDate != nil { stacks[date]?.animateExpansion() }
@@ -253,7 +278,7 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
         guard expandedDate != nil else { return }
         expandedDate = nil
         setNeedsLayout()
-        onStackExpansionChange?()
+        onPreferredHeightChange?()
     }
 
     override func layoutSubviews() {
@@ -297,6 +322,7 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
             currentDay = day
             onDayPositionChange?(day)
         }
+        if !applyingPosition { onPreferredHeightChange?() }
         setNeedsLayout()
     }
 
@@ -309,8 +335,7 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
 
 }
 
-private final class TimelineCardStackView: UIView, UITableViewDataSource {
-    static var preferredHeight: CGFloat { TimelineEventCardView.preferredHeight + 40 }
+private final class TimelineCardStackView: UIView, UITableViewDataSource, UITableViewDelegate {
     var onEditEvent: ((Event) -> Void)?
     var onToggleStack: (() -> Void)?
     private let backCards = [UIView(), UIView()]
@@ -320,6 +345,9 @@ private final class TimelineCardStackView: UIView, UITableViewDataSource {
     private var group: EventListDay?
     private var expanded = false
     private var highlightedEventID: UUID?
+    private var rowHeights: [UUID: CGFloat] = [:]
+    private var measuredWidth: CGFloat = 0
+    private var measuredTextSize: UIContentSizeCategory?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -337,8 +365,9 @@ private final class TimelineCardStackView: UIView, UITableViewDataSource {
         }
         frontCard.onToggleStack = { [weak self] in self?.onToggleStack?() }
         table.dataSource = self
+        table.delegate = self
         table.register(TimelineEventCardCell.self, forCellReuseIdentifier: "event")
-        table.rowHeight = TimelineEventCardView.preferredHeight + 12
+        table.estimatedRowHeight = 0
         table.separatorStyle = .none
         table.backgroundColor = .clear
         table.contentInset = UIEdgeInsets(top: 8, left: 0, bottom: 4, right: 0)
@@ -370,7 +399,7 @@ private final class TimelineCardStackView: UIView, UITableViewDataSource {
         table.isHidden = !expanded
         collapseButton.isHidden = !expanded
         collapseButton.setTitle("\(group.events.count) events  ", for: .normal)
-        if changed { table.reloadData() }
+        if changed { rowHeights.removeAll(); table.reloadData() }
         setNeedsLayout()
     }
 
@@ -402,8 +431,15 @@ private final class TimelineCardStackView: UIView, UITableViewDataSource {
     override func layoutSubviews() {
         super.layoutSubviews()
         let width = min(420, max(0, bounds.width - 32))
-        let frontFrame = CGRect(x: (bounds.width - width) / 2, y: bounds.height - Self.preferredHeight + 24,
-                                width: width, height: TimelineEventCardView.preferredHeight)
+        let height = frontCard.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+        let frontFrame = CGRect(x: (bounds.width - width) / 2, y: bounds.height - height - 16,
+                                width: width, height: height)
+        if measuredWidth != width || measuredTextSize != traitCollection.preferredContentSizeCategory {
+            measuredWidth = width
+            measuredTextSize = traitCollection.preferredContentSizeCategory
+            rowHeights.removeAll()
+            table.reloadData()
+        }
         for (index, card) in backCards.enumerated() {
             let inset = CGFloat(2 - index) * 7
             card.frame = frontFrame.insetBy(dx: inset, dy: 0).offsetBy(dx: 0, dy: -inset)
@@ -416,6 +452,15 @@ private final class TimelineCardStackView: UIView, UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { group?.events.count ?? 0 }
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        guard let event = group?.events[indexPath.row] else { return 0 }
+        if let height = rowHeights[event.id] { return height }
+        let width = min(420, max(0, bounds.width - 32))
+        let height = TimelineEventCardLayout(event: event, width: width, traits: traitCollection).height + 12
+        rowHeights[event.id] = height
+        return height
+    }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "event", for: indexPath) as! TimelineEventCardCell
@@ -457,16 +502,16 @@ private final class TimelineEventCardCell: UITableViewCell {
 }
 
 private final class TimelineEventCardView: UIView {
-    static var preferredHeight: CGFloat { UIFontMetrics(forTextStyle: .body).scaledValue(for: 168) - 8 }
     var onTap: ((Event) -> Void)?
     var onToggleStack: (() -> Void)?
     private let editButton = UIButton(type: .custom)
-    private let dateLabel = UILabel()
+    private let countdownLabel = UILabel()
     private let titleLabel = UILabel()
     private let detailLabel = UILabel()
     private let colorLine = UIView()
     private let countButton = UIButton(type: .system)
     private var event: Event?
+    private var stackCount = 1
 
     static func style(_ card: UIView) {
         card.backgroundColor = .secondarySystemGroupedBackground
@@ -484,16 +529,17 @@ private final class TimelineEventCardView: UIView {
         Self.style(self)
         addSubview(editButton)
         addSubview(countButton)
-        for label in [dateLabel, titleLabel, detailLabel] { editButton.addSubview(label) }
+        for label in [countdownLabel, titleLabel, detailLabel] { editButton.addSubview(label) }
         editButton.addSubview(colorLine)
-        dateLabel.font = .preferredFont(forTextStyle: .caption1)
-        dateLabel.textColor = .secondaryLabel
+        countdownLabel.font = .preferredFont(forTextStyle: .caption1)
+        countdownLabel.textColor = .secondaryLabel
+        countdownLabel.numberOfLines = 0
         titleLabel.font = .preferredFont(forTextStyle: .headline)
-        titleLabel.numberOfLines = 2
+        titleLabel.numberOfLines = 0
         detailLabel.font = .preferredFont(forTextStyle: .footnote)
         detailLabel.textColor = .secondaryLabel
-        detailLabel.numberOfLines = 2
-        for label in [dateLabel, titleLabel, detailLabel] { label.adjustsFontForContentSizeCategory = true }
+        detailLabel.numberOfLines = 0
+        for label in [countdownLabel, titleLabel, detailLabel] { label.adjustsFontForContentSizeCategory = true }
         colorLine.layer.cornerRadius = 2
         editButton.addTarget(self, action: #selector(tapEvent), for: .touchUpInside)
         countButton.titleLabel?.font = .preferredFont(forTextStyle: .caption1)
@@ -514,36 +560,87 @@ private final class TimelineEventCardView: UIView {
 
     func configure(event: Event, date: Date, stackCount: Int = 1) {
         self.event = event
+        self.stackCount = stackCount
         titleLabel.text = event.title
-        dateLabel.text = date.formatted(.dateTime.month(.abbreviated).day().year())
+        countdownLabel.text = event.date.relativeDate(to: event.endDate)
         detailLabel.text = EventDateText.range(start: event.date, end: event.endDate, reference: Date())
         colorLine.backgroundColor = UIColor(event.color.color)
         countButton.isHidden = stackCount < 2
         countButton.setTitle("\(stackCount) events", for: .normal)
-        countButton.accessibilityLabel = "Show all \(stackCount) events on \(dateLabel.text ?? "this day")"
+        countButton.accessibilityLabel = "Show all \(stackCount) events on \(date.formatted(date: .abbreviated, time: .omitted))"
         countButton.accessibilityIdentifier = "timelineStackEvents"
         editButton.accessibilityLabel = event.title
-        editButton.accessibilityValue = "\(dateLabel.text ?? ""), \(detailLabel.text ?? "")"
+        editButton.accessibilityValue = "\(countdownLabel.text ?? ""), \(detailLabel.text ?? "")"
         editButton.accessibilityHint = stackCount > 1 ? "Expand event stack" : "Edit event"
         editButton.accessibilityIdentifier = "timelineCard-\(event.id.uuidString)"
         setNeedsLayout()
     }
 
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
+        guard let event else { return .zero }
+        let layout = TimelineEventCardLayout(event: event, width: size.width, stackCount: stackCount, traits: traitCollection)
+        return CGSize(width: size.width, height: layout.height)
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        guard let event else { return }
+        let layout = TimelineEventCardLayout(event: event, width: bounds.width, stackCount: stackCount, traits: traitCollection)
         layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: 20).cgPath
         editButton.frame = bounds
-        let captionHeight = ceil(dateLabel.font.lineHeight)
-        countButton.frame = CGRect(x: max(0, bounds.width - 100), y: 2, width: 88, height: 44)
-        dateLabel.frame = CGRect(x: 16, y: 16, width: max(0, bounds.width - (countButton.isHidden ? 32 : 116)), height: captionHeight)
-        let titleY = 16 + captionHeight + 12
-        let titleHeight = min(titleLabel.font.lineHeight * 2, max(0, bounds.height - titleY - detailLabel.font.lineHeight * 2 - 24))
-        titleLabel.frame = CGRect(x: 28, y: titleY, width: max(0, bounds.width - 44), height: titleHeight)
-        detailLabel.frame = CGRect(x: 28, y: titleLabel.frame.maxY + 4, width: max(0, bounds.width - 44),
-                                  height: max(0, bounds.height - titleLabel.frame.maxY - 20))
-        colorLine.frame = CGRect(x: 16, y: titleY, width: 3, height: max(0, bounds.height - titleY - 16))
+        countdownLabel.font = layout.countdownFont
+        titleLabel.font = layout.titleFont
+        detailLabel.font = layout.detailFont
+        countButton.titleLabel?.font = layout.countdownFont
+        countdownLabel.frame = layout.countdown
+        titleLabel.frame = layout.title
+        detailLabel.frame = layout.detail
+        countButton.frame = layout.countButton
+        colorLine.frame = CGRect(x: 16, y: layout.title.minY, width: 3,
+                                 height: layout.detail.maxY - layout.title.minY)
     }
 
     @objc private func tapEvent() { if let event { onTap?(event) } }
     @objc private func toggleStack() { onToggleStack?() }
+}
+
+/// Shared text measurements keep carousel cards and vertical rows fitted to the
+/// same content, including wrapped titles, date ranges, and Dynamic Type.
+struct TimelineEventCardLayout {
+    let countdownFont: UIFont
+    let titleFont: UIFont
+    let detailFont: UIFont
+    let countdown: CGRect
+    let title: CGRect
+    let detail: CGRect
+    let countButton: CGRect
+    var height: CGFloat { detail.maxY + 12 }
+
+    init(event: Event, width: CGFloat, stackCount: Int = 1, traits: UITraitCollection, now: Date = Date()) {
+        countdownFont = .preferredFont(forTextStyle: .caption1, compatibleWith: traits)
+        titleFont = UIFontMetrics(forTextStyle: .headline).scaledFont(
+            for: .systemFont(ofSize: 17, weight: .medium), compatibleWith: traits)
+        detailFont = .preferredFont(forTextStyle: .footnote, compatibleWith: traits)
+        let countWidth = stackCount > 1
+            ? max(88, ceil(("\(stackCount) events" as NSString).size(withAttributes: [.font: countdownFont]).width) + 16) : 0
+        let captionWidth = max(1, width - 32 - countWidth)
+        countdown = CGRect(x: 16, y: 12, width: captionWidth,
+                           height: Self.textHeight(event.date.relativeDate(to: event.endDate, now: now),
+                                                   font: countdownFont, width: captionWidth))
+        let textWidth = max(1, width - 44)
+        title = CGRect(x: 28, y: countdown.maxY + 8, width: textWidth,
+                       height: Self.textHeight(event.title, font: titleFont, width: textWidth))
+        detail = CGRect(x: 28, y: title.maxY + 4, width: textWidth,
+                        height: Self.textHeight(EventDateText.range(start: event.date, end: event.endDate, reference: now),
+                                                font: detailFont, width: textWidth))
+        countButton = CGRect(x: max(0, width - countWidth - 4), y: max(0, countdown.midY - 22),
+                             width: countWidth, height: 44)
+    }
+
+    private static func textHeight(_ text: String, font: UIFont, width: CGFloat) -> CGFloat {
+        let bounds = (text as NSString).boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                                                   options: [.usesLineFragmentOrigin, .usesFontLeading],
+                                                   attributes: [.font: font], context: nil)
+        return ceil(max(font.lineHeight, bounds.height))
+    }
 }

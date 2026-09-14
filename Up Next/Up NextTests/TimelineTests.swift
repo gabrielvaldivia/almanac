@@ -105,6 +105,63 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testCardsFitShortAndWrappedTitlesAndResizeWhilePaging() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let short = Event(title: "Dinner", date: Calendar.current.date(byAdding: .day, value: 3, to: today)!,
+                          color: CodableColor(color: .blue))
+        let long = Event(title: "A weekend away with friends to celebrate a birthday and explore the mountains",
+                         date: Calendar.current.date(byAdding: .day, value: 4, to: today)!,
+                         endDate: Calendar.current.date(byAdding: .day, value: 8, to: today)!, color: CodableColor(color: .blue))
+        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
+        container.update(events: [short, long], expanded: true)
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        func descendants(_ view: UIView) -> [UIView] { view.subviews.flatMap { [$0] + descendants($0) } }
+        func card(_ event: Event) -> UIButton {
+            descendants(container.cards).compactMap { $0 as? UIButton }.first {
+                $0.accessibilityIdentifier == "timelineCard-\(event.id.uuidString)"
+            }!
+        }
+        layoutTree(container)
+        let shortCard = card(short)
+        let shortHeight = shortCard.bounds.height
+        XCTAssertLessThan(shortHeight, 120)
+        XCTAssertTrue(shortCard.accessibilityValue?.hasPrefix("in 3 days,") == true)
+        let labels = shortCard.subviews.compactMap { $0 as? UILabel }
+        let title = labels.first { $0.text == short.title }!
+        let date = labels.first { $0.text == EventDateText.range(start: short.date, end: nil) }!
+        XCTAssertLessThanOrEqual(date.frame.minY - title.frame.maxY, 6)
+        XCTAssertLessThanOrEqual(shortHeight - date.frame.maxY, 16)
+
+        container.cards.setDayPosition(4, animated: false)
+        layoutTree(container)
+        let longCard = card(long)
+        XCTAssertGreaterThan(longCard.bounds.height, shortHeight)
+        XCTAssertGreaterThanOrEqual(container.cards.bounds.height, longCard.bounds.height)
+        let longTitle = longCard.subviews.compactMap { $0 as? UILabel }.first { $0.text == long.title }!
+        XCTAssertGreaterThan(longTitle.bounds.height, longTitle.font.lineHeight * 2)
+        XCTAssertGreaterThanOrEqual(longTitle.bounds.height + 1,
+                                   longTitle.sizeThatFits(CGSize(width: longTitle.bounds.width, height: .greatestFiniteMagnitude)).height)
+        let narrowHeight = longCard.bounds.height
+        container.frame.size.width = 600
+        layoutTree(container)
+        XCTAssertLessThanOrEqual(card(long).bounds.height, narrowHeight)
+        container.cards.setDayPosition(3, animated: false)
+        layoutTree(container)
+        XCTAssertEqual(card(short).bounds.height, shortHeight)
+    }
+
+    func testCardContentGrowsWithAccessibilityTextSize() {
+        let event = Event(title: "A long event title that needs room to wrap", date: Date(), color: CodableColor(color: .blue))
+        let regular = TimelineEventCardLayout(event: event, width: 361,
+                                              traits: UITraitCollection(preferredContentSizeCategory: .large))
+        let accessible = TimelineEventCardLayout(event: event, width: 361,
+                                                 traits: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge))
+        XCTAssertGreaterThan(accessible.height, regular.height)
+        XCTAssertGreaterThan(accessible.title.height, regular.title.height)
+        XCTAssertLessThanOrEqual(accessible.title.maxY, accessible.detail.minY)
+    }
+
+    @MainActor
     func testExpandedStackScrollsManyEventsWithoutMovingTimelineAndCollapsesWhenLeavingDay() {
         let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
         let today = Calendar.current.startOfDay(for: Date())

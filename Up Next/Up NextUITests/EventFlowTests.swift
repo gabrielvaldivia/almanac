@@ -11,7 +11,7 @@ final class EventFlowTests: XCTestCase {
         for (index, name) in names.enumerated() {
             openComposer(app)
             input.tap()
-            input.typeText("\(name) \(index == 2 ? "tomorrow" : "today")")
+            input.typeText("\(name) \(index == 2 ? "in 3 days" : "today")")
             app.buttons["quickAddSubmit"].tap()
         }
 
@@ -37,6 +37,13 @@ final class EventFlowTests: XCTestCase {
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", originalDates ?? ""), object: timeline)
         XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
         XCTAssertEqual(cards.value as? String, "Page 2 of 2")
+        let laterCard = cards.buttons[names[2]]
+        XCTAssertTrue((laterCard.value as? String)?.hasPrefix("in 3 days,") == true)
+        XCTAssertLessThan(laterCard.frame.height, 120)
+        let compactCard = XCTAttachment(screenshot: app.screenshot())
+        compactCard.name = "Content-fitted timeline card with relative countdown"
+        compactCard.lifetime = .keepAlways
+        add(compactCard)
         let movedDates = timeline.value as? String
         cards.swipeRight()
         let followedCards = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", movedDates ?? ""), object: timeline)
