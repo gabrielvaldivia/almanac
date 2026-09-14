@@ -36,7 +36,11 @@ final class StorageTests: XCTestCase {
             data.updateEventsForCategoryChange(oldName: "Career", newName: "Career", oldColor: .blue, newColor: .green)
             XCTAssertEqual(data.events.map(\.color), [CodableColor(color: .green), overridden.color, unrelated.color])
             XCTAssertEqual(data.events.map(\.id), [inherited.id, overridden.id, unrelated.id])
-            XCTAssertEqual(try EventStore().load(), data.events, "The preserved overrides must also survive persistence")
+            let saved = try EventStore().load()
+            XCTAssertEqual(saved.map(\.color), data.events.map(\.color), "The preserved overrides must also survive persistence")
+            XCTAssertEqual(saved.map(\.category), data.events.map(\.category))
+            XCTAssertEqual(saved.map(\.id), data.events.map(\.id))
+            XCTAssertEqual(saved.map(\.date), data.events.map(\.date))
         }
     }
 

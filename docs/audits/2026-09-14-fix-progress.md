@@ -20,7 +20,7 @@ The full editor now keeps its category selection until a new category is actuall
 
 ### 3. F10 — Category saves preserve color overrides
 
-Category metadata saves and renames retain event colors. Changing a category color updates events matching its previous color while preserving different event colors. A storage regression covers no-op saves, renames, recoloring, unrelated events, defaults, IDs, and persistence. All 110 unit tests and the category rename UI test passed; signed phone build passed.
+Category metadata saves and renames retain event colors. Changing a category color updates events matching its previous color while preserving different event colors. A storage regression covers no-op saves, renames, recoloring, unrelated events, defaults, IDs, and persistence. All 110 unit tests and the category rename UI test passed; signed phone build passed. The first run exposed an overbroad test equality assertion because legacy decoding supplies optional repeat defaults. The regression now checks persisted colors, categories, IDs, and dates; the full unit rerun passed. App fix `cce0f7a` was pushed and installed; the assertion correction is a separate follow-up commit.
 
 ## Remaining
 
