@@ -48,8 +48,22 @@ final class EventFlowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(frontCard!.frame.minX, cards.frame.minX)
         XCTAssertLessThanOrEqual(frontCard!.frame.maxX, cards.frame.maxX)
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
+        frontCard!.tap()
+        let verticalCards = cards.tables["timelineExpandedStack"]
+        XCTAssertTrue(verticalCards.waitForExistence(timeout: 5))
+        let first = verticalCards.buttons[names[0]]
+        let second = verticalCards.buttons[names[1]]
+        XCTAssertTrue(first.isHittable)
+        XCTAssertTrue(second.isHittable)
+        XCTAssertTrue(first.frame.maxY <= second.frame.minY || second.frame.maxY <= first.frame.minY)
+        let verticalScreenshot = XCTAttachment(screenshot: app.screenshot())
+        verticalScreenshot.name = "Same-day stack arranged vertically"
+        verticalScreenshot.lifetime = .keepAlways
+        add(verticalScreenshot)
+        cards.buttons["timelineCollapseStack"].firstMatch.tap()
+        XCTAssertFalse(verticalCards.isHittable)
         cards.buttons["timelineStackEvents"].firstMatch.tap()
-        app.collectionViews.buttons[names[1]].tap()
+        second.tap()
         XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.textFields["Title"].value as? String, names[1])
         app.navigationBars["Edit Event"].buttons["Close"].tap()

@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import Up_Next
 
 final class TimelineTests: XCTestCase {
@@ -101,6 +102,56 @@ final class TimelineTests: XCTestCase {
         container.update(events: events, expanded: false)
         XCTAssertTrue(container.cards.isHidden)
         XCTAssertTrue(container.timeline.isTodayVisible)
+    }
+
+    @MainActor
+    func testExpandedStackScrollsManyEventsWithoutMovingTimelineAndCollapsesWhenLeavingDay() {
+        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
+        let today = Calendar.current.startOfDay(for: Date())
+        let events = (0..<1000).map { index in
+            Event(title: "Same day \(index)", date: today, color: CodableColor(color: .blue))
+        }
+        let later = Event(title: "Later", date: Calendar.current.date(byAdding: .day, value: 10, to: today)!,
+                          color: CodableColor(color: .blue))
+        container.update(events: events + [later], expanded: true)
+        container.layoutIfNeeded()
+        container.cards.layoutIfNeeded()
+        let collapsedHeight = container.cards.bounds.height
+        let day = container.timeline.dayPosition
+        container.cards.toggleStack(for: today)
+        container.layoutIfNeeded()
+        container.cards.layoutIfNeeded()
+        XCTAssertEqual(container.cards.expandedDate, today)
+        XCTAssertGreaterThan(container.cards.bounds.height, collapsedHeight)
+        XCTAssertLessThanOrEqual(container.cards.bounds.height, container.bounds.height - 52)
+        XCTAssertEqual(container.timeline.dayPosition, day, accuracy: 0.001)
+
+        func descendants(_ view: UIView) -> [UIView] { view.subviews.flatMap { [$0] + descendants($0) } }
+        let table = descendants(container.cards).compactMap { $0 as? UITableView }.first { !$0.isHidden }!
+        table.superview?.layoutIfNeeded()
+        table.layoutIfNeeded()
+        XCTAssertEqual(table.numberOfRows(inSection: 0), 1000)
+        XCTAssertLessThan(table.visibleCells.count, 10)
+        table.scrollToRow(at: IndexPath(row: 999, section: 0), at: .bottom, animated: false)
+        table.layoutIfNeeded()
+        let lastEvent = container.cards.groups[0].events.last!
+        let button = descendants(table).compactMap { $0 as? UIButton }.first {
+            $0.accessibilityIdentifier == "timelineCard-\(lastEvent.id.uuidString)"
+        }!
+        var editedID: UUID?
+        container.onEditEvent = { editedID = $0.id }
+        button.sendActions(for: .touchUpInside)
+        XCTAssertEqual(editedID, lastEvent.id)
+        XCTAssertEqual(container.timeline.dayPosition, day, accuracy: 0.001)
+
+        container.timeline.setDayPosition(10)
+        container.layoutIfNeeded()
+        XCTAssertNil(container.cards.expandedDate)
+        XCTAssertEqual(container.cards.bounds.height, collapsedHeight)
+        container.cards.setDayPosition(0, animated: false)
+        container.cards.toggleStack(for: today)
+        container.update(events: [later], expanded: true)
+        XCTAssertNil(container.cards.expandedDate, "Filtering away a group must clear its expansion")
     }
 
     @MainActor
