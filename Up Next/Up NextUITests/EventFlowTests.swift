@@ -210,7 +210,17 @@ final class EventFlowTests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
+        let list = app.scrollViews["eventList"]
+        let timeline = app.scrollViews["eventTimeline"]
+        waitForTimelineLayout(timeline)
+        let listFrame = list.frame
+        let timelineFrame = timeline.frame
         openComposer(app)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(list.frame.minY, listFrame.minY, accuracy: 1)
+        XCTAssertEqual(list.frame.maxY, listFrame.maxY, accuracy: 1,
+                       "The list must remain extended behind the keyboard instead of exposing the black timeline background")
+        XCTAssertEqual(timeline.frame.height, timelineFrame.height, accuracy: 1)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
         input.typeText("Dinner #Work tomorrow")
         let color = app.buttons["quickEventColor"]
@@ -229,8 +239,11 @@ final class EventFlowTests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
         XCTAssertFalse(app.buttons["manualEventInput"].exists)
-        let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
+        let handle = app.buttons["quickEntryDragHandle"]
+        XCTAssertTrue(handle.isHittable)
+        XCTAssertLessThan(handle.frame.maxY, input.frame.minY)
+        let handleCenter = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        handleCenter.press(forDuration: 0.05, thenDragTo: handleCenter.withOffset(CGVector(dx: 0, dy: 100)))
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)
         openComposer(app)
@@ -244,6 +257,10 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)
         XCTAssertFalse(app.keyboards.firstMatch.exists)
+        openComposer(app)
+        let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         openComposer(app)
         app.staticTexts["appTitle"].tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))

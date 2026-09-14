@@ -52,6 +52,19 @@ struct QuickAddEventField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Button(action: onDismiss) {
+                Capsule()
+                    .fill(Color(uiColor: .tertiaryLabel))
+                    .frame(width: 32, height: 4)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Collapse event entry")
+            .accessibilityHint("Swipe down or double-tap to return to the add button. Your draft is kept.")
+            .accessibilityIdentifier("quickEntryDragHandle")
+
             HStack(alignment: .center, spacing: 4) {
                 colorMenu
                 TextField("Add an event, like Dune 12/18", text: $text, axis: .vertical)
@@ -103,14 +116,6 @@ struct QuickAddEventField: View {
             }
         }
         .padding(8)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 20)
-                .onEnded { value in
-                    if value.translation.height > 30 && value.translation.height > abs(value.translation.width) {
-                        onDismiss()
-                    }
-                }
-        )
         .accessibilityAction(named: "Collapse event entry", onDismiss)
         .sheet(item: $dateDraft) { draft in
             QuickDateEditor(options: draft.options) { date, endDate in

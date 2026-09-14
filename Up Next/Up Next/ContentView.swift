@@ -15,6 +15,7 @@ struct ContentView: View {
     // State variables to manage the view's state
     @State private var quickEventInput: String = ""
     @State private var showingQuickEntry = false
+    @State private var quickEntryDragOffset: CGFloat = 0
     @Namespace private var composerTransition
     @State private var quickEventOverrides = QuickEventOverrides()
     @State private var attemptedQuickSubmit = false
@@ -83,11 +84,17 @@ struct ContentView: View {
         }
     }
 
+    private var eventListBackground: Color {
+        Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground)
+    }
+
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottom) {
                 mainContent
-                    .ignoresSafeArea(.container, edges: .bottom)
+                    // Keep the list underneath the keyboard throughout its
+                    // animation; only the floating composer moves above it.
+                    .ignoresSafeArea(.all, edges: .bottom)
                 if showingQuickEntry {
                     Color.clear
                         .contentShape(Rectangle())
@@ -100,6 +107,7 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
             }
+            .background(eventListBackground.ignoresSafeArea())
         }
         .sheet(item: $selectedEvent) { event in
             EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
@@ -132,6 +140,8 @@ struct ContentView: View {
                 )
                 .disabled(appData.storageError != nil)
                 .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition))
+                .offset(y: quickEntryDragOffset)
+                .simultaneousGesture(quickEntryDismissGesture)
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
             } else {
@@ -155,6 +165,22 @@ struct ContentView: View {
                 .accessibilityIdentifier("quickAddButton")
             }
         }
+    }
+
+    private var quickEntryDismissGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard value.translation.height > abs(value.translation.width) else { return }
+                quickEntryDragOffset = max(0, value.translation.height)
+            }
+            .onEnded { value in
+                let isDownward = value.translation.height > abs(value.translation.width)
+                if isDownward && (value.translation.height > 40 || value.predictedEndTranslation.height > 100) {
+                    dismissQuickEntry()
+                } else {
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { quickEntryDragOffset = 0 }
+                }
+            }
     }
 
     private var mainContent: some View {
@@ -185,15 +211,15 @@ struct ContentView: View {
                         }
                     }
                 )
-                // Keep the list usable on crowded dates and with the keyboard
-                // open; overflowing event lanes can scroll inside the timeline.
+                // Keep the list usable on crowded dates; overflowing event
+                // lanes can scroll inside the timeline.
                 .frame(height: min(timelineHeight, max(80, geometry.size.height * 0.5)))
                 .background(Color.black)
                 .environment(\.colorScheme, .dark)
 
                 eventList(days: days)
                     .frame(maxHeight: .infinity, alignment: .top)
-                    .background(Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground))
+                    .background(eventListBackground)
                     .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28))
             }
             .background(Color.black)
@@ -441,12 +467,15 @@ struct ContentView: View {
         quickEventInput = ""
         quickEventOverrides = QuickEventOverrides()
         attemptedQuickSubmit = false
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
+        dismissQuickEntry()
     }
 
     private func dismissQuickEntry() {
         isQuickEntryFocused = false
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+            showingQuickEntry = false
+            quickEntryDragOffset = 0
+        }
     }
 
     private var quickEventDraft: NewEventDraft {
