@@ -50,4 +50,26 @@ final class RecurrenceTests: XCTestCase {
         let edited = EventSeries.updating(events[1], with: updated, in: events, calendar: calendar)
         XCTAssertEqual(edited.map(\.id), Array(events.prefix(2)).map(\.id))
     }
+
+    func testMaximumSizeSeriesMetadataEditPreservesOccurrenceIdentityAndExceptions() {
+        var event = seed(.daily, date(2030, 1, 1))
+        event.repeatUntilCount = 10000
+        event.endDate = date(2030, 1, 3)
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        events[100].isRecurrenceException = true
+        events[100].date = date(2029, 12, 1)
+        let unrelated = Event(title: "Unrelated", date: event.date, color: CodableColor(color: .orange))
+        events.insert(unrelated, at: 5000)
+        var replacement = events[9000]
+        replacement.title = "Renamed"
+        let start = ProcessInfo.processInfo.systemUptime
+        let updated = EventSeries.updating(events[9000], with: replacement, in: events, calendar: calendar)
+        print("Series metadata edit, 10000 occurrences: \(ProcessInfo.processInfo.systemUptime - start) seconds")
+        XCTAssertEqual(updated.map(\.id), events.map(\.id))
+        XCTAssertEqual(updated.map(\.date), events.map(\.date))
+        XCTAssertEqual(updated.map(\.occurrenceIndex), events.map(\.occurrenceIndex))
+        XCTAssertEqual(updated.map(\.isRecurrenceException), events.map(\.isRecurrenceException))
+        XCTAssertEqual(updated[5000], unrelated)
+        XCTAssertTrue(updated.filter { $0.seriesID == event.seriesID }.allSatisfy { $0.title == "Renamed" })
+    }
 }

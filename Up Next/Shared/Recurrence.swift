@@ -194,10 +194,11 @@ enum Recurrence {
         }
         if samePattern && sameEnding {
             // Metadata and date shifts preserve every stored occurrence, including older long series.
+            let originalsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             return EventSeries.updatingLegacy(selected, with: replacement, in: events, calendar: calendar).map { member in
                 guard member.seriesID == id else { return member }
                 var updated = member
-                let original = events.first { $0.id == member.id }!
+                let original = originalsByID[member.id]!
                 updated.recurrence = newRule
                 updated.occurrenceIndex = original.occurrenceIndex
                 updated.isRecurrenceException = original.isRecurrenceException
