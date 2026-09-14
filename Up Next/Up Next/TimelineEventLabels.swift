@@ -247,6 +247,7 @@ final class TimelineEventLabelsView: UIView {
             button.titleLabel?.lineBreakMode = .byWordWrapping
             button.contentHorizontalAlignment = .left
             button.frame = placement.frame
+            button.isAccessibilityElement = placement.frame.intersects(viewport)
             button.accessibilityIdentifier = "timelineEventTitle-\(event.id)"
             button.accessibilityLabel = event.title
             button.accessibilityValue = event.date.formatted(date: .abbreviated, time: .omitted)

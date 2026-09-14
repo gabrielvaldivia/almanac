@@ -19,6 +19,13 @@ final class TimelineTests: XCTestCase {
               color: CodableColor(color: .blue))
     }
 
+    @MainActor
+    private func visibleAxisLabels(in timeline: TimelineScrollView) -> [UILabel] {
+        let header = timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" }
+        return (header?.subviews ?? []).flatMap(\.subviews).compactMap { $0 as? UILabel }
+            .filter { !$0.isHidden && $0.alpha > 0 }
+    }
+
     func testExpandedTitlePrefersRightAndMovesAboveWhenAnotherDotBlocksIt() {
         let first = TimelineLabelItem(id: UUID(), marker: CGRect(x: 20, y: 100, width: 20, height: 20),
                                       size: CGSize(width: 90, height: 20))
@@ -372,8 +379,7 @@ final class TimelineTests: XCTestCase {
                 timeline.endZoom()
                 timeline.setDayPosition(0)
                 timeline.layoutIfNeeded()
-                let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
-                    .filter { !$0.isHidden && $0.alpha > 0 }
+                let labels = visibleAxisLabels(in: timeline)
                 XCTAssertFalse(labels.isEmpty)
                 if spacing >= 23 {
                     XCTAssertTrue(labels.allSatisfy { Int($0.text ?? "") != nil })
@@ -408,8 +414,7 @@ final class TimelineTests: XCTestCase {
                         for position: CGFloat in [-90.33, 0, 0.07, 0.51, 18.91, 95.2] {
                             timeline.setDayPosition(position)
                             timeline.layoutIfNeeded()
-                            let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
-                                .filter { !$0.isHidden && $0.alpha > 0 }
+                            let labels = visibleAxisLabels(in: timeline)
                             let frames = labels.map { $0.convert($0.bounds, to: timeline) }
                             for (index, label) in labels.enumerated() {
                                 XCTAssertGreaterThanOrEqual(label.bounds.width + 0.01, ceil(label.intrinsicContentSize.width))
@@ -439,12 +444,82 @@ final class TimelineTests: XCTestCase {
             timeline.endZoom()
             timeline.setDayPosition(0.37)
             timeline.layoutIfNeeded()
-            let lines = timeline.subviews.flatMap(\.subviews).filter {
-                $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden
+            let lines = timeline.subviews.filter {
+                $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
             }.map { $0.convert($0.bounds, to: timeline).minX }.sorted()
             XCTAssertGreaterThan(lines.count, 2)
             for (first, next) in zip(lines, lines.dropFirst()) {
                 XCTAssertEqual(next - first, spacing * 7, accuracy: 0.01)
+            }
+        }
+    }
+
+    @MainActor
+    func testDateHeaderStaysPinnedAndDividersMeetWhileEventsScrollAtEveryScale() throws {
+        for height: CGFloat in [108, 600] {
+            let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
+            container.backgroundColor = .systemBackground
+            let timeline = TimelineScrollView(frame: container.bounds)
+            container.addSubview(timeline)
+            timeline.setExpanded(true)
+            timeline.update(events: (0..<80).map {
+                Event(title: "Stacked event \($0)", date: timeline.anchor, color: CodableColor(color: .blue))
+            })
+            timeline.layoutIfNeeded()
+            let header = try XCTUnwrap(timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" })
+            let divider = try XCTUnwrap(header.subviews.first { $0.accessibilityIdentifier == "timelineAxisDivider" })
+            func viewportFrame(_ view: UIView) -> CGRect {
+                view.convert(view.bounds, to: timeline).offsetBy(dx: -timeline.bounds.minX, dy: -timeline.bounds.minY)
+            }
+            for spacing: CGFloat in [44, 26.4, 18, TimelineZoomLevel.months.pointsPerDay] {
+                timeline.beginZoom(at: 196)
+                timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 196)
+                timeline.endZoom()
+                timeline.setDayPosition(0)
+                timeline.contentOffset.y = 0
+                timeline.layoutIfNeeded()
+                XCTAssertGreaterThan(timeline.contentSize.height, height + 175)
+                let labels = visibleAxisLabels(in: timeline)
+                XCTAssertFalse(labels.isEmpty)
+                let originalFrames = labels.map(viewportFrame)
+                let marker = try XCTUnwrap(timeline.subviews.compactMap { $0 as? UIButton }.first)
+                let markerTop = viewportFrame(marker).minY
+                for offset: CGFloat in [80, 175, -20] {
+                    timeline.contentOffset.y = offset
+                    timeline.layoutIfNeeded()
+                    XCTAssertEqual(viewportFrame(header).minY, 0, accuracy: 0.01)
+                    XCTAssertEqual(viewportFrame(header).width, timeline.bounds.width, accuracy: 0.01)
+                    for (label, original) in zip(labels, originalFrames) {
+                        XCTAssertFalse(label.isHidden)
+                        XCTAssertEqual(viewportFrame(label), original, "Date labels must stay fixed during vertical scrolling")
+                    }
+                    XCTAssertEqual(viewportFrame(marker).minY, markerTop - offset, accuracy: 0.01,
+                                   "Events must still scroll underneath the pinned header")
+                    let dividerFrame = divider.convert(divider.bounds, to: timeline)
+                    XCTAssertEqual(dividerFrame.minX, timeline.bounds.minX, accuracy: 0.01)
+                    XCTAssertEqual(dividerFrame.maxX, timeline.bounds.maxX, accuracy: 0.01)
+                    let verticals = timeline.subviews.filter { $0.backgroundColor == .separator && $0.alpha > 0 && $0.frame.width <= 1 }
+                    XCTAssertFalse(verticals.isEmpty)
+                    for line in verticals {
+                        XCTAssertEqual(line.frame.minY, dividerFrame.minY, accuracy: 0.01)
+                        XCTAssertEqual(line.frame.maxY, timeline.bounds.maxY, accuracy: 0.01)
+                    }
+                    let hit = try XCTUnwrap(timeline.hitTest(CGPoint(x: timeline.bounds.midX,
+                                                                   y: timeline.bounds.minY + header.bounds.height / 2), with: nil))
+                    XCTAssertTrue(hit === header || hit.isDescendant(of: header), "Covered event controls must not receive header taps")
+                    if height == 600 && spacing == 18 && offset == 175 {
+                        container.layoutIfNeeded()
+                        let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
+                        let screenshot = XCTAttachment(image: image)
+                        screenshot.name = "Pinned weekly axis above vertically scrolled events"
+                        screenshot.lifetime = .keepAlways
+                        add(screenshot)
+                    }
+                }
+                timeline.setDayPosition(0.4)
+                timeline.layoutIfNeeded()
+                XCTAssertEqual(header.bounds.minX, timeline.contentOffset.x, accuracy: 0.01)
+                XCTAssertEqual(viewportFrame(header).minY, 0, accuracy: 0.01)
             }
         }
     }
@@ -629,7 +704,8 @@ final class TimelineTests: XCTestCase {
         layoutTree(canvas)
         let marker = canvas.timeline.subviews.compactMap { $0 as? UIButton }.first { $0.accessibilityLabel == "Today" }!
         XCTAssertEqual(marker.frame.minY, previousTop, accuracy: 0.5)
-        XCTAssertEqual(marker.frame.minY - 44, canvas.timeline.bounds.height - marker.frame.maxY, accuracy: 1)
+        let header = canvas.timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" }!
+        XCTAssertEqual(marker.frame.minY - header.bounds.height, canvas.timeline.bounds.height - marker.frame.maxY, accuracy: 1)
     }
 
     func testViewportIncludesPartiallyVisibleDays() {
@@ -749,12 +825,13 @@ final class TimelineTests: XCTestCase {
         let scrollView = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 84))
         scrollView.layoutIfNeeded()
         let todayLabel = Date().formatted(date: .complete, time: .omitted)
-        XCTAssertTrue(scrollView.subviews.contains { $0.accessibilityLabel == todayLabel })
+        let header = scrollView.subviews.first { $0.accessibilityIdentifier == "timelineAxis" }!
+        XCTAssertTrue(header.subviews.contains { $0.accessibilityLabel == todayLabel })
         for _ in 0..<10 {
             scrollView.contentOffset.x += 70 * TimelineScrollWindow.dayWidth
             scrollView.setNeedsLayout()
             scrollView.layoutIfNeeded()
         }
-        XCTAssertLessThan(scrollView.subviews.filter(\.isAccessibilityElement).count, 15)
+        XCTAssertLessThan(header.subviews.filter(\.isAccessibilityElement).count, 15)
     }
 }
