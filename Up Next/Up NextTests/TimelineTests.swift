@@ -340,7 +340,7 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(months.allSatisfy { $0.accessibilityLabel.contains("2026") })
         let weeks = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...150, anchor: first, calendar: calendar)
         XCTAssertTrue(weeks.allSatisfy { $0.subtitle.contains("–") && !$0.subtitle.contains("2026") })
-        XCTAssertTrue(weeks.allSatisfy { Int($0.compactSubtitle) != nil }, "Dense weekly ticks retain a compact fallback")
+        XCTAssertTrue(weeks.allSatisfy { $0.compactSubtitle.contains("/") }, "Dense weekly ticks retain the month and day")
     }
 
     func testWeeklyRangesIncludeTheLastDayAcrossMonthYearAndDSTBoundaries() {
@@ -358,6 +358,7 @@ final class TimelineTests: XCTestCase {
             let start = calendar.date(from: DateComponents(year: year, month: month, day: day))!
             let week = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...0, anchor: start, calendar: calendar).first!
             XCTAssertEqual(week.subtitle, expected)
+            XCTAssertEqual(week.compactSubtitle, "\(month)/\(day)")
             XCTAssertEqual(week.endDay - week.startDay, 7)
             XCTAssertTrue(week.accessibilityLabel.contains("through"))
         }
@@ -367,30 +368,46 @@ final class TimelineTests: XCTestCase {
                                               calendar: calendar).first?.subtitle, "14–20")
     }
 
+    func testNumericAxisDatesUseTheLocalMonthAndDayWithoutLeadingZeros() {
+        let cases = [(2026, 9, 13, "9/13"), (2026, 12, 31, "12/31"), (2027, 1, 1, "1/1")]
+        for (year, month, day, expected) in cases {
+            let date = calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 23, minute: 30))!
+            XCTAssertEqual(TimelineAxisDate.text(date, calendar: calendar), expected,
+                           "The axis must use the local date even after midnight in UTC")
+        }
+    }
+
     @MainActor
-    func testCloseWeeklyZoomKeepsEveryDayUntilNumbersWouldOverlapAboveBothSheetSizes() {
+    func testTimelineKeepsEveryMonthAndDayUntilDatesWouldOverlapAboveBothSheetSizes() {
         for height: CGFloat in [100, 600] {
             let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
             timeline.setExpanded(height > 100)
             timeline.layoutIfNeeded()
-            for spacing: CGFloat in [26.4, 24, 23, 18] {
+            for spacing: CGFloat in [44, 40, 26.4, 18] {
                 timeline.beginZoom(at: 196)
                 timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 196)
                 timeline.endZoom()
-                timeline.setDayPosition(0)
-                timeline.layoutIfNeeded()
-                let labels = visibleAxisLabels(in: timeline)
-                XCTAssertFalse(labels.isEmpty)
-                if spacing >= 23 {
-                    XCTAssertTrue(labels.allSatisfy { Int($0.text ?? "") != nil })
-                    for day in 0..<Int(floor(timeline.bounds.width / spacing)) {
-                        let date = Calendar.current.date(byAdding: .day, value: day, to: timeline.anchor)!
-                        XCTAssertTrue(labels.contains { $0.text == date.formatted(.dateTime.day()) },
-                                      "Every fully visible day must have its number, including today")
+                // Include September's short dates and the wider December dates,
+                // scrolling across both month and year boundaries.
+                for month in [9, 12] {
+                    let calendar = Calendar.current
+                    let start = calendar.date(from: DateComponents(year: 2026, month: month, day: 28))!
+                    let position = calendar.dateComponents([.day], from: timeline.anchor, to: start).day!
+                    timeline.setDayPosition(CGFloat(position))
+                    timeline.layoutIfNeeded()
+                    let labels = visibleAxisLabels(in: timeline)
+                    XCTAssertFalse(labels.isEmpty)
+                    if spacing >= 40 {
+                        for day in 0..<Int(floor(timeline.bounds.width / spacing)) {
+                            let date = calendar.date(byAdding: .day, value: day, to: start)!
+                            let expected = "\(calendar.component(.month, from: date))/\(calendar.component(.day, from: date))"
+                            XCTAssertTrue(labels.contains { $0.text == expected },
+                                          "Every fully visible day must include its month: \(expected)")
+                        }
+                    } else {
+                        XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
+                                      "Use weekly ranges once individual month/day labels would overlap")
                     }
-                } else {
-                    XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
-                                  "Use weekly ranges once individual day numbers would overlap")
                 }
             }
         }
