@@ -298,7 +298,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private let axisHeader = UIView()
     private let axisDivider = UIView()
     private var axisHeight: CGFloat = TimelineAxisTypography.height
-    private let todayLine = UIView()
     private let zoomGesture = UIPinchGestureRecognizer()
     private var pinch: (width: CGFloat, day: CGFloat, focusedDay: CGFloat)?
     private var focusReferenceX: CGFloat = 0
@@ -359,9 +358,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         zoomGesture.addTarget(self, action: #selector(pinched(_:)))
         zoomGesture.delegate = self
         addGestureRecognizer(zoomGesture)
-        todayLine.backgroundColor = tintColor
-        todayLine.isUserInteractionEnabled = false
-        addSubview(todayLine)
         axisHeader.backgroundColor = .systemBackground
         axisHeader.clipsToBounds = true
         axisHeader.accessibilityIdentifier = "timelineAxis"
@@ -552,8 +548,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                           width: bounds.width, height: max(0, bounds.height - axisDivider.frame.minY))
         for view in dayViews.values { view.layoutLabels(in: axisHeader.bounds, grid: grid) }
         for view in periodViews.values { view.layoutLabels(in: axisHeader.bounds, grid: grid) }
-        todayLine.frame.origin.y = grid.minY
-        todayLine.frame.size.height = grid.height
         let eventViewport = CGRect(x: bounds.minX, y: bounds.minY + headerHeight,
                                    width: bounds.width, height: max(0, bounds.height - headerHeight))
         for button in eventButtons.values {
@@ -702,11 +696,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             view?.divider.removeFromSuperview()
             view?.removeFromSuperview()
         }
-        todayLine.backgroundColor = tintColor
-        todayLine.alpha = max(0, weights.months * 2 - 1) * 0.25
-        todayLine.frame = CGRect(x: (CGFloat(todayDay - scrollWindow.firstDay) + 0.5) * pointsPerDay - 0.5,
-                                 y: axisHeight, width: 1, height: max(0, bounds.height - axisHeight))
-
         let visibleIDs = Set(layout.placements.map { $0.event.id })
         for id in Array(eventButtons.keys) where !visibleIDs.contains(id) {
             eventButtons.removeValue(forKey: id)?.removeFromSuperview()
