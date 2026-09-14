@@ -119,6 +119,7 @@ struct ContentView: View {
                 EventTimelineView(
                     events: timelineEvents,
                     tint: categoryTint,
+                    highlightedEventID: highlightedEventID,
                     scrollToTodayRequest: scrollToTodayRequest,
                     onTodayVisibilityChange: { timelineShowsToday = $0 },
                     onSelectEvent: selectTimelineEvent,

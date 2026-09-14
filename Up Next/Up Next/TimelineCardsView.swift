@@ -84,14 +84,16 @@ final class TimelineContainerView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func update(events: [Event], expanded: Bool) {
+    func update(events: [Event], expanded: Bool, highlightedEventID: UUID? = nil) {
         if self.expanded && !expanded { cards.stopScrolling() }
         if self.expanded != expanded { needsInitialCardSync = true }
         self.expanded = expanded
         monthLabel.isHidden = !expanded
         timeline.setExpanded(expanded)
         timeline.update(events: events)
+        timeline.highlightedEventID = highlightedEventID
         cards.update(events: events, anchor: timeline.anchor)
+        cards.highlightedEventID = highlightedEventID
         cards.isHidden = !expanded || events.isEmpty
         emptyLabel.isHidden = !expanded || !events.isEmpty
         setNeedsLayout()
@@ -128,6 +130,12 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
     var onDayPositionChange: ((CGFloat) -> Void)?
     var onEditEvent: ((Event) -> Void)?
     var onBeginDragging: (() -> Void)?
+    var highlightedEventID: UUID? {
+        didSet {
+            guard highlightedEventID != oldValue else { return }
+            for stack in stacks.values { stack.setHighlighted(eventID: highlightedEventID) }
+        }
+    }
     private(set) var groups: [EventListDay] = []
     private var positions = TimelineCardPositions(days: [])
     private var stacks: [Date: TimelineCardStackView] = [:]
@@ -240,6 +248,7 @@ final class TimelineCardsScrollView: UIScrollView, UIScrollViewDelegate {
                 stack.onEditEvent = { [weak self] in self?.onEditEvent?($0) }
             }
             stack.configure(group: group, selectedID: selectedEvents[group.date])
+            stack.setHighlighted(eventID: highlightedEventID)
             stack.frame = CGRect(x: (bounds.width - cardWidth) / 2 + CGFloat(index) * pitch,
                                  y: 0, width: cardWidth, height: bounds.height)
         }
@@ -308,6 +317,16 @@ private final class TimelineCardStackView: UIView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func setHighlighted(eventID: UUID?) {
+        let highlighted = eventID != nil && event?.id == eventID
+        surface.layer.borderWidth = highlighted ? 2 : 0.5
+        surface.layer.borderColor = highlighted
+            ? event.map { UIColor($0.color.color).cgColor }
+            : UIColor.separator.withAlphaComponent(0.15).cgColor
+        if highlighted { editButton.accessibilityTraits.insert(.selected) }
+        else { editButton.accessibilityTraits.remove(.selected) }
+    }
 
     func configure(group: EventListDay, selectedID: UUID?) {
         guard let front = group.events.first(where: { $0.id == selectedID }) ?? group.events.first else { return }

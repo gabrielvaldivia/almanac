@@ -58,6 +58,7 @@ struct TimelinePanelHeights {
 struct EventTimelineView: View {
     var events: [Event]
     var tint: Color
+    var highlightedEventID: UUID?
     var scrollToTodayRequest: UUID?
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
@@ -84,6 +85,7 @@ struct EventTimelineView: View {
             TimelineScroller(
                 events: events,
                 tint: tint,
+                highlightedEventID: highlightedEventID,
                 scrollToTodayRequest: scrollToTodayRequest,
                 animateScrolling: !reduceMotion,
                 onTodayVisibilityChange: onTodayVisibilityChange,
@@ -169,6 +171,7 @@ private struct TimelineHandleDrag {
 private struct TimelineScroller: UIViewRepresentable {
     var events: [Event]
     var tint: Color
+    var highlightedEventID: UUID?
     var scrollToTodayRequest: UUID?
     var animateScrolling: Bool
     var onTodayVisibilityChange: (Bool) -> Void
@@ -196,7 +199,7 @@ private struct TimelineScroller: UIViewRepresentable {
         scrollView.onLaneCountChange = onLaneCountChange
         scrollView.onCollapse = onCollapse
         scrollView.onTodayVisibilityChange = onTodayVisibilityChange
-        container.update(events: events, expanded: isExpanded)
+        container.update(events: events, expanded: isExpanded, highlightedEventID: highlightedEventID)
         if let scrollToTodayRequest, context.coordinator.lastScrollToTodayRequest != scrollToTodayRequest {
             context.coordinator.lastScrollToTodayRequest = scrollToTodayRequest
             scrollView.scrollToToday(animated: animateScrolling)
@@ -213,6 +216,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var onTodayVisibilityChange: ((Bool) -> Void)?
     var onScrollPositionChange: ((CGFloat) -> Void)?
     var onBeginDragging: (() -> Void)?
+    var highlightedEventID: UUID? {
+        didSet {
+            guard highlightedEventID != oldValue else { return }
+            for (id, button) in eventButtons { button.isSelected = id == highlightedEventID }
+        }
+    }
+    private let selectionFeedback = UISelectionFeedbackGenerator()
 
     let anchor = Calendar.current.startOfDay(for: Date())
     private var scrollWindow = TimelineScrollWindow()
@@ -372,6 +382,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             let button = eventButtons[placement.event.id] ?? TimelineEventButton(type: .custom)
             if eventButtons[placement.event.id] == nil {
                 eventButtons[placement.event.id] = button
+                button.addTarget(self, action: #selector(prepareSelectionFeedback), for: .touchDown)
                 button.addTarget(self, action: #selector(selectedEvent(_:)), for: .touchUpInside)
                 addSubview(button)
             }
@@ -381,7 +392,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             let x = CGFloat(start - scrollWindow.firstDay) * TimelineScrollWindow.dayWidth
             let width = CGFloat(end - start + 1) * TimelineScrollWindow.dayWidth
             button.placement = placement
-            button.backgroundColor = UIColor(placement.event.color.color).withAlphaComponent(0.2)
+            button.isSelected = placement.event.id == highlightedEventID
             button.layer.cornerRadius = 12
             button.frame = CGRect(x: x + (isSingleDay ? 10 : 2), y: 48 + CGFloat(placement.lane) * 28,
                                   width: isSingleDay ? 24 : width - 4, height: 24)
@@ -413,8 +424,15 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         }
     }
 
+    @objc private func prepareSelectionFeedback() {
+        selectionFeedback.prepare()
+    }
+
     @objc private func selectedEvent(_ button: TimelineEventButton) {
-        if let event = button.placement?.event { onSelectEvent?(event) }
+        guard let event = button.placement?.event else { return }
+        highlightedEventID = event.id
+        selectionFeedback.selectionChanged()
+        onSelectEvent?(event)
     }
 
     @objc private func swipedVertically(_ gesture: UISwipeGestureRecognizer) {
@@ -428,7 +446,23 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
 }
 
 private final class TimelineEventButton: UIButton {
-    var placement: TimelineEventPlacement?
+    var placement: TimelineEventPlacement? {
+        didSet { updateSelectionAppearance() }
+    }
+
+    override var isSelected: Bool {
+        didSet { updateSelectionAppearance() }
+    }
+
+    private func updateSelectionAppearance() {
+        guard let event = placement?.event else { return }
+        let color = UIColor(event.color.color)
+        backgroundColor = color.withAlphaComponent(isSelected ? 0.4 : 0.2)
+        layer.borderColor = color.cgColor
+        layer.borderWidth = isSelected ? 2 : 0
+        if isSelected { accessibilityTraits.insert(.selected) }
+        else { accessibilityTraits.remove(.selected) }
+    }
 }
 
 private final class TimelineDayView: UIView {
