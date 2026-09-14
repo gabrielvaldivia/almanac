@@ -118,7 +118,6 @@ class AppData: NSObject, ObservableObject {
         loadEvents()
         isDataLoaded = true
         UNUserNotificationCenter.current().delegate = self
-        loadSubscriptionProduct()
     }
 
     deinit { transactionListener?.cancel() }
