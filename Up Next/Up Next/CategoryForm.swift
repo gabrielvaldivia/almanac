@@ -154,7 +154,8 @@ struct CategoryForm: View {
                             ))
                         showingSheet = false
                     }
-                    .disabled(appData.categoryStorageError != nil || !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName))
+                    .disabled(appData.categoryStorageError != nil || (isEditing && !appData.canEditExistingCategories) ||
+                              !CategoryName.isValid(categoryName, existing: appData.categories.map(\.name), excluding: originalName))
                 }
             }
         }

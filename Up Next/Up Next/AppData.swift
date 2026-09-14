@@ -141,17 +141,20 @@ class AppData: NSObject, ObservableObject {
     // Function to save categories to UserDefaults
     func saveCategories() {
         guard categoryStorageError == nil else { return }
-        let categoryData = categories.map {
+        do {
+            try CategoryStorage.save(categoryRecords(categories))
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch { categoryStorageError = "Categories could not be saved. The original data is preserved. \(error.localizedDescription)" }
+    }
+
+    private func categoryRecords(_ categories: [EventCategory]) -> [CategoryData] {
+        categories.map {
             CategoryData(
                 name: $0.name, color: CodableColor(color: $0.color), repeatOption: $0.repeatOption,
                 showRepeatOptions: false, customRepeatCount: $0.customRepeatCount,
                 repeatUnit: $0.repeatUnit, repeatUntilOption: $0.repeatUntilOption,
                 repeatUntilCount: $0.repeatUntilCount, repeatUntil: $0.repeatUntil, keywords: $0.keywords)
         }
-        do {
-            try CategoryStorage.save(categoryData)
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch { categoryStorageError = "Categories could not be saved. The original data is preserved. \(error.localizedDescription)" }
     }
 
     // Function to load categories from UserDefaults
@@ -295,24 +298,81 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
-    // Function to update events when a category is edited
-    func updateEventsForCategoryChange(oldName: String, newName: String, oldColor: Color, newColor: Color) {
-        if defaultCategory == oldName { defaultCategory = newName }
-        let previousColor = CodableColor(color: oldColor)
-        let updatedColor = CodableColor(color: newColor)
-        var eventsUpdated = false
-        for i in 0..<events.count {
-            if events[i].category == oldName {
-                events[i].category = newName
-                if previousColor != updatedColor && events[i].color == previousColor {
-                    events[i].color = updatedColor
-                }
-                eventsUpdated = true
+    var canEditExistingCategories: Bool { storageError == nil && categoryStorageError == nil }
+
+    @discardableResult
+    func updateCategory(named oldName: String, with category: EventCategory) -> Bool {
+        guard canEditExistingCategories,
+              let index = categories.firstIndex(where: { $0.name == oldName }),
+              CategoryName.isValid(category.name, existing: categories.map(\.name), excluding: oldName) else { return false }
+        let previousColor = CodableColor(color: categories[index].color)
+        let updatedColor = CodableColor(color: category.color)
+        let updatedEvents = events.map { event -> Event in
+            guard event.category == oldName else { return event }
+            var updated = event
+            updated.category = category.name
+            if previousColor != updatedColor && updated.color == previousColor {
+                updated.color = updatedColor
+            }
+            return updated
+        }
+        var updatedCategories = categories
+        updatedCategories[index] = category
+        return commitCategoryChange(updatedCategories, events: updatedEvents,
+                                    defaultCategory: defaultCategory == oldName ? category.name : defaultCategory)
+    }
+
+    @discardableResult
+    func removeCategories(at offsets: IndexSet) -> Bool {
+        guard canEditExistingCategories, !offsets.isEmpty,
+              offsets.allSatisfy({ categories.indices.contains($0) }) else { return false }
+        let names = Set(offsets.map { categories[$0].name })
+        var updatedCategories = categories
+        updatedCategories.remove(atOffsets: offsets)
+        let updatedEvents = events.map { event -> Event in
+            guard let category = event.category, names.contains(category) else { return event }
+            var updated = event
+            updated.category = nil
+            return updated
+        }
+        return commitCategoryChange(updatedCategories, events: updatedEvents,
+                                    defaultCategory: names.contains(defaultCategory) ? "" : defaultCategory)
+    }
+
+    private func commitCategoryChange(_ updatedCategories: [EventCategory], events updatedEvents: [Event],
+                                      defaultCategory updatedDefault: String) -> Bool {
+        let defaults = AppPreferences.shared
+        let previous = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup"].map {
+            (key: $0, data: defaults.data(forKey: $0))
+        }
+        func restorePreviousPayloads() {
+            for (key, data) in previous {
+                if let data { defaults.set(data, forKey: key) }
+                else { defaults.removeObject(forKey: key) }
             }
         }
-        if eventsUpdated {
-            saveEvents()
+        // Publish only after both saves succeed. Retain the readable backups
+        // and original payloads if either store refuses the dependent change.
+        do { try eventStore.save(updatedEvents) }
+        catch {
+            restorePreviousPayloads()
+            storageError = "Could not save events: \(error.localizedDescription)"
+            return false
         }
+        do { try CategoryStorage.save(categoryRecords(updatedCategories)) }
+        catch {
+            restorePreviousPayloads()
+            categoryStorageError = "Categories could not be saved. The original data is preserved. \(error.localizedDescription)"
+            return false
+        }
+        isLoadingCategories = true
+        categories = updatedCategories
+        isLoadingCategories = false
+        events = updatedEvents
+        defaultCategory = updatedDefault
+        WidgetCenter.shared.reloadAllTimelines()
+        scheduleDailyNotification()
+        return true
     }
 
     func loadSubscriptionProduct() {

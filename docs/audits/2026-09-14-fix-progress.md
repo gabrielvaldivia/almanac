@@ -22,6 +22,10 @@ The full editor now keeps its category selection until a new category is actuall
 
 Category metadata saves and renames retain event colors. Changing a category color updates events matching its previous color while preserving different event colors. A storage regression covers no-op saves, renames, recoloring, unrelated events, defaults, IDs, and persistence. All 110 unit tests and the category rename UI test passed; signed phone build passed. The first run exposed an overbroad test equality assertion because legacy decoding supplies optional repeat defaults. The regression now checks persisted colors, categories, IDs, and dates; the full unit rerun passed. App fix `cce0f7a` was pushed and installed; the assertion correction is a separate follow-up commit.
 
+### 4. F11 — Category edits respect event recovery
+
+Renames and deletions now share model-level recovery guards. Both payloads save before publishing changed categories/events/defaults; a save error restores the previous payloads and readable backups. A recovery message explains why editing is paused. Category creation and reordering retain their prior behavior. All 113 unit tests and the normal category rename/edit/delete UI flow passed, including new corruption, rollback, and deletion regressions. The signed phone build passed.
+
 ## Remaining
 
-F01–F09, F11–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F01–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

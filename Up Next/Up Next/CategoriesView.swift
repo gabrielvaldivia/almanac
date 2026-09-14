@@ -28,6 +28,12 @@ struct CategoriesView: View {
                     Button("Retry Loading Categories") { appData.loadCategories() }
                 }
             }
+            if appData.storageError != nil {
+                Section {
+                    Text("Category edits and deletions are paused until your events can be read. Retry loading or restore your events in Settings.")
+                        .font(.footnote)
+                }
+            }
             // Categories section
             Section {
                 ForEach(appData.categories.indices, id: \.self) { index in
@@ -80,14 +86,7 @@ struct CategoriesView: View {
                     isEditing: true,
                     editingCategory: category,
                     onSave: { updatedCategory in
-                        if let index = appData.categories.firstIndex(where: {
-                            $0.name == category.name
-                        }) {
-                            appData.categories[index] = updatedCategory
-                            appData.updateEventsForCategoryChange(
-                                oldName: category.name, newName: updatedCategory.name,
-                                oldColor: category.color, newColor: updatedCategory.color)
-                        }
+                        appData.updateCategory(named: category.name, with: updatedCategory)
                         categoryToEdit = nil  // Reset categoryToEdit after saving
                     }
                 )
@@ -98,14 +97,7 @@ struct CategoriesView: View {
     }
 
     private func removeCategory(at offsets: IndexSet) {
-        guard appData.categoryStorageError == nil else { return }
-        let names = Set(offsets.compactMap { appData.categories.indices.contains($0) ? appData.categories[$0].name : nil })
-        appData.categories.remove(atOffsets: offsets)
-        for index in appData.events.indices where names.contains(appData.events[index].category ?? "") {
-            appData.events[index].category = nil
-        }
-        if names.contains(appData.defaultCategory) { appData.defaultCategory = "" }
-        appData.saveEvents()
+        appData.removeCategories(at: offsets)
     }
 
     private func moveCategory(from source: IndexSet, to destination: Int) {
