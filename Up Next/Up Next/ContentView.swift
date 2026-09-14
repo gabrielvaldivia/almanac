@@ -63,17 +63,15 @@ struct ContentView: View {
     @FocusState private var isQuickEntryFocused: Bool
 
     // Date formatters
-    let itemDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter
-    }()
-
     let yearFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy"
         return formatter
     }()
+
+    private func sheetMonthHeading(for date: Date) -> String {
+        TimelineHeading.text(first: date, last: date)
+    }
 
     private var simplifiedCategories: [(name: String, color: Color)] {
         return appData.categories.map { category in
@@ -290,7 +288,7 @@ struct ContentView: View {
             if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
-                Text(itemDateFormatter.string(from: eventListPosition ?? EventListDay.initialDate(in: days) ?? Date()))
+                Text(sheetMonthHeading(for: eventListPosition ?? EventListDay.initialDate(in: days) ?? Date()))
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal).padding(.bottom, 10)

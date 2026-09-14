@@ -104,6 +104,61 @@ final class TimelineTests: XCTestCase {
         for (first, second) in zip(weeks, weeks.dropFirst()) { XCTAssertEqual(first.endDay, second.startDay) }
     }
 
+    func testTimelineLabelsOmitRepeatedYearsAndKeepYearContextWhenNeeded() {
+        let first = calendar.date(from: DateComponents(year: 2026, month: 7, day: 1))!
+        let last = calendar.date(from: DateComponents(year: 2026, month: 11, day: 30))!
+        XCTAssertEqual(TimelineHeading.text(first: first, last: last, today: anchor, calendar: calendar), "Jul – Nov")
+        XCTAssertEqual(TimelineHeading.text(first: first, last: first, today: anchor, calendar: calendar), "July")
+        let nextYear = calendar.date(byAdding: .year, value: 1, to: first)!
+        XCTAssertTrue(TimelineHeading.text(first: nextYear, last: nextYear, today: anchor, calendar: calendar).contains("2027"))
+        let crossYear = TimelineHeading.text(first: first, last: nextYear, today: anchor, calendar: calendar)
+        XCTAssertTrue(crossYear.contains("2026"))
+        XCTAssertTrue(crossYear.contains("2027"))
+        let months = TimelineAxisPeriod.make(level: .months, visibleDays: 0...150, anchor: first, calendar: calendar)
+        XCTAssertTrue(months.allSatisfy { $0.subtitle.isEmpty && !$0.title.contains("2026") })
+        XCTAssertTrue(months.allSatisfy { $0.accessibilityLabel.contains("2026") })
+        let weeks = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...150, anchor: first, calendar: calendar)
+        XCTAssertTrue(weeks.allSatisfy { Int($0.subtitle) != nil }, "Weekly ticks identify the start day without squeezed date ranges")
+    }
+
+    @MainActor
+    func testAxisLabelsFitWithoutOverlapAtEveryZoomAndFractionalScrollOffset() {
+        continueAfterFailure = false
+        for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+            UITraitCollection(preferredContentSizeCategory: category).performAsCurrent {
+                for width: CGFloat in [320, 393, 600] {
+                    let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: width, height: 600))
+                    timeline.setExpanded(true)
+                    timeline.layoutIfNeeded()
+                    // Include the exact week/month blend that previously drew both
+                    // month names on top of one another, and densely spaced weekdays.
+                    for spacing: CGFloat in [44, 39, 34, 31, 29, 24, 18, 10, 6.6, 5.3, 4.5, 3.6, 2.8, 44.0 / 30] {
+                        timeline.beginZoom(at: width / 2)
+                        timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: width / 2)
+                        timeline.endZoom()
+                        for position: CGFloat in [-90.33, 0, 0.07, 0.51, 18.91, 95.2] {
+                            timeline.setDayPosition(position)
+                            timeline.layoutIfNeeded()
+                            let labels = timeline.subviews.flatMap(\.subviews).compactMap { $0 as? UILabel }
+                                .filter { !$0.isHidden && $0.alpha > 0 }
+                            let frames = labels.map { $0.convert($0.bounds, to: timeline) }
+                            for (index, label) in labels.enumerated() {
+                                XCTAssertGreaterThanOrEqual(label.bounds.width + 0.01, ceil(label.intrinsicContentSize.width))
+                                XCTAssertGreaterThanOrEqual(label.bounds.height, ceil(label.font.lineHeight))
+                                XCTAssertGreaterThanOrEqual(frames[index].minX, timeline.bounds.minX)
+                                XCTAssertLessThanOrEqual(frames[index].maxX, timeline.bounds.maxX)
+                                for other in frames.dropFirst(index + 1) {
+                                    XCTAssertFalse(frames[index].intersects(other), "Overlapping labels at \(spacing) pt/day")
+                                }
+                            }
+                            XCTAssertFalse(labels.isEmpty, "Every zoom position must retain readable date context")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @MainActor
     func testMonthZoomSeparatesNearbyMarkersAndOnlyBuildsVisibleViews() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 600))

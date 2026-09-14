@@ -79,6 +79,10 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(timeline.value as? String, weekDates)
         handle.tap()
         XCTAssertEqual(handle.value as? String, "Small")
+        timeline.pinch(withScale: 0.7, velocity: -1)
+        let transition = XCTAttachment(screenshot: app.screenshot())
+        transition.name = "Readable labels between weeks and months"
+        transition.lifetime = .keepAlways; add(transition)
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
         let monthDates = timeline.value as? String
