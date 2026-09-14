@@ -227,16 +227,6 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 filterMenu.simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
             }
-            if !timelineShowsToday || isListAwayFromToday(in: days) {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        todayButton
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                } else {
-                    ToolbarItem(placement: .topBarTrailing) { todayButton }
-                }
-            }
         }
         .onAppear {
             appData.loadEvents()
@@ -304,13 +294,20 @@ struct ContentView: View {
                     }
             )
 
-            Text("Up Next")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal).padding(.bottom, 10)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("eventSheetTitle")
+            HStack(spacing: 12) {
+                Text("Up Next")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("eventSheetTitle")
+                if !timelineShowsToday || isListAwayFromToday(in: days) {
+                    todayButton
+                }
+            }
+            // Reserve the button's height so returning to today never shifts the list.
+            .frame(minHeight: 44)
+            .padding(.horizontal).padding(.bottom, 10)
 
             if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
@@ -396,15 +393,12 @@ struct ContentView: View {
 
     @ViewBuilder private var todayButton: some View {
         let button = Button(action: scrollToToday) {
-            Text(Date().formatted(.dateTime.day()))
-                .font(.body)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            TodayCalendarIcon()
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .foregroundStyle(.tint)
         .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")
@@ -614,6 +608,27 @@ struct ContentView: View {
         }
     }
 
+}
+
+private struct TodayCalendarIcon: View {
+    var body: some View {
+        ZStack {
+            Path { path in
+                path.addRoundedRect(in: CGRect(x: 2, y: 4, width: 20, height: 18),
+                                    cornerSize: CGSize(width: 3, height: 3))
+                path.move(to: CGPoint(x: 2, y: 9))
+                path.addLine(to: CGPoint(x: 22, y: 9))
+                for x: CGFloat in [7, 17] {
+                    path.move(to: CGPoint(x: x, y: 2))
+                    path.addLine(to: CGPoint(x: x, y: 6))
+                }
+            }
+            .stroke(style: StrokeStyle(lineWidth: 1.75, lineCap: .round, lineJoin: .round))
+            Circle().frame(width: 5, height: 5).offset(y: 3.5)
+        }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
+    }
 }
 
 /// Group by calendar dates, including history, without parsing relative labels.
