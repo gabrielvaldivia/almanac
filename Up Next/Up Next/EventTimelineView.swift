@@ -1,6 +1,12 @@
 import SwiftUI
 import UIKit
 
+enum TimelineAppearance {
+    static let background = UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .black : UIColor(white: 0.96, alpha: 1)
+    }
+}
+
 /// A fixed-size canvas that is rebased as the user scrolls. Day offsets and the
 /// fractional scroll position survive rebasing, so neither end is reachable.
 struct TimelineScrollWindow {
@@ -296,7 +302,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var dayViews: [Int: TimelineDayView] = [:]
     private var periodViews: [String: TimelinePeriodView] = [:]
     private let axisHeader = UIView()
-    private let axisDivider = UIView()
     private var axisHeight: CGFloat = TimelineAxisTypography.height
     private let zoomGesture = UIPinchGestureRecognizer()
     private var pinch: (width: CGFloat, day: CGFloat, focusedDay: CGFloat)?
@@ -358,14 +363,9 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         zoomGesture.addTarget(self, action: #selector(pinched(_:)))
         zoomGesture.delegate = self
         addGestureRecognizer(zoomGesture)
-        axisHeader.backgroundColor = .systemBackground
+        axisHeader.backgroundColor = TimelineAppearance.background
         axisHeader.clipsToBounds = true
         axisHeader.accessibilityIdentifier = "timelineAxis"
-        axisDivider.backgroundColor = .systemGray2
-        axisDivider.alpha = 0.85
-        axisDivider.isUserInteractionEnabled = false
-        axisDivider.accessibilityIdentifier = "timelineAxisDivider"
-        axisHeader.addSubview(axisDivider)
         addSubview(axisHeader)
         registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: TimelineScrollView, _: UITraitCollection) in
             view.needsEventLayout = true
@@ -543,7 +543,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         let headerHeight = axisHeight + 8
         axisHeader.frame = CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: headerHeight)
         axisHeader.bounds = CGRect(x: bounds.minX, y: 0, width: bounds.width, height: headerHeight)
-        axisDivider.frame = CGRect(x: bounds.minX, y: headerHeight - 0.75, width: bounds.width, height: 0.75)
         for view in dayViews.values { view.layoutLabels(in: axisHeader.bounds) }
         for view in periodViews.values { view.layoutLabels(in: axisHeader.bounds) }
         let eventViewport = CGRect(x: bounds.minX, y: bounds.minY + headerHeight,
@@ -551,7 +550,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         for button in eventButtons.values {
             button.isAccessibilityElement = button.frame.intersects(eventViewport)
         }
-        axisHeader.bringSubviewToFront(axisDivider)
         bringSubviewToFront(axisHeader)
     }
 

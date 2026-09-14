@@ -88,6 +88,10 @@ struct ContentView: View {
         Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground)
     }
 
+    private var timelineBackground: Color {
+        Color(uiColor: TimelineAppearance.background)
+    }
+
     var body: some View {
         NavigationView {
             ZStack(alignment: .bottom) {
@@ -214,15 +218,14 @@ struct ContentView: View {
                 // Keep the list usable on crowded dates; overflowing event
                 // lanes can scroll inside the timeline.
                 .frame(height: min(timelineHeight, max(80, geometry.size.height * 0.5)))
-                .background(Color.black)
-                .environment(\.colorScheme, .dark)
+                .background(timelineBackground)
 
                 eventList(days: days)
                     .frame(maxHeight: .infinity, alignment: .top)
                     .background(eventListBackground)
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28))
+                    .overlay(alignment: .top) { Divider().allowsHitTesting(false) }
             }
-            .background(Color.black)
+            .background(timelineBackground)
             .frame(height: geometry.size.height, alignment: .top)
             .clipped()
             .transaction { if reduceMotion { $0.animation = nil } }
@@ -233,14 +236,13 @@ struct ContentView: View {
                     Text(error).font(.footnote)
                     NavigationLink("Data Recovery") { SettingsView() }
                 }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
-                    .environment(\.colorScheme, .dark)
             }
         }
         .navigationTitle(timelineTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.black, for: .navigationBar)
+        .toolbarBackground(timelineBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(colorScheme, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 ViewThatFits(in: .horizontal) {
@@ -248,7 +250,7 @@ struct ContentView: View {
                     Text(compactTimelineTitle).fixedSize()
                 }
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
@@ -377,7 +379,7 @@ struct ContentView: View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
                 .accessibilityLabel("Settings")
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .imageScale(.large)
         }
         .simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
@@ -388,7 +390,7 @@ struct ContentView: View {
             Image(systemName: "calendar.day.timeline.left")
                 .imageScale(.large)
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(.primary)
         .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")

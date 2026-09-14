@@ -266,7 +266,7 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testTimelineOnlyShowsTheHorizontalDividerAtEveryZoom() throws {
+    func testTimelineShowsNoDividersAtEveryZoom() throws {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 800, height: 500))
         timeline.layoutIfNeeded()
         for spacing: CGFloat in [44, 39, 29, 18, 6.6, 5.3, 4.6, 2.8, 44.0 / 30] {
@@ -280,9 +280,9 @@ final class TimelineTests: XCTestCase {
             }
             XCTAssertTrue(lines.isEmpty, "No vertical lines should appear at \(spacing) pt/day")
             let header = try XCTUnwrap(timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" })
-            let divider = try XCTUnwrap(header.subviews.first { $0.accessibilityIdentifier == "timelineAxisDivider" })
-            XCTAssertEqual(divider.frame.width, timeline.bounds.width, accuracy: 0.01)
-            XCTAssertGreaterThan(divider.alpha, 0)
+            XCTAssertFalse(header.subviews.contains {
+                $0.alpha > 0 && !$0.isHidden && $0.frame.height > 0 && $0.frame.height <= 1 && $0.frame.width > 1
+            }, "No horizontal line should appear below the date labels")
         }
     }
 
@@ -329,7 +329,7 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testDateHeaderAndHorizontalDividerStayPinnedWhileEventsScrollAtEveryScale() throws {
+    func testDateHeaderStaysPinnedWhileEventsScrollAtEveryScale() throws {
         for height: CGFloat in [108, 600] {
             let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
             container.backgroundColor = .systemBackground
@@ -340,7 +340,6 @@ final class TimelineTests: XCTestCase {
             })
             timeline.layoutIfNeeded()
             let header = try XCTUnwrap(timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" })
-            let divider = try XCTUnwrap(header.subviews.first { $0.accessibilityIdentifier == "timelineAxisDivider" })
             func viewportFrame(_ view: UIView) -> CGRect {
                 view.convert(view.bounds, to: timeline).offsetBy(dx: -timeline.bounds.minX, dy: -timeline.bounds.minY)
             }
@@ -373,10 +372,6 @@ final class TimelineTests: XCTestCase {
                     }
                     XCTAssertEqual(viewportFrame(marker).minY, markerTop - offset, accuracy: 0.01,
                                    "Events must still scroll underneath the pinned header")
-                    let dividerFrame = divider.convert(divider.bounds, to: timeline)
-                    XCTAssertEqual(dividerFrame.minX, timeline.bounds.minX, accuracy: 0.01)
-                    XCTAssertEqual(dividerFrame.maxX, timeline.bounds.maxX, accuracy: 0.01)
-                    XCTAssertEqual(dividerFrame.maxY, header.frame.maxY, accuracy: 0.01)
                     let hit = try XCTUnwrap(timeline.hitTest(CGPoint(x: timeline.bounds.midX,
                                                                    y: timeline.bounds.minY + header.bounds.height / 2), with: nil))
                     XCTAssertTrue(hit === header || hit.isDescendant(of: header), "Covered event controls must not receive header taps")
