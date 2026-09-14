@@ -94,9 +94,10 @@ struct CategoryForm: View {
                     .background(Color(UIColor.secondarySystemGroupedBackground))
                     .cornerRadius(12)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Keywords")
                             .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 16)
                         ZStack(alignment: .topLeading) {
                             if keywordsText.isEmpty {
                                 Text("e.g. book, reading, book club")
@@ -113,13 +114,15 @@ struct CategoryForm: View {
                                 .accessibilityIdentifier("categoryKeywords")
                         }
                         .frame(height: 96)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(12)
                         Text("Automatically select this category when any keyword or phrase appears. Separate with commas or new lines.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .padding(.horizontal, 16)
                     }
-                    .padding()
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .cornerRadius(12)
                 }
             }
             .padding()
