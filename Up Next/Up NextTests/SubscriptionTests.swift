@@ -33,6 +33,11 @@ final class SubscriptionTests: XCTestCase {
         guard case .success(let verification) = try await step("Purchase the test subscription", operation: { try await product.purchase() }),
               case .verified(let transaction) = verification else { return XCTFail("Expected a verified test purchase") }
         XCTAssertEqual(transaction.environment, .xcode)
+        // SKTestSession records the purchase before the simulator necessarily
+        // invalidates its cached empty entitlements. Synchronize the local test
+        // storefront before asking the app to read it; waiting on isSubscribed
+        // alone cannot refresh StoreKit's cache.
+        try await step("Synchronize the test purchase") { try await AppStore.sync() }
         try await step("Finish the verified transaction") { await transaction.finish() }
         try await step("Refresh the purchased entitlement") { await appData.refreshSubscriptionStatus() }
         // The transaction listener may start a newer refresh while the explicit

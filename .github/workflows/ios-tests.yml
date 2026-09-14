@@ -26,6 +26,7 @@ jobs:
               output.write('ALMANAC_SIMULATOR=' + devices[0]['udid'] + '\n')
           PY
       - name: Build app, widgets, and tests
+        id: build
         run: |
           xcodebuild -project 'Up Next/Up Next.xcodeproj' -scheme 'Up Next' \
             -destination "platform=iOS Simulator,id=$ALMANAC_SIMULATOR" \
@@ -41,6 +42,7 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/AlmanacUnitTests.xcresult" \
             CODE_SIGN_IDENTITY=- test-without-building
       - name: Run UI tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           xcodebuild -project 'Up Next/Up Next.xcodeproj' -scheme 'Up Next' \
             -destination "platform=iOS Simulator,id=$ALMANAC_SIMULATOR" \
