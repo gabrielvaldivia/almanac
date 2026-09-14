@@ -14,12 +14,7 @@ final class SubscriptionTests: XCTestCase {
         session.timeRate = .realTime
         session.clearTransactions()
         defer { session.clearTransactions() }
-        // Create the local purchase before querying receipts. On a fresh
-        // simulator, querying empty history can stall receipt synchronization.
-        let transaction = try await step("Create the local test purchase") {
-            try await session.buyProduct(identifier: "AP0001")
-        }
-        XCTAssertEqual(transaction.environment, .xcode)
+        // Configure the local store before the app queries products or receipts.
         let appData = AppData()
         let catalogLoaded = expectation(description: "The app loads the test catalog and initial entitlements")
         let catalogObservation = appData.$isLoadingSubscription.dropFirst().filter { !$0 }.first()
@@ -27,19 +22,32 @@ final class SubscriptionTests: XCTestCase {
         defer { catalogObservation.cancel() }
         appData.loadSubscriptionProduct()
         guard await XCTWaiter.fulfillment(of: [catalogLoaded], timeout: 60) == .completed else {
-            return XCTFail("StoreKit initialization did not complete in 60 seconds")
+            return XCTFail("StoreKit initialization did not complete in 60 seconds. Product: \(appData.subscriptionProduct?.id ?? "none"); message: \(appData.subscriptionMessage ?? "none")")
         }
+        XCTAssertFalse(appData.isSubscribed)
         let product = try XCTUnwrap(appData.subscriptionProduct, appData.subscriptionMessage ?? "Missing test product")
-        XCTAssertEqual(product.id, transaction.productID)
+        let purchaseObserved = expectation(description: "The app grants the verified purchased entitlement")
+        let purchaseObservation = appData.$isSubscribed.filter { $0 }.first()
+            .sink { _ in purchaseObserved.fulfill() }
+        defer { purchaseObservation.cancel() }
+        guard case .success(let verification) = try await step("Purchase the test subscription", operation: { try await product.purchase() }),
+              case .verified(let transaction) = verification else { return XCTFail("Expected a verified test purchase") }
+        XCTAssertEqual(transaction.environment, .xcode)
         try await step("Finish the verified transaction") { await transaction.finish() }
         try await step("Refresh the purchased entitlement") { await appData.refreshSubscriptionStatus() }
-        // AppData only grants this entitlement for a verified transaction.
+        // The transaction listener may start a newer refresh while the explicit
+        // refresh is suspended. Wait for the published result of that refresh.
+        guard await XCTWaiter.fulfillment(of: [purchaseObserved], timeout: 30) == .completed else {
+            return XCTFail("The verified purchase did not grant the entitlement")
+        }
         XCTAssertTrue(appData.isSubscribed)
         let refundObserved = expectation(description: "The transaction listener removes the refunded entitlement")
         let observation = appData.$isSubscribed.filter { !$0 }.first().sink { _ in refundObserved.fulfill() }
         defer { observation.cancel() }
         try session.refundTransaction(identifier: UInt(transaction.id))
-        await fulfillment(of: [refundObserved], timeout: 30)
+        guard await XCTWaiter.fulfillment(of: [refundObserved], timeout: 30) == .completed else {
+            return XCTFail("The refunded purchase did not remove the entitlement")
+        }
         XCTAssertFalse(appData.isSubscribed)
     }
 
