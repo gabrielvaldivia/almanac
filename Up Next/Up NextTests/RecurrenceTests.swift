@@ -72,4 +72,47 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertEqual(updated[5000], unrelated)
         XCTAssertTrue(updated.filter { $0.seriesID == event.seriesID }.allSatisfy { $0.title == "Renamed" })
     }
+
+    func testChangingEndingPreservesStoredHistoryWithoutBackfillingMissingYears() throws {
+        let event = seed(.daily, date(2030, 1, 1))
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: event.date, calendar: calendar)
+        events = Recurrence.removingOccurrence(events[10], from: events)
+        events[5].isRecurrenceException = true
+        events[5].date = date(2029, 12, 20)
+        events[5].endDate = date(2029, 12, 22)
+        let exception = events[5]
+        var replacement = events[20]
+        replacement.recurrence!.end = .onDate
+        replacement.recurrence!.until = date(2033, 1, 1)
+        let updated = Recurrence.updatingSeries(events[20], with: replacement, in: events,
+                                               calendar: calendar, now: date(2032, 1, 1))
+        XCTAssertTrue(Set(events.map(\.id)).isSubset(of: Set(updated.map(\.id))))
+        XCTAssertEqual(Set(updated.map(\.id)).count, updated.count)
+        XCTAssertFalse(updated.contains { $0.occurrenceIndex == 10 })
+        XCTAssertFalse(updated.contains { $0.date == date(2031, 6, 1) }, "Changing the ending must not invent unstored history")
+        for original in events {
+            XCTAssertEqual(updated.first { $0.id == original.id }?.date, original.date)
+        }
+        XCTAssertEqual(updated.first { $0.id == exception.id }?.endDate, exception.endDate)
+        XCTAssertEqual(updated.last?.date, date(2033, 1, 1))
+        XCTAssertEqual(updated.first?.recurrence?.anchorDay, CalendarDay(event.date, calendar: calendar))
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        decoder.userInfo[.eventCalendar] = calendar
+        let savedRule = try decoder.decode(RecurrenceRule.self, from: encoder.encode(XCTUnwrap(updated.first?.recurrence)))
+        XCTAssertEqual(savedRule.anchor, event.date)
+        XCTAssertEqual(savedRule.until, date(2033, 1, 1))
+    }
+
+    func testEndingInThePastKeepsExactlyTheSurvivingHistoricalOccurrences() {
+        let event = seed(.daily, date(2030, 1, 1))
+        let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: event.date, calendar: calendar)
+        var replacement = events[0]
+        replacement.recurrence!.end = .onDate
+        replacement.recurrence!.until = date(2030, 1, 3)
+        let updated = Recurrence.updatingSeries(events[0], with: replacement, in: events,
+                                               calendar: calendar, now: date(2032, 1, 1))
+        XCTAssertEqual(updated.map(\.id), Array(events.prefix(3)).map(\.id))
+        XCTAssertEqual(updated.map(\.date), [date(2030, 1, 1), date(2030, 1, 2), date(2030, 1, 3)])
+    }
 }

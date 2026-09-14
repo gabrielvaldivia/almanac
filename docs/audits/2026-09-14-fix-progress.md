@@ -24,8 +24,12 @@ Category metadata saves and renames retain event colors. Changing a category col
 
 ### 4. F11 — Category edits respect event recovery
 
-Renames and deletions now share model-level recovery guards. Both payloads save before publishing changed categories/events/defaults; a save error restores the previous payloads and readable backups. A recovery message explains why editing is paused. Category creation and reordering retain their prior behavior. All 113 unit tests and the normal category rename/edit/delete UI flow passed, including new corruption, rollback, and deletion regressions. The signed phone build passed.
+Renames and deletions now share model-level recovery guards. Both payloads save before publishing changed categories/events/defaults; a save error restores the previous payloads and readable backups. A recovery message explains why editing is paused. Category creation and reordering retain their prior behavior. All 113 unit tests and the normal category rename/edit/delete UI flow passed, including new corruption, rollback, and deletion regressions. The signed phone build passed. Pushed as `2e481fd` and installed on the phone.
+
+### 5. F01 — Recurrence ending changes preserve history
+
+Existing occurrence indices that still satisfy the edited rule are retained independently of the future-generation horizon. Surviving IDs and date exceptions remain intact, exclusions remain excluded, and missing years are not backfilled. Anchors/endings retain the supplied calendar through encoding. All 115 unit tests passed, followed by 20 focused calendar/recurrence/birthday tests after the storage-calendar refinement. Signed phone build passed.
 
 ## Remaining
 
-F01–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F02–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

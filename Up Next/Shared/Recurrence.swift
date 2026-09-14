@@ -103,24 +103,30 @@ enum Recurrence {
                calendar.startOfDay(for: date) > calendar.startOfDay(for: until) { break }
             if rule.end != .after && date > horizon { break }
             if !exclusions.contains(index) {
-                var event = seed
-                event.id = index == 0 ? seed.id : UUID()
-                event.date = date
-                event.endDate = seed.endDate == nil ? nil : calendar.date(byAdding: .day, value: duration, to: date)
-                event.calendarDay = CalendarDay(date, calendar: calendar)
-                event.calendarEndDay = event.endDate.map { CalendarDay($0, calendar: calendar) }
-                event.seriesID = seriesID
-                event.recurrence = rule
-                event.occurrenceIndex = index
-                event.isRecurrenceException = false
-                event.repeatOption = rule.frequency
-                event.repeatUntil = rule.until
-                event.repeatUntilCount = rule.count
-                result.append(event)
+                result.append(occurrence(seed, rule: rule, seriesID: seriesID, index: index,
+                                         date: date, duration: duration, calendar: calendar))
             }
             index += 1
         }
         return result
+    }
+
+    private static func occurrence(_ seed: Event, rule: RecurrenceRule, seriesID: UUID, index: Int,
+                                   date: Date, duration: Int, calendar: Calendar) -> Event {
+        var event = seed
+        event.id = index == 0 ? seed.id : UUID()
+        event.date = date
+        event.endDate = seed.endDate == nil ? nil : calendar.date(byAdding: .day, value: duration, to: date)
+        event.calendarDay = CalendarDay(date, calendar: calendar)
+        event.calendarEndDay = event.endDate.map { CalendarDay($0, calendar: calendar) }
+        event.seriesID = seriesID
+        event.recurrence = rule
+        event.occurrenceIndex = index
+        event.isRecurrenceException = false
+        event.repeatOption = rule.frequency
+        event.repeatUntil = rule.until
+        event.repeatUntilCount = rule.count
+        return event
     }
 
     static func replenishing(_ events: [Event], now: Date = Date(), calendar: Calendar = .current) -> [Event] {
@@ -173,7 +179,7 @@ enum Recurrence {
     }
 
     static func updatingSeries(_ selected: Event, with replacement: Event, in events: [Event],
-                               calendar: Calendar = .current) -> [Event] {
+                               calendar: Calendar = .current, now: Date = Date()) -> [Event] {
         guard let id = selected.seriesID, let oldRule = selected.recurrence else { return events }
         let calendar = oldRule.resolvedCalendar(calendar)
         if replacement.repeatOption == .never {
@@ -192,6 +198,8 @@ enum Recurrence {
             newRule.anchor = calendar.date(byAdding: newRule.component,
                 value: -(selected.occurrenceIndex ?? 0) * newRule.interval, to: replacement.date) ?? replacement.date
         }
+        newRule.anchorDay = CalendarDay(newRule.anchor, calendar: calendar)
+        newRule.untilDay = newRule.until.map { CalendarDay($0, calendar: calendar) }
         if samePattern && sameEnding {
             // Metadata and date shifts preserve every stored occurrence, including older long series.
             let originalsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -215,12 +223,29 @@ enum Recurrence {
             let days = calendar.dateComponents([.day], from: replacement.date, to: end).day ?? 0
             seed.endDate = calendar.date(byAdding: .day, value: days, to: newRule.anchor)
         }
-        let generated = generate(seed, rule: newRule, calendar: calendar).map { member -> Event in
+        var materialized = generate(seed, rule: newRule, now: now, calendar: calendar)
+        let generatedIndices = Set(materialized.compactMap(\.occurrenceIndex))
+        let exclusions = Set(newRule.excludedIndices)
+        let duration = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: seed.date),
+                                                     to: calendar.startOfDay(for: seed.endDate ?? seed.date)).day ?? 0)
+        // A generation horizon limits new occurrences, not records already
+        // saved by the user. Keep each surviving index without filling gaps
+        // in unmaterialized history or restoring explicitly deleted dates.
+        for index in byIndex.keys where !generatedIndices.contains(index) && !exclusions.contains(index) {
+            guard newRule.end != .after || index < newRule.count,
+                  let date = newRule.date(at: index, calendar: calendar) else { continue }
+            if newRule.end == .onDate, let until = newRule.until,
+               calendar.startOfDay(for: date) > calendar.startOfDay(for: until) { continue }
+            materialized.append(occurrence(seed, rule: newRule, seriesID: id, index: index,
+                                           date: date, duration: duration, calendar: calendar))
+        }
+        let generated = materialized.sorted { ($0.occurrenceIndex ?? 0) < ($1.occurrenceIndex ?? 0) }.map { member -> Event in
             var updated = member
             if let index = member.occurrenceIndex, let original = byIndex[index] {
                 updated.id = original.id
                 if original.isRecurrenceException {
                     updated.date = original.date; updated.endDate = original.endDate
+                    updated.calendarDay = original.calendarDay; updated.calendarEndDay = original.calendarEndDay
                     updated.isRecurrenceException = true
                 }
             }
