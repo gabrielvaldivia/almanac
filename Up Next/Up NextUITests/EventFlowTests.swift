@@ -15,6 +15,23 @@ final class EventFlowTests: XCTestCase {
         return app
     }
 
+    func testAComposerAcceptsCompleteTextOnFirstLaunch() {
+        // Run before tests that warm up the system keyboard. Keep first-launch
+        // typing covered independently of the timeline's fixture setup.
+        continueAfterFailure = false
+        let app = makeApp()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        let title = "First launch planning session"
+        input.typeText(title)
+        let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", title), object: input)
+        XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 5), .completed,
+                       "The first keyboard entry must preserve the complete text")
+        app.buttons["quickAddSubmit"].tap()
+        XCTAssertTrue(app.scrollViews["eventList"].staticTexts[title].waitForExistence(timeout: 5))
+    }
+
     func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() throws {
         continueAfterFailure = false
         let app = makeApp()
