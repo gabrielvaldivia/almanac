@@ -29,6 +29,7 @@ jobs:
         run: |
           xcodebuild -project 'Up Next/Up Next.xcodeproj' -scheme 'Up Next' \
             -destination "platform=iOS Simulator,id=$ALMANAC_SIMULATOR" \
+            -parallel-testing-enabled NO \
             -resultBundlePath "$RUNNER_TEMP/AlmanacTests.xcresult" \
             CODE_SIGN_IDENTITY=- test
       - uses: actions/upload-artifact@v4
