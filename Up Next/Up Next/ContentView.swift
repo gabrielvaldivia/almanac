@@ -157,8 +157,6 @@ struct ContentView: View {
                     onDismiss: dismissQuickEntry
                 )
                 .disabled(appData.storageError != nil)
-                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition))
-                .offset(y: quickEntryDragOffset)
                 .simultaneousGesture(quickEntryDismissGesture)
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
@@ -174,12 +172,20 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .disabled(appData.storageError != nil)
                 .foregroundStyle(.white)
-                .modifier(FloatingControlSurface(id: "composer", namespace: composerTransition, isInteractive: true, tint: categoryTint))
                 .transition(.opacity)
                 .accessibilityLabel("Add event")
                 .accessibilityIdentifier("quickAddButton")
             }
         }
+        // Resize one surface in place. Replacing two matched glass surfaces
+        // during a drag and keyboard dismissal can replay the outgoing view
+        // from its old, un-dragged position.
+        .modifier(FloatingControlSurface(
+            id: "composer", namespace: composerTransition,
+            isInteractive: !showingQuickEntry,
+            tint: showingQuickEntry ? nil : categoryTint
+        ))
+        .offset(y: quickEntryDragOffset)
     }
 
     private var quickEntryDismissGesture: some Gesture {
