@@ -209,7 +209,7 @@ final class TimelineCanvasView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        timeline.frame = bounds
+        if timeline.frame != bounds { timeline.frame = bounds }
     }
 }
 
@@ -379,6 +379,9 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private func finishProgrammaticScroll() {
         guard let day = scrollTargetDay else { return }
         scrollTargetDay = nil
+        // A layout update can end UIKit's animation before its target. Settle at
+        // the requested position before compensating for physical-pixel rounding.
+        setDayPosition(day - focusReferenceX / pointsPerDay)
         // UIKit rounds offsets to physical pixels. Keep an exact calendar focus
         // so landing on the first of a month cannot report the previous month.
         focusReferenceX = (day - dayPosition) * pointsPerDay
@@ -628,7 +631,7 @@ private final class TimelineEventButton: UIButton {
     private func updateSelectionAppearance() {
         guard let event = placement?.event else { return }
         let color = UIColor(event.color.color)
-        backgroundColor = color.withAlphaComponent(isSelected ? 0.6 : 0.2)
+        backgroundColor = color.withAlphaComponent(1)
         if isSelected { accessibilityTraits.insert(.selected) }
         else { accessibilityTraits.remove(.selected) }
     }
