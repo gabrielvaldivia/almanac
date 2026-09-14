@@ -23,6 +23,7 @@ struct AddEventView: View {
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor  // Use CodableColor to store color
 
+    var initialDraft: NewEventDraft? = nil
     var initialRecurrence: ParsedEventRecurrence? = nil
     var onSave: () -> Void = {}
 
@@ -108,13 +109,13 @@ struct AddEventView: View {
         .onAppear {
             guard !hasInitialized else { return }
             hasInitialized = true
-            let draft = NewEventDraft(title: newEventTitle, date: newEventDate,
+            let draft = initialDraft ?? NewEventDraft(title: newEventTitle, date: newEventDate,
                                       endDate: showEndDate ? newEventEndDate : nil,
                                       category: selectedCategory, appData: appData,
                                       recurrence: initialRecurrence)
             eventDetails.title = draft.title
             dateOptions = draft.dateOptions
-            useCustomRepeatOptions = initialRecurrence != nil
+            useCustomRepeatOptions = draft.usesCustomRepeat
             categoryOptions = draft.categoryOptions
             isTitleFocused = newEventTitle.isEmpty
         }

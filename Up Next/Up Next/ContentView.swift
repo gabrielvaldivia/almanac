@@ -14,6 +14,8 @@ struct ContentView: View {
 
     // State variables to manage the view's state
     @State private var quickEventInput: String = ""
+    @State private var quickEventOverrides = QuickEventOverrides()
+    @State private var manualDraft: NewEventDraft?
     @State private var newEventTitle: String = ""
     @State private var newEventDate: Date = Date()
     @State private var newEventEndDate: Date = Date()
@@ -76,26 +78,16 @@ struct ContentView: View {
         NavigationView {
             mainContent
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    HStack(spacing: 8) {
-                        Group {
-                            if isQuickEntryFocused {
-                                closeQuickEntryButton
-                                    .transition(.blurReplace)
-                            } else {
-                                filterMenu
-                                    .transition(.blurReplace)
-                            }
-                        }
-                        .modifier(FloatingControlSurface())
-                        QuickAddEventField(
-                            text: $quickEventInput,
-                            isFocused: $isQuickEntryFocused,
-                            onSubmit: submitQuickEntry
-                        )
-                        .disabled(appData.storageError != nil)
-                        quickEntryActionButton
-                    }
-                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: isQuickEntryFocused)
+                    QuickAddEventField(
+                        text: $quickEventInput,
+                        isFocused: $isQuickEntryFocused,
+                        overrides: $quickEventOverrides,
+                        draft: quickEventDraft,
+                        categories: simplifiedCategories,
+                        onSubmit: submitQuickEntry,
+                        onEdit: openEventDetails
+                    )
+                    .disabled(appData.storageError != nil)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                 }
@@ -182,6 +174,7 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarLeading) {
                 settingsButton
             }
+            ToolbarItem(placement: .topBarTrailing) { filterMenu }
             if !timelineShowsToday || isListAwayFromToday(in: days) {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -199,6 +192,9 @@ struct ContentView: View {
         }
         .onChange(of: appData.categories.map(\.name)) { _, names in
             if let selectedCategoryFilter, !names.contains(selectedCategoryFilter) { self.selectedCategoryFilter = nil }
+            if let name = quickEventOverrides.categoryName, !name.isEmpty, !names.contains(name) {
+                quickEventOverrides.categoryName = nil
+            }
         }
         .onOpenURL { url in
             handleOpenURL(url)
@@ -306,61 +302,28 @@ struct ContentView: View {
         .accessibilityIdentifier("eventFilter")
     }
 
-    private var closeQuickEntryButton: some View {
-        Button {
-            isQuickEntryFocused = false
-        } label: {
-            Image(systemName: "xmark")
-                .foregroundStyle(.tint)
-                .imageScale(.large)
-                .frame(width: 48, height: 48)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Close event input")
-        .accessibilityHint("Dismisses the keyboard")
-        .accessibilityIdentifier("closeQuickEntry")
-    }
-
-    private var quickEntryActionButton: some View {
-        let isDisabled = appData.storageError != nil || (isQuickEntryFocused && quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        return Button {
-            if isQuickEntryFocused {
-                submitQuickEntry()
-            } else {
-                openEventDetails(QuickEventParser.parse(quickEventInput))
-            }
-        } label: {
-            Image(systemName: isQuickEntryFocused ? "arrow.up" : "calendar.badge.plus")
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(isQuickEntryFocused ? .white : categoryTint)
-                .font(.system(size: 20, weight: isQuickEntryFocused ? .semibold : .regular))
-                .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
-                .frame(width: 48, height: 48)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .background {
-            if isQuickEntryFocused {
-                Circle().fill(categoryTint)
-            }
-        }
-        .modifier(FloatingControlSurface())
-        .opacity(isDisabled ? 0.45 : 1)
-        .accessibilityLabel(isQuickEntryFocused ? "Submit event" : "Add event")
-        .accessibilityHint(isQuickEntryFocused ? "Adds a recognized event or opens event details." : "Opens the full event form.")
-        .accessibilityIdentifier(isQuickEntryFocused ? "quickAddSubmit" : "manualEventInput")
-    }
-
     private func submitQuickEntry() {
-        guard !quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isQuickEntryFocused = false
-        if let parsed = QuickEventParser.parse(quickEventInput) {
-            addQuickEvent(parsed)
-        } else {
-            openEventDetails(nil)
+        let draft = quickEventDraft
+        guard appData.storageError == nil, !draft.title.isEmpty else { return }
+        guard !draft.requiresScheduleReview, draft.dateOptions.validationMessage == nil else {
+            openEventDetails()
+            return
         }
+        appData.events.append(contentsOf: NewEventDraft.events(
+            title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions))
+        appData.saveEvents()
+        isQuickEntryFocused = false
+        resetQuickEntry()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    private func resetQuickEntry() {
+        quickEventInput = ""
+        quickEventOverrides = QuickEventOverrides()
+    }
+
+    private var quickEventDraft: NewEventDraft {
+        quickEventOverrides.resolve(quickEventInput, category: selectedCategoryFilter, appData: appData)
     }
 
     private var timelineEvents: [Event] {
@@ -383,31 +346,17 @@ struct ContentView: View {
         quickEventDefaults.categoryOptions.selectedColor.color
     }
 
-    private func addQuickEvent(_ input: ParsedEventInput) {
-        guard appData.storageError == nil else { return }
-        let draft = NewEventDraft(title: input.title, date: input.date,
-                                  category: selectedCategoryFilter, appData: appData,
-                                  recurrence: input.recurrence)
-        guard draft.dateOptions.validationMessage == nil else {
-            openEventDetails(input)
-            return
-        }
-        appData.events.append(contentsOf: NewEventDraft.events(
-            title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions))
-        appData.saveEvents()
-        quickEventInput = ""
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-    }
-
-    private func openEventDetails(_ input: ParsedEventInput?) {
+    private func openEventDetails() {
         isQuickEntryFocused = false
-        newEventTitle = input?.title ?? quickEventInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        newEventDate = input?.date ?? Calendar.current.startOfDay(for: Date())
-        newEventEndDate = newEventDate
-        newEventRecurrence = input?.recurrence ?? QuickEventParser.inferredRecurrence(for: newEventTitle)
-        showEndDate = false
-        selectedCategory = quickEventDefaults.categoryOptions.selectedCategory
-        selectedColor = quickEventDefaults.categoryOptions.selectedColor
+        let draft = quickEventDraft
+        manualDraft = draft
+        newEventTitle = draft.title
+        newEventDate = draft.dateOptions.date
+        newEventEndDate = draft.dateOptions.endDate
+        newEventRecurrence = nil
+        showEndDate = draft.dateOptions.showEndDate
+        selectedCategory = draft.categoryOptions.selectedCategory
+        selectedColor = draft.categoryOptions.selectedColor
         showAddEventSheet = true
     }
 
@@ -422,8 +371,9 @@ struct ContentView: View {
             showAddEventSheet: $showAddEventSheet,
             selectedCategory: $selectedCategory,
             selectedColor: $selectedColor,
+            initialDraft: manualDraft,
             initialRecurrence: newEventRecurrence,
-            onSave: { quickEventInput = "" },
+            onSave: resetQuickEntry,
             appData: _appData
         )
     }
@@ -513,6 +463,7 @@ struct ContentView: View {
         selectedEvent = nil
         switch link {
         case .addEvent:
+            manualDraft = nil
             newEventRecurrence = nil
             newEventTitle = ""
             newEventDate = Date()

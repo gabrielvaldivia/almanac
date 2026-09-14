@@ -181,6 +181,79 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(draft.dateOptions.repeatOption, selected?.repeatOption ?? .never)
     }
 
+    func testComposerShowsDefaultsAndParsesDateCategoryAndRepeat() {
+        let data = AppData()
+        let originalDefault = data.defaultCategory
+        defer { data.defaultCategory = originalDefault }
+        data.defaultCategory = "Work"
+        let overrides = QuickEventOverrides()
+        let empty = overrides.resolve("", category: nil, appData: data, now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(empty.dateOptions.date, date(2026, 9, 13))
+        XCTAssertEqual(empty.categoryOptions.selectedCategory, "Work")
+        XCTAssertEqual(empty.dateOptions.repeatOption, .never)
+        let parsed = overrides.resolve("Dinner #Social tomorrow", category: nil, appData: data,
+                                       now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(parsed.title, "Dinner")
+        XCTAssertEqual(parsed.dateOptions.date, date(2026, 9, 14))
+        XCTAssertEqual(parsed.categoryOptions.selectedCategory, "Social")
+        let recurring = overrides.resolve("Dinner every other Saturday until December 15", category: nil,
+                                          appData: data, now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(recurring.dateOptions.repeatOption, .custom)
+        XCTAssertEqual(recurring.dateOptions.customRepeatCount, 2)
+        XCTAssertEqual(recurring.dateOptions.repeatUntil, date(2026, 12, 15))
+        XCTAssertTrue(recurring.usesCustomRepeat)
+    }
+
+    func testComposerManualChoicesOverrideTextAndExplicitNoneOverridesDefault() {
+        let data = AppData()
+        let originalDefault = data.defaultCategory
+        defer { data.defaultCategory = originalDefault }
+        data.defaultCategory = "Birthdays"
+        var overrides = QuickEventOverrides(date: date(2026, 10, 1), categoryName: "")
+        var repeatOptions = overrides.resolve("Dinner", category: nil, appData: data).dateOptions
+        repeatOptions.repeatOption = .never
+        overrides.repeatOptions = repeatOptions
+        let draft = overrides.resolve("Dinner #Social every week", category: nil, appData: data,
+                                      now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(draft.title, "Dinner")
+        XCTAssertEqual(draft.dateOptions.date, date(2026, 10, 1))
+        XCTAssertNil(draft.categoryOptions.selectedCategory)
+        XCTAssertEqual(draft.dateOptions.repeatOption, .never)
+        XCTAssertTrue(draft.usesCustomRepeat)
+        let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                          category: draft.categoryOptions, calendar: calendar)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.date, date(2026, 10, 1))
+        XCTAssertNil(events.first?.category)
+    }
+
+    func testComposerPreservesCustomRepeatCountAndResetsToParsedValues() {
+        let data = AppData()
+        var overrides = QuickEventOverrides()
+        var options = overrides.resolve("Dinner weekly", category: nil, appData: data).dateOptions
+        options.repeatUntilOption = .after
+        options.repeatUntilCount = 3
+        overrides.repeatOptions = options
+        let draft = overrides.resolve("Dinner tomorrow", category: nil, appData: data,
+                                      now: date(2026, 9, 13), calendar: calendar)
+        XCTAssertEqual(draft.dateOptions.repeatUntilCount, 3)
+        XCTAssertEqual(draft.dateOptions.repeatUntilOption, .after)
+        XCTAssertEqual(NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                            category: draft.categoryOptions, calendar: calendar).count, 3)
+        overrides.repeatOptions = nil
+        XCTAssertEqual(overrides.resolve("Dinner tomorrow", category: nil, appData: data).dateOptions.repeatOption, .never)
+    }
+
+    func testComposerReviewsInvalidSchedulesButAcceptsPlainTitlesWithDefaults() {
+        let data = AppData()
+        let overrides = QuickEventOverrides()
+        for text in ["Dinner 2/30", "Dinner 12/", "Dinner every other Saturday until", "Dinner February 30"] {
+            XCTAssertTrue(overrides.resolve(text, category: nil, appData: data).requiresScheduleReview, text)
+        }
+        XCTAssertFalse(overrides.resolve("Dinner", category: nil, appData: data).requiresScheduleReview)
+        XCTAssertFalse(overrides.resolve("Dinner tomorrow", category: nil, appData: data).requiresScheduleReview)
+    }
+
     func testQuickAndManualCreationPreserveEditableDetails() {
         var dates = DateOptions(date: date(2026, 12, 18), endDate: date(2026, 12, 20), showEndDate: true,
                                 repeatOption: .never, repeatUntil: date(2027, 12, 18),
