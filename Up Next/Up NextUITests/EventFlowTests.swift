@@ -381,7 +381,7 @@ final class EventFlowTests: XCTestCase {
         app.buttons["quickEventDate"].tap()
         app.collectionViews.buttons["Choose Dates…"].tap()
         XCTAssertTrue(app.navigationBars["Dates"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.switches["End date"].value as? String, "1")
+        XCTAssertTrue(app.buttons["calendarRemoveEndDate"].exists)
         app.navigationBars["Dates"].buttons["Done"].tap()
         app.buttons["quickAddSubmit"].tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
@@ -420,7 +420,10 @@ final class EventFlowTests: XCTestCase {
             attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
         }
         openDates()
-        XCTAssertEqual(app.switches["End date"].value as? String, "0")
+        let endpoints = app.segmentedControls["calendarEndpoint"]
+        XCTAssertTrue(endpoints.buttons["Start"].isSelected)
+        XCTAssertTrue(endpoints.buttons["+ End"].exists)
+        XCTAssertFalse(app.buttons["calendarRemoveEndDate"].exists)
         let calendar = Calendar.current
         let month = calendar.dateInterval(of: .month, for: Date())!.start
         var sixWeekMonth = month
@@ -438,7 +441,8 @@ final class EventFlowTests: XCTestCase {
         for _ in 0..<monthsBack { app.buttons["Next month"].tap() }
         app.buttons["calendarDay-28"].tap()
         screenshot("Inline calendar with single date")
-        app.switches["End date"].tap()
+        endpoints.buttons["+ End"].tap()
+        XCTAssertTrue(endpoints.buttons["End"].isSelected)
         app.buttons["Next month"].tap()
         app.buttons["calendarDay-3"].tap()
         XCTAssertTrue(app.buttons["calendarDay-1"].isSelected)
@@ -446,18 +450,23 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["calendarDay-3"].isSelected)
         XCTAssertFalse(app.buttons["calendarDay-4"].isSelected)
         screenshot("Inline calendar with range continuing into next month")
-        app.buttons["calendarStartDate"].tap()
+        XCTAssertTrue(endpoints.buttons["End"].isSelected, "Choosing a day keeps the current segment selected")
+        endpoints.buttons["Start"].tap()
         XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
         screenshot("Inline calendar with range starting in previous month")
+        endpoints.buttons["End"].tap()
+        XCTAssertTrue(app.buttons["calendarDay-3"].isSelected, "Switching endpoints reveals its month")
         app.navigationBars["Dates"].buttons["Done"].tap()
 
         // Reopening preserves both endpoints; turning the range off keeps its start.
         openDates()
-        XCTAssertEqual(app.switches["End date"].value as? String, "1")
-        app.switches["End date"].tap()
-        XCTAssertFalse(app.buttons["calendarEndDate"].exists)
+        XCTAssertTrue(app.buttons["calendarRemoveEndDate"].exists)
+        app.buttons["calendarRemoveEndDate"].tap()
+        XCTAssertTrue(endpoints.buttons["+ End"].exists)
+        XCTAssertTrue(endpoints.buttons["Start"].isSelected)
+        XCTAssertFalse(app.buttons["calendarRemoveEndDate"].exists)
         XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
-        app.switches["End date"].tap()
+        endpoints.buttons["+ End"].tap()
         app.buttons["Next month"].tap()
         app.buttons["calendarDay-3"].tap()
         app.navigationBars["Dates"].buttons["Done"].tap()

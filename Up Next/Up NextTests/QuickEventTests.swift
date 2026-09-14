@@ -38,12 +38,23 @@ final class QuickEventTests: XCTestCase {
         selection.select(date(2026, 9, 24))
         XCTAssertEqual(selection.start, date(2026, 9, 24))
         XCTAssertEqual(selection.end, date(2026, 9, 24))
+        XCTAssertEqual(selection.endpoint, .start)
+        selection.endpoint = .end
         selection.select(date(2026, 9, 20))
         XCTAssertEqual(selection.start, date(2026, 9, 20))
         XCTAssertEqual(selection.end, date(2026, 9, 20))
         selection.select(date(2026, 9, 23))
         XCTAssertEqual(selection.start, date(2026, 9, 20))
         XCTAssertEqual(selection.end, date(2026, 9, 23))
+        XCTAssertEqual(selection.endpoint, .end)
+        selection.select(date(2026, 9, 25))
+        XCTAssertEqual(selection.start, date(2026, 9, 20))
+        XCTAssertEqual(selection.end, date(2026, 9, 25), "Calendar taps keep editing the selected segment")
+        selection.endpoint = .start
+        selection.select(date(2026, 9, 19))
+        XCTAssertEqual(selection.start, date(2026, 9, 19))
+        XCTAssertEqual(selection.end, date(2026, 9, 25))
+        XCTAssertEqual(selection.endpoint, .start)
     }
 
     func testCalendarRangeSpansYearAndDaylightSavingBoundaries() {
