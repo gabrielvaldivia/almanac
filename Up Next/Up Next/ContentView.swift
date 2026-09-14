@@ -189,10 +189,16 @@ struct ContentView: View {
     }
 
     private var quickEntryDismissGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
+        // Measure outside the translated composer so moving the view cannot
+        // change the gesture's origin and feed back into the next drag update.
+        DragGesture(minimumDistance: 12, coordinateSpace: .global)
             .onChanged { value in
                 guard value.translation.height > abs(value.translation.width) else { return }
-                quickEntryDragOffset = max(0, value.translation.height)
+                var transaction = Transaction(animation: nil)
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    quickEntryDragOffset = max(0, value.translation.height)
+                }
             }
             .onEnded { value in
                 let isDownward = value.translation.height > abs(value.translation.width)

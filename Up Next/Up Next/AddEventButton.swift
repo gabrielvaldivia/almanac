@@ -54,18 +54,20 @@ struct QuickAddEventField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button(action: onDismiss) {
-                Capsule()
-                    .fill(Color(uiColor: .tertiaryLabel))
-                    .frame(width: 32, height: 4)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 12)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Collapse event entry")
-            .accessibilityHint("Swipe down or double-tap to return to the add button. Your draft is kept.")
-            .accessibilityIdentifier("quickEntryDragHandle")
+            // A Button can activate on release when it moves with the finger.
+            // A tap gesture cancels when the user starts dragging the handle.
+            Capsule()
+                .fill(Color(uiColor: .tertiaryLabel))
+                .frame(width: 32, height: 4)
+                .frame(maxWidth: .infinity)
+                .frame(height: 12)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onDismiss)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { onDismiss() }
+                .accessibilityLabel("Collapse event entry")
+                .accessibilityHint("Swipe down or double-tap to return to the add button. Your draft is kept.")
+                .accessibilityIdentifier("quickEntryDragHandle")
 
             HStack(alignment: .center, spacing: 4) {
                 colorMenu

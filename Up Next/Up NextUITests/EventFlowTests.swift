@@ -260,6 +260,18 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(handle.isHittable)
         XCTAssertLessThan(handle.frame.maxY, input.frame.minY)
         let handleCenter = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let restingInputFrame = input.frame
+        // Hold a short drag before releasing: it should follow the finger,
+        // then return to its resting position without dismissing the keyboard.
+        handleCenter.press(forDuration: 0.05,
+                           thenDragTo: handleCenter.withOffset(CGVector(dx: 0, dy: 30)),
+                           withVelocity: .slow, thenHoldForDuration: 1)
+        let returnedToRest = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            abs(input.frame.minY - restingInputFrame.minY) < 1
+        }, object: input)
+        XCTAssertEqual(XCTWaiter.wait(for: [returnedToRest], timeout: 5), .completed)
+        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        XCTAssertEqual(input.value as? String, "Dinner #Work tomorrow")
         handleCenter.press(forDuration: 0.05, thenDragTo: handleCenter.withOffset(CGVector(dx: 0, dy: 100)))
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)
@@ -280,6 +292,9 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         openComposer(app)
         app.staticTexts["appTitle"].tap()
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        openComposer(app)
+        handle.tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         list.staticTexts[fixtureName].tap()
         XCTAssertTrue(app.buttons["Delete Event"].waitForExistence(timeout: 5))
