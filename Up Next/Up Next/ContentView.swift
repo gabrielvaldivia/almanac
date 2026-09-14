@@ -36,7 +36,11 @@ struct ContentView: View {
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
-    @State private var timelinePresentation: TimelinePresentation = .compact
+    @State private var eventSheetSize: EventSheetSize = .large
+    @State private var eventSheetScrollRequest: EventSheetScrollRequest?
+    @State private var lastTimelineSheetDate: Date?
+    @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
+    private var eventSheetDrag: EventSheetDrag?
     @State private var scrollToTodayRequest: UUID?
     @State private var eventDetails = EventDetails(
         title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
@@ -144,61 +148,42 @@ struct ContentView: View {
         let days = EventListDay.group(events: timelineEvents)
 
         return GeometryReader { geometry in
-            VStack(spacing: 0) {
+            let heights = EventSheetHeights(available: geometry.size.height, compactTimeline: 108)
+            let sheetHeight = eventSheetDrag?.height ?? heights.height(for: eventSheetSize)
+            let progress = heights.timelineExpansion(at: sheetHeight)
+            ZStack(alignment: .bottom) {
                 EventTimelineView(
-                    events: timelineEvents,
-                    tint: categoryTint,
-                    highlightedEventID: highlightedEventID,
-                    scrollToTodayRequest: scrollToTodayRequest,
-                    onTodayVisibilityChange: { timelineShowsToday = $0 },
-                    onSelectEvent: selectTimelineEvent,
-                    onEditEvent: { selectedEvent = $0 },
-                    maximumHeight: max(0, geometry.size.height - 24),
-                    presentation: $timelinePresentation
-                )
-                if timelinePresentation != .expanded {
-                    Divider()
-
-                    if days.isEmpty {
-                        emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
-                    } else {
-                        if let visibleDate = eventListPosition ?? EventListDay.initialDate(in: days) {
-                            Text(itemDateFormatter.string(from: visibleDate))
-                                .font(.headline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
-                                .background(Color(uiColor: .systemBackground))
-                                .accessibilityAddTraits(.isHeader)
-                        }
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 0) {
-                                ForEach(days) { day in
-                                    eventRowView(key: day.date.relativeDate(), events: day.events)
-                                        .padding(.horizontal)
-                                        .padding(.bottom, 10)
-                                        .id(day.date)
-                                }
-                                // Content scrolls behind the floating composer; this
-                                // inset lets the last event clear it when scrolled.
-                                Spacer(minLength: 100)
-                            }
-                            .scrollTargetLayout()
-                        }
-                        .accessibilityIdentifier("eventList")
-                        .scrollPosition(id: $eventListPosition, anchor: .top)
-                        .coordinateSpace(name: "eventList")
-                        .scrollDismissesKeyboard(.interactively)
-                        .background(Color.clear)
-                        .onChange(of: days.map(\.date), initial: true) {
-                            guard !days.contains(where: { $0.date == eventListPosition }) else { return }
-                            eventListPosition = EventListDay.initialDate(in: days)
+                    events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
+                    scrollToTodayRequest: scrollToTodayRequest, animateScrolling: !reduceMotion,
+                    expanded: eventSheetSize == .small, expansionProgress: progress,
+                    onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
+                    onPositionChange: { day, anchor in
+                        guard let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date)),
+                              date != lastTimelineSheetDate else { return }
+                        DispatchQueue.main.async {
+                            lastTimelineSheetDate = date
+                            eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
                         }
                     }
-                }
+                )
+                .padding(.top, 4)
+                .frame(height: max(0, geometry.size.height - sheetHeight))
+                .frame(maxHeight: .infinity, alignment: .top)
+                .background(Color(uiColor: .systemBackground))
+
+                eventSheet(days: days, heights: heights)
+                    .frame(height: sheetHeight, alignment: .top)
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
+                    .overlay {
+                        UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24)
+                            .strokeBorder(Color(uiColor: .separator).opacity(0.5), lineWidth: 0.5)
+                            .allowsHitTesting(false)
+                    }
             }
-            .frame(height: geometry.size.height, alignment: .top)
+            .frame(height: geometry.size.height, alignment: .bottom)
             .clipped()
+            .transaction { if eventSheetDrag != nil || reduceMotion { $0.animation = nil } }
         }
         .safeAreaInset(edge: .top) {
             if let error = appData.storageError {
@@ -211,10 +196,20 @@ struct ContentView: View {
         .navigationTitle("Almanac")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Almanac").font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: dismissQuickEntry)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("appTitle")
+            }
             ToolbarItem(placement: .topBarLeading) {
                 settingsButton
             }
-            ToolbarItem(placement: .topBarTrailing) { filterMenu }
+            ToolbarItem(placement: .topBarTrailing) {
+                filterMenu.simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
+            }
             if !timelineShowsToday || isListAwayFromToday(in: days) {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -240,9 +235,12 @@ struct ContentView: View {
             handleOpenURL(url)
         }
         .onChange(of: selectedCategoryFilter) {
+            dismissQuickEntry()
             highlightRequestID = nil
             highlightedEventID = nil
-            eventListPosition = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents))
+            if let date = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents)) {
+                eventSheetScrollRequest = EventSheetScrollRequest(date: date)
+            }
         }
         .task(id: highlightRequestID) {
             guard highlightRequestID != nil else { return }
@@ -257,6 +255,91 @@ struct ContentView: View {
         }
     }
 
+    private func eventSheet(days: [EventListDay], heights: EventSheetHeights) -> some View {
+        VStack(spacing: 0) {
+            Button { setEventSheetSize(eventSheetSize == .large ? .small : .large) } label: {
+                Capsule().fill(.tertiary).frame(width: 28, height: 4)
+                    .frame(maxWidth: .infinity).frame(height: 32).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Resize events sheet")
+            .accessibilityValue(eventSheetSize.rawValue)
+            .accessibilityHint("Drag down for a larger timeline, or up for a larger events sheet.")
+            .accessibilityIdentifier("eventSheetResizeHandle")
+            .accessibilityAction(named: "Large events sheet") { setEventSheetSize(.large) }
+            .accessibilityAction(named: "Small events sheet") { setEventSheetSize(.small) }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .global)
+                    .updating($eventSheetDrag) { value, state, transaction in
+                        if state == nil {
+                            guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                            state = EventSheetDrag(heights: heights, startHeight: heights.height(for: eventSheetSize))
+                        }
+                        state?.translation = value.translation.height
+                        transaction.animation = nil
+                    }
+                    .onEnded { value in
+                        guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                        let stops = eventSheetDrag?.heights ?? heights
+                        let start = eventSheetDrag?.startHeight ?? stops.height(for: eventSheetSize)
+                        setEventSheetSize(stops.nearest(to: start - value.predictedEndTranslation.height))
+                    }
+            )
+
+            if days.isEmpty {
+                emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
+            } else {
+                Text(itemDateFormatter.string(from: eventListPosition ?? EventListDay.initialDate(in: days) ?? Date()))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal).padding(.bottom, 10)
+                    .accessibilityAddTraits(.isHeader)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(days) { day in
+                                eventRowView(key: day.date.relativeDate(), events: day.events)
+                                    .padding(.horizontal).padding(.bottom, 10)
+                                    .background {
+                                        GeometryReader { geometry in
+                                            let frame = geometry.frame(in: .named("eventList"))
+                                            Color.clear.preference(key: EventSheetVisibleDaysKey.self,
+                                                value: [EventSheetVisibleDay(date: day.date, minY: frame.minY, maxY: frame.maxY)])
+                                        }
+                                    }
+                                    .id(day.date)
+                            }
+                            Spacer(minLength: 100)
+                        }
+                    }
+                    .accessibilityIdentifier("eventList")
+                    .coordinateSpace(name: "eventList")
+                    .scrollDismissesKeyboard(.interactively)
+                    .onPreferenceChange(EventSheetVisibleDaysKey.self) { visibleDays in
+                        if let day = visibleDays.filter({ $0.maxY > 1 }).min(by: { $0.minY < $1.minY }),
+                           day.date != eventListPosition { eventListPosition = day.date }
+                    }
+                    .onChange(of: eventSheetScrollRequest) { _, request in
+                        guard let request else { return }
+                        withAnimation(request.animated && !reduceMotion ? .easeOut(duration: 0.18) : nil) {
+                            proxy.scrollTo(request.date, anchor: .top)
+                        }
+                    }
+                    .onChange(of: days.map(\.date), initial: true) { _, dates in
+                        guard !dates.contains(eventListPosition ?? .distantPast),
+                              let date = EventListDay.initialDate(in: days) else { return }
+                        eventListPosition = date
+                        proxy.scrollTo(date, anchor: .top)
+                    }
+                }
+            }
+        }
+    }
+
+    private func setEventSheetSize(_ size: EventSheetSize) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) { eventSheetSize = size }
+    }
+
     private var settingsButton: some View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
@@ -264,6 +347,7 @@ struct ContentView: View {
                 .foregroundStyle(.tint)
                 .imageScale(.large)
         }
+        .simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
     }
 
     @ViewBuilder private var todayButton: some View {
@@ -294,11 +378,14 @@ struct ContentView: View {
     }
 
     private func scrollToToday() {
+        dismissQuickEntry()
         highlightedEventID = nil
         highlightRequestID = nil
         scrollToTodayRequest = UUID()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-            eventListPosition = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents))
+            if let date = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents)) {
+                eventSheetScrollRequest = EventSheetScrollRequest(date: date)
+            }
         }
     }
 
@@ -381,7 +468,7 @@ struct ContentView: View {
         highlightedEventID = event.id
         highlightRequestID = UUID()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-            eventListPosition = EventListDay.displayDate(for: event)
+            eventSheetScrollRequest = EventSheetScrollRequest(date: EventListDay.displayDate(for: event), animated: true)
         }
     }
 

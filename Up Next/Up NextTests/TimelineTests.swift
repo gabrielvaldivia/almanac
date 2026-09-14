@@ -62,13 +62,13 @@ final class TimelineTests: XCTestCase {
         timeline.setExpanded(true)
         timeline.layoutIfNeeded()
         timeline.setDayPosition(20.25)
-        let cardDay = timeline.cardDayPosition
+        let focusedDay = timeline.focusedDayPosition
         let anchorDay = timeline.dayPosition + 180 / timeline.pointsPerDay
         timeline.beginZoom(at: 180)
         for scale: CGFloat in [0.7, 0.4, 0.15, 0.06, 0.01] {
             timeline.changeZoom(scale: scale, at: 200)
             XCTAssertEqual((timeline.dayPosition - anchorDay) * timeline.pointsPerDay + 200, 0, accuracy: 0.5)
-            XCTAssertEqual(timeline.cardDayPosition, cardDay, accuracy: 0.00001)
+            XCTAssertEqual(timeline.focusedDayPosition, focusedDay, accuracy: 0.00001)
         }
         XCTAssertEqual(timeline.pointsPerDay, TimelineZoomLevel.months.pointsPerDay)
         timeline.changeZoom(scale: 0.15, at: 200)
@@ -77,38 +77,10 @@ final class TimelineTests: XCTestCase {
         timeline.endZoom()
         timeline.setExpanded(false)
         XCTAssertEqual(timeline.pointsPerDay, 44)
-        XCTAssertEqual(timeline.dayPosition * 44, cardDay * 44, accuracy: 0.5)
+        XCTAssertEqual(timeline.dayPosition * 44, focusedDay * 44, accuracy: 0.5)
         timeline.beginZoom(at: 180)
         timeline.changeZoom(scale: 0.1, at: 180)
         XCTAssertEqual(timeline.pointsPerDay, 44, "Only the full-screen timeline should zoom")
-    }
-
-    @MainActor
-    func testZoomKeepsCardsSynchronizedAndTodayRetainsTheScale() {
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        let events = [0, 14, 60].map { day in
-            Event(title: "Day \(day)", date: Calendar.current.date(byAdding: .day, value: day, to: container.timeline.anchor)!,
-                  color: CodableColor(color: .blue))
-        }
-        container.update(events: events, expanded: true)
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        layoutTree(container)
-        container.timeline.beginZoom(at: 196)
-        container.timeline.changeZoom(scale: 1.0 / 30, at: 196)
-        container.timeline.endZoom()
-        layoutTree(container)
-        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.5)
-        container.cards.scrollViewWillBeginDragging(container.cards)
-        container.cards.contentOffset.x = container.cards.bounds.width * 2
-        layoutTree(container)
-        XCTAssertEqual(container.timeline.cardDayPosition * container.timeline.pointsPerDay,
-                       60 * container.timeline.pointsPerDay, accuracy: 0.5)
-        XCTAssertEqual(container.timeline.zoomLevel, .months)
-        container.timeline.scrollToToday(animated: false)
-        layoutTree(container)
-        XCTAssertTrue(container.timeline.isTodayVisible)
-        XCTAssertEqual(container.timeline.zoomLevel, .months)
-        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.5)
     }
 
     func testZoomPeriodsUseRealMonthLengthsAndCalendarWeeksAcrossDST() {
@@ -152,254 +124,90 @@ final class TimelineTests: XCTestCase {
         }
     }
 
+    func testEventSheetHasTwoStopsAndTracksTheHandleWithinItsBounds() {
+        let heights = EventSheetHeights(available: 750, compactTimeline: 108)
+        XCTAssertEqual(heights.large, 642)
+        XCTAssertEqual(heights.small, 240)
+        XCTAssertEqual(heights.nearest(to: 100), .small)
+        XCTAssertEqual(heights.nearest(to: 700), .large)
+        var drag = EventSheetDrag(heights: heights, startHeight: heights.large)
+        drag.translation = 150
+        XCTAssertEqual(drag.height, 492)
+        XCTAssertGreaterThan(heights.timelineExpansion(at: drag.height), 0)
+        XCTAssertLessThan(heights.timelineExpansion(at: drag.height), 1)
+        drag.translation = 1000
+        XCTAssertEqual(drag.height, heights.small)
+        drag.translation = -1000
+        XCTAssertEqual(drag.height, heights.large)
+        XCTAssertEqual(EventSheetHeights(available: 100, compactTimeline: 500).large, 100)
+        XCTAssertEqual(EventSheetHeights(available: -10, compactTimeline: 100).small, 0)
+    }
+
+    func testSheetSelectionFindsTheNearestCalendarDayAcrossDSTAndLargeGaps() {
+        let dates = [-20, 0, 2, 30, 365].map { calendar.date(byAdding: .day, value: $0, to: anchor)! }
+        func selected(_ day: CGFloat) -> Date? {
+            EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: dates, calendar: calendar)
+        }
+        XCTAssertEqual(selected(-100), dates.first)
+        XCTAssertEqual(selected(0.9), dates[1])
+        XCTAssertEqual(selected(1.1), dates[2])
+        XCTAssertEqual(selected(20), dates[3])
+        XCTAssertEqual(selected(1000), dates.last)
+        XCTAssertNil(EventSheetSelection.nearestDate(to: 0, anchor: anchor, dates: [], calendar: calendar))
+    }
+
+    @MainActor
+    func testTimelineReportsTheFocusedDayWhileZoomingAndReturningToToday() {
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
+        canvas.update(events: [], expanded: true, progress: 1, highlightedEventID: nil)
+        canvas.layoutIfNeeded()
+        canvas.timeline.layoutIfNeeded()
+        var reportedDay: CGFloat?
+        canvas.onPositionChange = { day, anchor in
+            reportedDay = day
+            XCTAssertEqual(anchor, canvas.timeline.anchor)
+        }
+        canvas.timeline.setDayPosition(60)
+        XCTAssertEqual(reportedDay, 60)
+        canvas.timeline.beginZoom(at: 196)
+        canvas.timeline.changeZoom(scale: 1.0 / 30, at: 196)
+        canvas.timeline.endZoom()
+        XCTAssertEqual(reportedDay!, 60, accuracy: 0.001)
+        XCTAssertEqual(canvas.timeline.zoomLevel, .months)
+        canvas.timeline.scrollToToday(animated: false)
+        XCTAssertEqual(reportedDay!, 0, accuracy: 0.001)
+        XCTAssertTrue(canvas.timeline.isTodayVisible)
+        XCTAssertEqual(canvas.timeline.zoomLevel, .months)
+    }
+
+    @MainActor
+    func testDotsMoveContinuouslyAsTheEventSheetShrinks() {
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 80))
+        let events = [Event(title: "Today", date: canvas.timeline.anchor, color: CodableColor(color: .blue))]
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        var previousTop: CGFloat = 48
+        for step in 0...10 {
+            let progress = CGFloat(step) / 10
+            canvas.frame.size.height = 80 + 470 * progress
+            canvas.update(events: events, expanded: false, progress: progress, highlightedEventID: nil)
+            layoutTree(canvas)
+            let marker = canvas.timeline.subviews.compactMap { $0 as? UIButton }.first { $0.accessibilityLabel == "Today" }!
+            XCTAssertGreaterThanOrEqual(marker.frame.minY, previousTop)
+            if step == 5 { XCTAssertGreaterThan(marker.frame.minY, 80) }
+            previousTop = marker.frame.minY
+        }
+        canvas.update(events: events, expanded: true, progress: 1, highlightedEventID: nil)
+        layoutTree(canvas)
+        let marker = canvas.timeline.subviews.compactMap { $0 as? UIButton }.first { $0.accessibilityLabel == "Today" }!
+        XCTAssertEqual(marker.frame.minY, previousTop, accuracy: 0.5)
+        XCTAssertEqual(marker.frame.minY - 44, canvas.timeline.bounds.height - marker.frame.maxY, accuracy: 1)
+    }
+
     func testViewportIncludesPartiallyVisibleDays() {
         let window = TimelineScrollWindow()
         XCTAssertEqual(window.visibleDays(offset: window.initialOffset, width: 88), 0...1)
         XCTAssertEqual(window.visibleDays(offset: window.initialOffset + 1, width: 88), 0...2)
         XCTAssertEqual(window.visibleDays(offset: window.initialOffset - 1, width: 88), -1...1)
-    }
-
-    func testHandleHasThreeStopsAndRespectsAvailableHeight() {
-        let heights = TimelinePanelHeights(compact: 108, expanded: 600)
-        XCTAssertEqual(heights.nearest(to: 20), .collapsed)
-        XCTAssertEqual(heights.nearest(to: 180), .compact)
-        XCTAssertEqual(heights.nearest(to: 450), .expanded)
-        XCTAssertEqual(heights.height(for: .expanded), 600)
-        XCTAssertEqual(TimelinePanelHeights(compact: 500, expanded: 200).compact, 200)
-        XCTAssertEqual(TimelinePanelHeights(compact: 100, expanded: -10).expanded, 0)
-    }
-
-    func testCardPositionsInterpolateSparseDaysInBothDirections() {
-        let positions = TimelineCardPositions(days: [-20, 0, 1, 30, 365])
-        for day: CGFloat in [-20, -10.5, 0, 0.25, 1, 17, 30, 200, 365] {
-            XCTAssertEqual(positions.day(for: positions.fraction(for: day))!, day, accuracy: 0.00001)
-        }
-        XCTAssertEqual(positions.fraction(for: -100), 0)
-        XCTAssertEqual(positions.fraction(for: 1000), 4)
-        XCTAssertNil(TimelineCardPositions(days: []).day(for: 0))
-        XCTAssertEqual(TimelineCardPositions(days: [5]).day(for: 100), 5)
-    }
-
-    @MainActor
-    func testFloatingCardsGroupSameDayAndStaySynchronizedWithTimeline() {
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        let today = Calendar.current.startOfDay(for: Date())
-        let events = [
-            Event(title: "First", date: today, color: CodableColor(color: .blue)),
-            Event(title: "Second", date: today, color: CodableColor(color: .blue)),
-            Event(title: "Later", date: Calendar.current.date(byAdding: .day, value: 10, to: today)!, color: CodableColor(color: .blue))
-        ]
-        container.update(events: events, expanded: true)
-        container.layoutIfNeeded()
-        container.timeline.layoutIfNeeded()
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.cards.groups.map { $0.events.count }, [2, 1])
-        XCTAssertFalse(container.cards.isHidden)
-
-        container.timeline.setDayPosition(4.25)
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.001)
-        container.timeline.setDayPosition(5.25)
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.cards.contentOffset.x, container.cards.bounds.width, accuracy: 0.001)
-        XCTAssertEqual(container.timeline.dayPosition, 5.25, accuracy: 0.001, "Selecting a card page must not snap the timeline away from the user's date")
-
-        container.cards.scrollViewWillBeginDragging(container.cards)
-        container.cards.contentOffset.x *= 0.5
-        // UIScrollView rounds fractional offsets to the screen's pixel grid.
-        XCTAssertEqual(container.timeline.dayPosition * TimelineScrollWindow.dayWidth,
-                       5 * TimelineScrollWindow.dayWidth, accuracy: 0.5)
-        container.timeline.scrollToToday(animated: false)
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.001)
-
-        container.update(events: events, expanded: false)
-        XCTAssertTrue(container.cards.isHidden)
-        XCTAssertTrue(container.timeline.isTodayVisible)
-    }
-
-    @MainActor
-    func testExpandedDotsStayCenteredAsCardsExpandAndTheViewportResizes() {
-        let today = Calendar.current.startOfDay(for: Date())
-        let events = [Event(title: "First", date: today, color: CodableColor(color: .blue)),
-                      Event(title: "Second", date: today, color: CodableColor(color: .blue))]
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        container.update(events: events, expanded: true)
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        func markerBounds() -> CGRect {
-            container.timeline.subviews.compactMap { $0 as? UIButton }
-                .filter { events.map(\.title).contains($0.accessibilityLabel ?? "") }
-                .reduce(CGRect.null) { $0.union($1.frame) }
-        }
-        func assertCentered(file: StaticString = #filePath, line: UInt = #line) {
-            let markers = markerBounds()
-            let spaceAbove = markers.minY - 44
-            let spaceBelow = container.timeline.bounds.height - container.timeline.bottomOverlayHeight - markers.maxY
-            XCTAssertEqual(spaceAbove, spaceBelow, accuracy: 1, file: file, line: line)
-            XCTAssertGreaterThan(spaceAbove, 0, file: file, line: line)
-        }
-        layoutTree(container)
-        assertCentered()
-        let originalTop = markerBounds().minY
-        let originalTimelineSize = container.timeline.bounds.size
-        container.cards.toggleStack(for: today)
-        layoutTree(container)
-        XCTAssertEqual(container.timeline.bounds.size, originalTimelineSize)
-        XCTAssertLessThan(markerBounds().minY, originalTop, "A taller card stack must recenter dots without a timeline resize")
-        assertCentered()
-        container.frame.size.height = 500
-        layoutTree(container)
-        assertCentered()
-        container.update(events: events, expanded: false)
-        layoutTree(container)
-        XCTAssertEqual(markerBounds().minY, 48, "Compact mode keeps dots directly below the days")
-    }
-
-    @MainActor
-    func testCardsFitShortAndWrappedTitlesAndResizeWhilePaging() {
-        let today = Calendar.current.startOfDay(for: Date())
-        let short = Event(title: "Dinner", date: Calendar.current.date(byAdding: .day, value: 3, to: today)!,
-                          color: CodableColor(color: .blue))
-        let long = Event(title: "A weekend away with friends to celebrate a birthday and explore the mountains",
-                         date: Calendar.current.date(byAdding: .day, value: 4, to: today)!,
-                         endDate: Calendar.current.date(byAdding: .day, value: 8, to: today)!, color: CodableColor(color: .blue))
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        container.update(events: [short, long], expanded: true)
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        func descendants(_ view: UIView) -> [UIView] { view.subviews.flatMap { [$0] + descendants($0) } }
-        func card(_ event: Event) -> UIButton {
-            descendants(container.cards).compactMap { $0 as? UIButton }.first {
-                $0.accessibilityIdentifier == "timelineCard-\(event.id.uuidString)"
-            }!
-        }
-        layoutTree(container)
-        let shortCard = card(short)
-        let shortHeight = shortCard.bounds.height
-        XCTAssertLessThan(shortHeight, 120)
-        XCTAssertTrue(shortCard.accessibilityValue?.hasPrefix("in 3 days,") == true)
-        let labels = shortCard.subviews.compactMap { $0 as? UILabel }
-        let title = labels.first { $0.text == short.title }!
-        let date = labels.first { $0.text == EventDateText.range(start: short.date, end: nil) }!
-        XCTAssertLessThanOrEqual(date.frame.minY - title.frame.maxY, 6)
-        XCTAssertLessThanOrEqual(shortHeight - date.frame.maxY, 16)
-
-        container.cards.setDayPosition(4, animated: false)
-        layoutTree(container)
-        let longCard = card(long)
-        XCTAssertGreaterThan(longCard.bounds.height, shortHeight)
-        XCTAssertGreaterThanOrEqual(container.cards.bounds.height, longCard.bounds.height)
-        let longTitle = longCard.subviews.compactMap { $0 as? UILabel }.first { $0.text == long.title }!
-        XCTAssertGreaterThan(longTitle.bounds.height, longTitle.font.lineHeight * 2)
-        XCTAssertGreaterThanOrEqual(longTitle.bounds.height + 1,
-                                   longTitle.sizeThatFits(CGSize(width: longTitle.bounds.width, height: .greatestFiniteMagnitude)).height)
-        let narrowHeight = longCard.bounds.height
-        container.frame.size.width = 600
-        layoutTree(container)
-        XCTAssertLessThanOrEqual(card(long).bounds.height, narrowHeight)
-        container.cards.setDayPosition(3, animated: false)
-        layoutTree(container)
-        XCTAssertEqual(card(short).bounds.height, shortHeight)
-    }
-
-    func testCardContentGrowsWithAccessibilityTextSize() {
-        let event = Event(title: "A long event title that needs room to wrap", date: Date(), color: CodableColor(color: .blue))
-        let regular = TimelineEventCardLayout(event: event, width: 361,
-                                              traits: UITraitCollection(preferredContentSizeCategory: .large))
-        let accessible = TimelineEventCardLayout(event: event, width: 361,
-                                                 traits: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraExtraExtraLarge))
-        XCTAssertGreaterThan(accessible.height, regular.height)
-        XCTAssertGreaterThan(accessible.title.height, regular.title.height)
-        XCTAssertLessThanOrEqual(accessible.title.maxY, accessible.detail.minY)
-    }
-
-    @MainActor
-    func testExpandedStackScrollsManyEventsWithoutMovingTimelineAndCollapsesWhenLeavingDay() {
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        let today = Calendar.current.startOfDay(for: Date())
-        let events = (0..<1000).map { index in
-            Event(title: "Same day \(index)", date: today, color: CodableColor(color: .blue))
-        }
-        let later = Event(title: "Later", date: Calendar.current.date(byAdding: .day, value: 10, to: today)!,
-                          color: CodableColor(color: .blue))
-        container.update(events: events + [later], expanded: true)
-        container.layoutIfNeeded()
-        container.cards.layoutIfNeeded()
-        let collapsedHeight = container.cards.bounds.height
-        let day = container.timeline.dayPosition
-        container.cards.toggleStack(for: today)
-        container.layoutIfNeeded()
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.cards.expandedDate, today)
-        XCTAssertGreaterThan(container.cards.bounds.height, collapsedHeight)
-        XCTAssertLessThanOrEqual(container.cards.bounds.height, container.bounds.height - 52)
-        XCTAssertEqual(container.timeline.dayPosition, day, accuracy: 0.001)
-
-        func descendants(_ view: UIView) -> [UIView] { view.subviews.flatMap { [$0] + descendants($0) } }
-        let table = descendants(container.cards).compactMap { $0 as? UITableView }.first { !$0.isHidden }!
-        table.superview?.layoutIfNeeded()
-        table.layoutIfNeeded()
-        XCTAssertEqual(table.numberOfRows(inSection: 0), 1000)
-        XCTAssertLessThan(table.visibleCells.count, 10)
-        table.scrollToRow(at: IndexPath(row: 999, section: 0), at: .bottom, animated: false)
-        table.layoutIfNeeded()
-        let lastEvent = container.cards.groups[0].events.last!
-        let button = descendants(table).compactMap { $0 as? UIButton }.first {
-            $0.accessibilityIdentifier == "timelineCard-\(lastEvent.id.uuidString)"
-        }!
-        var editedID: UUID?
-        container.onEditEvent = { editedID = $0.id }
-        button.sendActions(for: .touchUpInside)
-        XCTAssertEqual(editedID, lastEvent.id)
-        XCTAssertEqual(container.timeline.dayPosition, day, accuracy: 0.001)
-
-        container.timeline.setDayPosition(10)
-        container.layoutIfNeeded()
-        XCTAssertNil(container.cards.expandedDate)
-        XCTAssertEqual(container.cards.bounds.height, collapsedHeight)
-        container.cards.setDayPosition(0, animated: false)
-        container.cards.toggleStack(for: today)
-        container.update(events: [later], expanded: true)
-        XCTAssertNil(container.cards.expandedDate, "Filtering away a group must clear its expansion")
-    }
-
-    @MainActor
-    func testCardPagingUsesTheTimelinesOriginalCalendarAnchor() {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
-        let cards = TimelineCardsScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 200))
-        cards.update(events: [Event(title: "Today", date: today, color: CodableColor(color: .blue)),
-                              Event(title: "Tomorrow", date: tomorrow, color: CodableColor(color: .blue))], anchor: yesterday)
-        cards.setDayPosition(1.25, animated: false)
-        cards.layoutIfNeeded()
-        XCTAssertEqual(cards.contentOffset.x, 0, accuracy: 0.001)
-        cards.setDayPosition(2, animated: false)
-        cards.layoutIfNeeded()
-        XCTAssertEqual(cards.contentOffset.x, 393, accuracy: 0.001)
-    }
-
-    @MainActor
-    func testFullTimelineResizeAndFilteringKeepCardsBounded() {
-        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
-        let today = Calendar.current.startOfDay(for: Date())
-        let events = (0..<1000).map { day in
-            Event(title: "Event \(day)", date: Calendar.current.date(byAdding: .day, value: day, to: today)!, color: CodableColor(color: .blue))
-        }
-        container.update(events: events, expanded: true)
-        container.layoutIfNeeded()
-        container.cards.layoutIfNeeded()
-        container.timeline.setDayPosition(500.5)
-        container.cards.layoutIfNeeded()
-        XCTAssertLessThan(container.cards.subviews.count, 12)
-        container.frame.size = CGSize(width: 600, height: 400)
-        container.layoutIfNeeded()
-        container.cards.layoutIfNeeded()
-        XCTAssertEqual(container.timeline.dayPosition, 500.5, accuracy: 0.001)
-        container.update(events: [], expanded: true)
-        container.layoutIfNeeded()
-        XCTAssertTrue(container.cards.groups.isEmpty)
-        XCTAssertTrue(container.cards.isHidden)
     }
 
     func testHeightOnlyIncludesOverlapsInViewAndShrinksToEmpty() {
