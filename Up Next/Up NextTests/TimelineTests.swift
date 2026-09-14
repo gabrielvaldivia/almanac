@@ -276,7 +276,7 @@ final class TimelineTests: XCTestCase {
             timeline.setDayPosition(0.37)
             timeline.layoutIfNeeded()
             let lines = timeline.subviews.filter {
-                $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
+                $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
             }.map { $0.convert($0.bounds, to: timeline).minX }.sorted()
             XCTAssertGreaterThan(lines.count, 2)
             for (first, next) in zip(lines, lines.dropFirst()) {
@@ -304,7 +304,7 @@ final class TimelineTests: XCTestCase {
                 timeline.setDayPosition(CGFloat(position) + offset)
                 timeline.layoutIfNeeded()
                 let lines = timeline.subviews.filter {
-                    $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
+                    $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
                 }
                 let markers = timeline.subviews.compactMap { $0 as? UIButton }
                 XCTAssertFalse(markers.isEmpty)
@@ -371,7 +371,7 @@ final class TimelineTests: XCTestCase {
                     let dividerFrame = divider.convert(divider.bounds, to: timeline)
                     XCTAssertEqual(dividerFrame.minX, timeline.bounds.minX, accuracy: 0.01)
                     XCTAssertEqual(dividerFrame.maxX, timeline.bounds.maxX, accuracy: 0.01)
-                    let verticals = timeline.subviews.filter { $0.backgroundColor == .separator && $0.alpha > 0 && $0.frame.width <= 1 }
+                    let verticals = timeline.subviews.filter { $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && $0.frame.width <= 1 }
                     XCTAssertFalse(verticals.isEmpty)
                     for line in verticals {
                         XCTAssertEqual(line.frame.minY, dividerFrame.minY, accuracy: 0.01)

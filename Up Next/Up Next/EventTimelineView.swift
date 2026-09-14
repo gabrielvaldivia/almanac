@@ -362,7 +362,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         axisHeader.backgroundColor = .systemBackground
         axisHeader.clipsToBounds = true
         axisHeader.accessibilityIdentifier = "timelineAxis"
-        axisDivider.backgroundColor = .separator
+        axisDivider.backgroundColor = .systemGray2
         axisDivider.alpha = 0.85
         axisDivider.isUserInteractionEnabled = false
         axisDivider.accessibilityIdentifier = "timelineAxisDivider"
@@ -784,7 +784,8 @@ private final class TimelineDayView: UIView {
             addSubview(label)
         }
         number.clipsToBounds = true
-        divider.backgroundColor = .separator
+        divider.backgroundColor = .systemGray2
+        divider.accessibilityIdentifier = "timelineGridDivider"
         divider.isUserInteractionEnabled = false
     }
 
@@ -852,7 +853,8 @@ private final class TimelinePeriodView: UIView {
         label.font = TimelineAxisTypography.font
         label.textAlignment = .center
         addSubview(label)
-        divider.backgroundColor = .separator
+        divider.backgroundColor = .systemGray2
+        divider.accessibilityIdentifier = "timelineGridDivider"
         divider.isUserInteractionEnabled = false
     }
 
