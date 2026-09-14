@@ -12,6 +12,7 @@ struct QuickAddEventField: View {
 
     @State private var dateDraft: QuickScheduleEditorDraft?
     @State private var repeatDraft: QuickScheduleEditorDraft?
+    @Environment(\.colorScheme) private var colorScheme
 
     private var dateLabel: String {
         let calendar = Calendar.current
@@ -43,14 +44,16 @@ struct QuickAddEventField: View {
         return options.repeatOption.rawValue
     }
 
+    private var submitForeground: Color {
+        let color = draft.categoryOptions.selectedColor
+        let brightness = color.red * 0.299 + color.green * 0.587 + color.blue * 0.114
+        return brightness > 0.5 ? .black : .white
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Circle()
-                    .fill(draft.categoryOptions.selectedColor.color)
-                    .frame(width: 10, height: 10)
-                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-                    .accessibilityHidden(true)
+            HStack(alignment: .center, spacing: 4) {
+                colorMenu
                 TextField("Add an event, like Dune 12/18", text: $text, axis: .vertical)
                     .lineLimit(1...4)
                     .textInputAutocapitalization(.sentences)
@@ -59,8 +62,8 @@ struct QuickAddEventField: View {
                     .accessibilityHint("Type an event. The date, category and repeat buttons update as you type.")
                     .accessibilityIdentifier("quickEventInput")
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 8)
+            .padding(.trailing, 8)
+            .padding(.top, 4)
             .padding(.bottom, 4)
 
             HStack(spacing: 4) {
@@ -86,7 +89,7 @@ struct QuickAddEventField: View {
                 Button(action: onSubmit) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(submitForeground)
                         .frame(width: 36, height: 36)
                         .background(draft.categoryOptions.selectedColor.color, in: Circle())
                         .frame(width: 44, height: 44)
@@ -138,6 +141,42 @@ struct QuickAddEventField: View {
             .background(Color(uiColor: .secondarySystemFill), in: Capsule())
             .frame(minHeight: 44)
             .contentShape(Rectangle())
+    }
+
+    private var colorMenu: some View {
+        let choices = CustomColorPickerSheet.colorChoices(for: colorScheme)
+        let selected = draft.categoryOptions.selectedColor
+        let selectedName = CustomColorPickerSheet.colorName(for: selected, scheme: colorScheme)
+        return Menu {
+            ForEach(choices, id: \.name) { choice in
+                Button {
+                    overrides.color = CodableColor(color: choice.color)
+                } label: {
+                    Label {
+                        Text(choice.name)
+                    } icon: {
+                        let symbol = selectedName == choice.name ? "checkmark.circle.fill" : "circle.fill"
+                        Image(uiImage: UIImage(systemName: symbol)!.withTintColor(
+                            UIColor(choice.color), renderingMode: .alwaysOriginal))
+                    }
+                }
+            }
+            if overrides.color != nil {
+                Divider()
+                Button("Use Category Color") { overrides.color = nil }
+            }
+        } label: {
+            Circle()
+                .fill(selected.color)
+                .frame(width: 28, height: 28)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Event color")
+        .accessibilityValue(selectedName)
+        .accessibilityHint("Choose a color for this event.")
+        .accessibilityIdentifier("quickEventColor")
     }
 
     private var dateMenu: some View {

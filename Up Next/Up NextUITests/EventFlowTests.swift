@@ -138,14 +138,30 @@ final class EventFlowTests: XCTestCase {
         openComposer(app)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
         input.typeText("Dinner #Work tomorrow")
+        let color = app.buttons["quickEventColor"]
+        XCTAssertGreaterThanOrEqual(color.frame.width, 44)
+        XCTAssertEqual(color.frame.midY, input.frame.midY, accuracy: 1)
+        color.tap()
+        app.collectionViews.buttons["Orange"].tap()
+        XCTAssertEqual(color.value as? String, "Orange")
         app.buttons["quickEventCategory"].tap()
         app.collectionViews.buttons["Social"].tap()
         XCTAssertTrue(input.exists)
         XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        XCTAssertEqual(color.value as? String, "Orange")
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Composer with event color beside text"
         screenshot.lifetime = .keepAlways
         add(screenshot)
+        app.buttons["manualEventInput"].tap()
+        XCTAssertTrue(app.navigationBars["Add Event"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["Color"].value as? String, "Orange")
+        let manualScreenshot = XCTAttachment(screenshot: app.screenshot())
+        manualScreenshot.name = "Manual event form preserves the selected orange color"
+        manualScreenshot.lifetime = .keepAlways
+        add(manualScreenshot)
+        app.navigationBars["Add Event"].buttons["Close"].tap()
+        input.tap()
         let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
@@ -153,6 +169,10 @@ final class EventFlowTests: XCTestCase {
         openComposer(app)
         XCTAssertEqual(input.value as? String, "Dinner #Work tomorrow")
         XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        XCTAssertEqual(color.value as? String, "Orange")
+        color.tap()
+        app.collectionViews.buttons["Use Category Color"].tap()
+        XCTAssertNotEqual(color.value as? String, "Orange")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)

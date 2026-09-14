@@ -290,6 +290,25 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(overrides.resolve("Dinner tomorrow", category: nil, appData: data).dateOptions.repeatOption, .never)
     }
 
+    func testComposerColorChoiceSurvivesParsingAndSavingAndCanFollowCategoryAgain() {
+        let data = AppData()
+        let chosen = CodableColor(color: .orange)
+        var overrides = QuickEventOverrides(color: chosen)
+        for category in ["Work", "Social"] {
+            let draft = overrides.resolve("Dinner #\(category) tomorrow", category: nil, appData: data,
+                                          now: date(2026, 9, 13), calendar: calendar)
+            XCTAssertEqual(draft.categoryOptions.selectedCategory, category)
+            XCTAssertEqual(draft.categoryOptions.selectedColor, chosen)
+            let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                              category: draft.categoryOptions, calendar: calendar)
+            XCTAssertEqual(events.first?.color, chosen)
+        }
+        overrides.color = nil
+        let draft = overrides.resolve("Dinner #Work tomorrow", category: nil, appData: data)
+        XCTAssertEqual(draft.categoryOptions.selectedColor,
+                       CodableColor(color: data.categories.first { $0.name == "Work" }!.color))
+    }
+
     func testComposerReviewsInvalidSchedulesButAcceptsPlainTitlesWithDefaults() {
         let data = AppData()
         let overrides = QuickEventOverrides()

@@ -11,6 +11,7 @@ import SwiftUI
 struct ColorSelectionRow: View {
     let color: Color
     var action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: action) {
@@ -33,6 +34,7 @@ struct ColorSelectionRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Color")
+        .accessibilityValue(CustomColorPickerSheet.colorName(for: CodableColor(color: color), scheme: colorScheme))
         .accessibilityHint("Choose a color")
     }
 }
@@ -42,9 +44,26 @@ struct CustomColorPickerSheet: View {
     @Binding var showColorPickerSheet: Bool
     @Environment(\.colorScheme) var colorScheme
     
-    static let predefinedColors: [Color] = [
-        .gray, .blue, .indigo, .purple, .red, .pink, .yellow, .orange, .brown, .green, .teal
+    private static let namedColors: [(name: String, color: Color)] = [
+        ("Gray", .gray), ("Blue", .blue), ("Indigo", .indigo), ("Purple", .purple),
+        ("Red", .red), ("Pink", .pink), ("Yellow", .yellow), ("Orange", .orange),
+        ("Brown", .brown), ("Green", .green), ("Teal", .teal)
     ]
+
+    static let predefinedColors: [Color] = namedColors.map(\.color)
+
+    static func colorChoices(for scheme: ColorScheme) -> [(name: String, color: Color)] {
+        [(scheme == .dark ? "White" : "Black", scheme == .dark ? .white : .black)] + namedColors
+    }
+
+    static func colorName(for color: CodableColor, scheme: ColorScheme) -> String {
+        colorChoices(for: scheme).first { choice in
+            let candidate = CodableColor(color: choice.color)
+            // SwiftUI/UIKit color conversion can round the stored RGB components.
+            return abs(candidate.red - color.red) < 0.001 && abs(candidate.green - color.green) < 0.001 &&
+                abs(candidate.blue - color.blue) < 0.001 && abs(candidate.opacity - color.opacity) < 0.001
+        }?.name ?? "Custom"
+    }
 
     var contrastColor: Color {
         let brightness = (selectedColor.red * 299 + selectedColor.green * 587 + selectedColor.blue * 114) / 1000
@@ -69,28 +88,21 @@ struct CustomColorPickerSheet: View {
     @ViewBuilder
     private func ColorGrid() -> some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-            ForEach(Array(colorOptions.enumerated()), id: \.offset) { index, color in
+            ForEach(Self.colorChoices(for: colorScheme), id: \.name) { choice in
                 Button(action: {
-                    selectedColor = CodableColor(color: color)
+                    selectedColor = CodableColor(color: choice.color)
                     showColorPickerSheet = false
                 }) {
                     Circle()
-                        .fill(color)
+                        .fill(choice.color)
                         .frame(width: 50, height: 50)
                         .padding(.bottom, 10)
-                        .accessibilityLabel(colorNames[index])
-                        .accessibilityValue(selectedColor.color == color ? "Selected" : "")
+                        .accessibilityLabel(choice.name)
+                        .accessibilityValue(selectedColor == CodableColor(color: choice.color) ? "Selected" : "")
                 }
             }
         }
         .padding()
     }
     
-    private var colorNames: [String] {
-        [colorScheme == .dark ? "White" : "Black", "Gray", "Blue", "Indigo", "Purple", "Red", "Pink", "Yellow", "Orange", "Brown", "Green", "Teal"]
-    }
-
-    private var colorOptions: [Color] {
-        return [colorScheme == .dark ? .white : .black] + Self.predefinedColors
-    }
 }

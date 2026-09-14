@@ -23,7 +23,7 @@ struct AddEventView: View {
     @Binding var selectedCategory: String?
     @Binding var selectedColor: CodableColor  // Use CodableColor to store color
 
-    var initialDraft: NewEventDraft? = nil
+    @Binding var initialDraft: NewEventDraft?
     var initialRecurrence: ParsedEventRecurrence? = nil
     var onSave: () -> Void = {}
 
@@ -134,7 +134,6 @@ struct AddEventView: View {
                     dateOptions.repeatUntilCount = category.repeatUntilCount
                     dateOptions.repeatUntil = category.repeatUntil
                 }
-                categoryOptions.selectedColor = CodableColor(color: category.color)
             }
         }
     }

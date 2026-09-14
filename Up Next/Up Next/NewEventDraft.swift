@@ -66,6 +66,7 @@ struct QuickEventOverrides {
     var hasDateOverride: Bool { date != nil }
     // nil follows parsing/defaults; an empty name explicitly means no category.
     var categoryName: String?
+    var color: CodableColor?
     var repeatOptions: DateOptions?
 
     func resolve(_ input: String, category: String?, appData: AppData,
@@ -88,6 +89,7 @@ struct QuickEventOverrides {
             endDate: hasDateOverride ? endDate : parsed?.endDate,
             category: categoryName ?? taggedCategory ?? category, appData: appData,
             recurrence: parsed?.recurrence ?? QuickEventParser.inferredRecurrence(for: title))
+        if let color { draft.categoryOptions.selectedColor = color }
         // Keep incomplete/invalid scheduling input in the manual review flow;
         // a plain title can use the default date displayed by the composer.
         let scheduleHint = #"(?:^|\s)\d{1,4}[-/]\d*|\b(?:every|until|through|starting)\b|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d"#

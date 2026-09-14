@@ -548,7 +548,7 @@ struct ContentView: View {
             showAddEventSheet: $showAddEventSheet,
             selectedCategory: $selectedCategory,
             selectedColor: $selectedColor,
-            initialDraft: manualDraft,
+            initialDraft: $manualDraft,
             initialRecurrence: newEventRecurrence,
             onSave: resetQuickEntry,
             appData: _appData
