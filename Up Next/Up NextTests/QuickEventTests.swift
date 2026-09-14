@@ -16,6 +16,64 @@ final class QuickEventTests: XCTestCase {
         QuickEventParser.parse(text, now: now ?? date(2026, 9, 13, hour: 14), calendar: calendar)
     }
 
+    func testCalendarSwitchesBetweenSingleDateAndRangeWithoutChangingTheStart() {
+        var selection = CalendarDateSelection(start: date(2026, 9, 14, hour: 13), end: nil, calendar: calendar)
+        selection.select(date(2026, 9, 18, hour: 19))
+        XCTAssertEqual(selection.start, date(2026, 9, 18))
+        XCTAssertNil(selection.end)
+        selection.setRangeEnabled(true)
+        selection.select(date(2026, 9, 21, hour: 15))
+        XCTAssertEqual(selection.start, date(2026, 9, 18))
+        XCTAssertEqual(selection.end, date(2026, 9, 21))
+        XCTAssertTrue(selection.contains(date(2026, 9, 20)))
+        XCTAssertFalse(selection.contains(date(2026, 9, 22)))
+        selection.setRangeEnabled(false)
+        XCTAssertEqual(selection.start, date(2026, 9, 18))
+        XCTAssertNil(selection.end)
+        XCTAssertFalse(selection.contains(date(2026, 9, 20)))
+    }
+
+    func testCalendarKeepsRangesOrderedWhenEitherEndpointMoves() {
+        var selection = CalendarDateSelection(start: date(2026, 9, 18), end: date(2026, 9, 21), calendar: calendar)
+        selection.select(date(2026, 9, 24))
+        XCTAssertEqual(selection.start, date(2026, 9, 24))
+        XCTAssertEqual(selection.end, date(2026, 9, 24))
+        selection.select(date(2026, 9, 20))
+        XCTAssertEqual(selection.start, date(2026, 9, 20))
+        XCTAssertEqual(selection.end, date(2026, 9, 20))
+        selection.select(date(2026, 9, 23))
+        XCTAssertEqual(selection.start, date(2026, 9, 20))
+        XCTAssertEqual(selection.end, date(2026, 9, 23))
+    }
+
+    func testCalendarRangeSpansYearAndDaylightSavingBoundaries() {
+        for (start, end, inside) in [
+            (date(2026, 12, 30), date(2027, 1, 2), date(2027, 1, 1)),
+            (date(2026, 3, 7), date(2026, 3, 9), date(2026, 3, 8, hour: 23))
+        ] {
+            var selection = CalendarDateSelection(start: start, end: nil, calendar: calendar)
+            selection.setRangeEnabled(true)
+            selection.select(end)
+            XCTAssertEqual(selection.start, start)
+            XCTAssertEqual(selection.end, end)
+            XCTAssertTrue(selection.contains(inside))
+        }
+    }
+
+    func testCalendarGridRespectsFirstWeekdayLeapDayAndLocalMidnight() {
+        var mondayFirst = calendar
+        mondayFirst.firstWeekday = 2
+        let selection = CalendarDateSelection(start: date(2024, 2, 1), end: nil, calendar: mondayFirst)
+        let february = selection.monthDays(containing: date(2024, 2, 15))
+        XCTAssertEqual(february.prefix(while: { $0 == nil }).count, 3)
+        XCTAssertEqual(february.compactMap { $0 }.count, 29)
+        XCTAssertEqual(february.compactMap { $0 }.last, date(2024, 2, 29))
+        let march = selection.monthDays(containing: date(2026, 3, 8)).compactMap { $0 }
+        XCTAssertEqual(march.count, 31)
+        XCTAssertTrue(march.allSatisfy { calendar.component(.hour, from: $0) == 0 })
+        XCTAssertEqual(march[8], date(2026, 3, 9))
+    }
+
     func testRequestedExampleAndTitlePreservation() {
         XCTAssertEqual(parse("Dune 12/18"), ParsedEventInput(title: "Dune", date: date(2026, 12, 18)))
         XCTAssertEqual(parse("  🎬 Dune: Part 2 on 12/18  "),

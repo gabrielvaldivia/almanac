@@ -359,6 +359,80 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.waitForExistence(timeout: 5))
     }
 
+    func testInlineCalendarSelectsAndSavesARangeAcrossMonths() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let name = "Calendar \(UUID().uuidString.prefix(6))"
+        app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.typeText(name)
+        func openDates() {
+            app.buttons["quickEventDate"].tap()
+            app.collectionViews.buttons["Choose Dates…"].tap()
+            XCTAssertTrue(app.navigationBars["Dates"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["calendarDay-15"].isHittable, "Calendar should be exposed immediately")
+        }
+        func screenshot(_ name: String) {
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        }
+        openDates()
+        XCTAssertEqual(app.switches["End date"].value as? String, "0")
+        let calendar = Calendar.current
+        let month = calendar.dateInterval(of: .month, for: Date())!.start
+        var sixWeekMonth = month
+        var monthsBack = 0
+        while monthsBack < 12 {
+            let leadingDays = (calendar.component(.weekday, from: sixWeekMonth) - calendar.firstWeekday + 7) % 7
+            if leadingDays + calendar.range(of: .day, in: .month, for: sixWeekMonth)!.count > 35 { break }
+            sixWeekMonth = calendar.date(byAdding: .month, value: -1, to: sixWeekMonth)!
+            monthsBack += 1
+            app.buttons["Previous month"].tap()
+        }
+        let lastDay = calendar.range(of: .day, in: .month, for: sixWeekMonth)!.count
+        XCTAssertTrue(app.buttons["calendarDay-\(lastDay)"].isHittable, "A six-week month should fit without scrolling")
+        screenshot("Inline calendar with all six weeks visible")
+        for _ in 0..<monthsBack { app.buttons["Next month"].tap() }
+        app.buttons["calendarDay-28"].tap()
+        screenshot("Inline calendar with single date")
+        app.switches["End date"].tap()
+        app.buttons["Next month"].tap()
+        app.buttons["calendarDay-3"].tap()
+        XCTAssertTrue(app.buttons["calendarDay-1"].isSelected)
+        XCTAssertTrue(app.buttons["calendarDay-2"].isSelected)
+        XCTAssertTrue(app.buttons["calendarDay-3"].isSelected)
+        XCTAssertFalse(app.buttons["calendarDay-4"].isSelected)
+        screenshot("Inline calendar with range continuing into next month")
+        app.buttons["calendarStartDate"].tap()
+        XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
+        screenshot("Inline calendar with range starting in previous month")
+        app.navigationBars["Dates"].buttons["Done"].tap()
+
+        // Reopening preserves both endpoints; turning the range off keeps its start.
+        openDates()
+        XCTAssertEqual(app.switches["End date"].value as? String, "1")
+        app.switches["End date"].tap()
+        XCTAssertFalse(app.buttons["calendarEndDate"].exists)
+        XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
+        app.switches["End date"].tap()
+        app.buttons["Next month"].tap()
+        app.buttons["calendarDay-3"].tap()
+        app.navigationBars["Dates"].buttons["Done"].tap()
+        app.buttons["quickAddSubmit"].tap()
+        let title = app.staticTexts[name].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        let start = calendar.date(byAdding: .day, value: 27, to: month)!
+        let end = calendar.date(byAdding: .day, value: 2, to: calendar.date(byAdding: .month, value: 1, to: month)!)!
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        XCTAssertEqual(app.buttons["Start date"].value as? String, formatter.string(from: start))
+        XCTAssertEqual(app.buttons["End date"].value as? String, formatter.string(from: end))
+        app.buttons["Delete Event"].tap()
+        app.alerts["Delete Event"].buttons["Delete this event"].tap()
+    }
+
     func testInvalidScheduleCanBeCorrectedInComposer() {
         continueAfterFailure = false
         let app = XCUIApplication()

@@ -275,37 +275,6 @@ private struct QuickScheduleEditorDraft: Identifiable {
     var options: DateOptions
 }
 
-private struct QuickDateEditor: View {
-    @State var options: DateOptions
-    var onSave: (Date, Date?) -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                DatePicker("Start date", selection: $options.date, displayedComponents: .date)
-                    .onChange(of: options.date) { _, date in options.endDate = max(date, options.endDate) }
-                Toggle("End date", isOn: $options.showEndDate)
-                if options.showEndDate {
-                    DatePicker("End date", selection: $options.endDate, in: options.date..., displayedComponents: .date)
-                }
-            }
-            .accessibilityIdentifier("quickDatePicker")
-            .navigationTitle("Dates")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        let calendar = Calendar.current
-                        onSave(calendar.startOfDay(for: options.date),
-                               options.showEndDate ? calendar.startOfDay(for: options.endDate) : nil)
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
 private struct QuickRepeatEditor: View {
     @State var options: DateOptions
     @State private var usesCustomRepeat = true
