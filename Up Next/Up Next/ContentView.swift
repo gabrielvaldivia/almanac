@@ -33,8 +33,10 @@ struct ContentView: View {
     @State private var selectedCategoryFilter: String? = nil
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
+    @State private var eventListWindow = EventListWindow()
     @State private var timelineShowsToday = true
     @State private var timelineHeight: CGFloat = 100
+    @State private var timelineInsetHeight: CGFloat = 100
     @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var timelineUsesYearHeading = false
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
@@ -211,15 +213,17 @@ struct ContentView: View {
     }
 
     private var mainContent: some View {
-        let days = EventListDay.group(events: timelineEvents)
+        let days = eventListDays
 
         return GeometryReader { geometry in
-            VStack(spacing: 0) {
+            let headerHeight = min(timelineHeight, max(80, geometry.size.height * 0.5))
+            let insetHeight = min(timelineInsetHeight, max(80, geometry.size.height * 0.5))
+            eventList(days: days, insetHeight: insetHeight, headerOffset: headerHeight - insetHeight) {
                 EventTimelineView(
                     events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
                     scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
                     animateScrolling: !reduceMotion,
-                    onHeightChange: { timelineHeight = $0 },
+                    onHeightChange: updateTimelineHeight,
                     onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
                     onInteractionBegan: beginTimelineInteraction,
                     onPositionChange: { day, anchor, visibleDayCount in
@@ -240,15 +244,11 @@ struct ContentView: View {
                 )
                 // Keep the list usable on crowded dates; overflowing event
                 // lanes can scroll inside the timeline.
-                .frame(height: min(timelineHeight, max(80, geometry.size.height * 0.5)))
+                .frame(height: headerHeight)
                 .background(timelineBackground)
-
-                eventList(days: days)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .background(eventListBackground)
-                    .overlay(alignment: .top) { Divider().allowsHitTesting(false) }
+                .overlay(alignment: .bottom) { Divider().allowsHitTesting(false) }
             }
-            .background(timelineBackground)
+            .background(eventListBackground)
             .frame(height: geometry.size.height, alignment: .top)
             .clipped()
             .transaction { if reduceMotion { $0.animation = nil } }
@@ -304,11 +304,12 @@ struct ContentView: View {
             handleOpenURL(url)
         }
         .onChange(of: selectedCategoryFilter) {
+            eventListWindow = EventListWindow()
             beginTimelineInteraction()
             dismissQuickEntry()
             highlightRequestID = nil
             highlightedEventID = nil
-            if let date = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents)) {
+            if let date = EventListDay.initialDate(in: eventListDays) {
                 eventSheetScrollRequest = EventSheetScrollRequest(date: date)
             }
         }
@@ -325,28 +326,60 @@ struct ContentView: View {
         }
     }
 
-    private func eventList(days: [EventListDay]) -> some View {
+    private func eventList<Header: View>(days: [EventListDay], insetHeight: CGFloat, headerOffset: CGFloat,
+                                      @ViewBuilder header: @escaping () -> Header) -> some View {
         VStack(spacing: 0) {
-            if days.isEmpty {
+            if days.isEmpty && !hasMoreListEvents {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        Color.clear.frame(height: insetHeight).allowsHitTesting(false)
+                    }
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
+                            if days.isEmpty {
+                                Text("No events in the next \(eventListWindow.dayCount) days")
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                            }
                             ForEach(days) { day in
-                                eventRowView(key: day.date.relativeDate(), events: day.events)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    if day.startsMonth {
+                                        Text(day.date.formatted(.dateTime.month(.wide).year()))
+                                            .font(.headline)
+                                            .padding(.top, 16)
+                                            .padding(.bottom, 10)
+                                            .accessibilityAddTraits(.isHeader)
+                                    }
+                                    eventRowView(key: day.date.relativeDate(), events: day.events, pinnedTop: headerOffset)
+                                }
                                     .padding(.horizontal)
                                     .background {
                                         GeometryReader { geometry in
                                             let frame = geometry.frame(in: .named("eventList"))
-                                            Color.clear.preference(key: EventSheetVisibleDaysKey.self,
-                                                value: [EventSheetVisibleDay(date: day.date, minY: frame.minY, maxY: frame.maxY)])
+                                            Color.clear.preference(key: EventSheetTopDateKey.self,
+                                                value: frame.maxY > 1 ? day.date : nil)
                                         }
                                     }
                                     // The gap between days must not keep an offscreen
                                     // event selected when the next card is visible.
                                     .padding(.bottom, 10)
                                     .id(day.date)
+                            }
+                            if hasMoreListEvents {
+                                Button("Show more") {
+                                    // Appending a page must keep the current row
+                                    // and scroll ownership, without reloading storage.
+                                    eventListWindow.loadMore()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .padding(.vertical, 10)
+                                .accessibilityHint("Load the next 365 days of events")
+                                .accessibilityIdentifier("showMoreEvents")
                             }
                             Spacer(minLength: 100)
                         }
@@ -359,13 +392,18 @@ struct ContentView: View {
                     .coordinateSpace(name: "eventList")
                     .scrollDismissesKeyboard(.interactively)
                     .modifier(EventSheetScrollTracking(onInteraction: beginSheetInteraction))
-                    .onPreferenceChange(EventSheetVisibleDaysKey.self) { visibleDays in
-                        guard let day = visibleDays.filter({ $0.maxY > 1 }).min(by: { $0.minY < $1.minY }) else { return }
-                        if day.date != eventListPosition { eventListPosition = day.date }
-                        synchronizeTimeline(to: day.date)
+                    // Keep the native drag baseline stable. The visible timeline
+                    // resizes independently in the overlay above this scroll view.
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        Color.clear.frame(height: insetHeight).allowsHitTesting(false)
+                    }
+                    .onPreferenceChange(EventSheetTopDateKey.self) { date in
+                        guard let date, date != eventListPosition else { return }
+                        eventListPosition = date
+                        synchronizeTimeline(to: date)
                     }
                     .onChange(of: eventSheetScrollRequest) { _, request in
-                        guard let request else { return }
+                        guard let request, scrollSynchronization.source == .timeline else { return }
                         withAnimation(request.animated && !reduceMotion ? .easeOut(duration: 0.18) : nil) {
                             proxy.scrollTo(request.date, anchor: .top)
                         }
@@ -380,16 +418,28 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay(alignment: .top, content: header)
     }
 
     private func beginTimelineInteraction() {
         scrollSynchronization.begin(.timeline)
         timelineScrollRequest = nil
+        updateTimelineHeight(timelineHeight)
+    }
+
+    private func updateTimelineHeight(_ height: CGFloat) {
+        let updatesInset = scrollSynchronization.source == .timeline
+        guard timelineHeight != height || (updatesInset && timelineInsetHeight != height) else { return }
+        withAnimation(reduceMotion ? nil : .interactiveSpring(response: 0.2, dampingFraction: 1, blendDuration: 0)) {
+            timelineHeight = height
+            if updatesInset { timelineInsetHeight = height }
+        }
     }
 
     private func beginSheetInteraction() {
         guard scrollSynchronization.source != .sheet else { return }
         scrollSynchronization.begin(.sheet)
+        eventSheetScrollRequest = nil
         if let date = eventListPosition { synchronizeTimeline(to: date) }
     }
 
@@ -426,7 +476,7 @@ struct ContentView: View {
         highlightRequestID = nil
         scrollToTodayRequest = UUID()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-            if let date = EventListDay.initialDate(in: EventListDay.group(events: timelineEvents)) {
+            if let date = EventListDay.initialDate(in: eventListDays) {
                 eventSheetScrollRequest = EventSheetScrollRequest(date: date)
             }
         }
@@ -511,8 +561,19 @@ struct ContentView: View {
         appData.events.filter { selectedCategoryFilter == nil || $0.category == selectedCategoryFilter }
     }
 
+    private var eventListDays: [EventListDay] {
+        let end = eventListWindow.end
+        return EventListDay.group(events: timelineEvents.filter { $0.date < end })
+    }
+
+    private var hasMoreListEvents: Bool {
+        let end = eventListWindow.end
+        return timelineEvents.contains { $0.date >= end }
+    }
+
     private func selectTimelineEvent(_ event: Event) {
         beginTimelineInteraction()
+        eventListWindow.include(EventListDay.displayDate(for: event))
         highlightedEventID = event.id
         highlightRequestID = UUID()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
@@ -529,10 +590,9 @@ struct ContentView: View {
     }
 
     // View for each event row
-    func eventRowView(key: String, events: [Event]) -> some View {
+    func eventRowView(key: String, events: [Event], pinnedTop: CGFloat = 0) -> some View {
         HStack(alignment: .top) {
             GeometryReader { dayGeometry in
-                let dayFrame = dayGeometry.frame(in: .named("eventList"))
                 Text(key.uppercased())
                     .font(.system(.caption, design: .monospaced, weight: .medium))
                     .foregroundColor(.gray)
@@ -541,8 +601,8 @@ struct ContentView: View {
                     .visualEffect { content, labelGeometry in
                         // Keep the day beside its events, then let the next day
                         // push it away at the bottom of this group.
-                        content.offset(y: min(max(0, -dayFrame.minY),
-                                              max(0, dayFrame.height - labelGeometry.size.height)))
+                        content.offset(y: min(max(0, pinnedTop - labelGeometry.frame(in: .named("eventList")).minY),
+                                              max(0, dayGeometry.size.height - labelGeometry.size.height)))
                     }
             }
             .frame(width: 100)

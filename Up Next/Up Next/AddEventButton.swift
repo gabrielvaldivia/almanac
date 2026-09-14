@@ -13,6 +13,7 @@ struct QuickAddEventField: View {
     @State private var dateDraft: QuickScheduleEditorDraft?
     @State private var repeatDraft: QuickScheduleEditorDraft?
     @State private var showingNewCategory = false
+    @ScaledMetric(relativeTo: .body) private var textLineHeight = UIFont.systemFont(ofSize: UIFont.labelFontSize).lineHeight
     @EnvironmentObject private var appData: AppData
     @Environment(\.colorScheme) private var colorScheme
 
@@ -46,10 +47,8 @@ struct QuickAddEventField: View {
         return options.repeatOption.rawValue
     }
 
-    private var submitForeground: Color {
-        let color = draft.categoryOptions.selectedColor
-        let brightness = color.red * 0.299 + color.green * 0.587 + color.blue * 0.114
-        return brightness > 0.5 ? .black : .white
+    private var isSubmitDisabled: Bool {
+        draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -69,42 +68,55 @@ struct QuickAddEventField: View {
                 .accessibilityHint("Swipe down or double-tap to return to the add button. Your draft is kept.")
                 .accessibilityIdentifier("quickEntryDragHandle")
 
-            HStack(alignment: .center, spacing: 4) {
+            HStack(alignment: .top, spacing: 4) {
                 colorMenu
-                TextField("Add an event, like Dune 12/18", text: $text, axis: .vertical)
+                    .frame(height: max(44, textLineHeight))
+                TextField("Add an event, like \"Dune 12/18\"", text: $text, axis: .vertical)
+                    .font(.body)
                     .lineLimit(1...4)
                     .textInputAutocapitalization(.sentences)
                     .focused($isFocused)
                     .accessibilityLabel("Quick event entry")
                     .accessibilityHint("Type an event. The date, category and repeat buttons update as you type.")
                     .accessibilityIdentifier("quickEventInput")
+                    // Center the first line in the swatch's tap target as more lines grow below it.
+                    .padding(.vertical, max(0, (44 - textLineHeight) / 2))
             }
             .padding(.trailing, 8)
             .padding(.bottom, 4)
 
-            HStack(spacing: 4) {
+            ZStack(alignment: .trailing) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         dateMenu
                         categoryMenu
                         repeatMenu
                     }
+                    // Let the last pill scroll fully clear of the fade and button.
+                    .padding(.trailing, 68)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .padding(.leading, 8)
+                .mask {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: 24)
+                        Color.clear.frame(width: 44)
+                    }
+                }
                 .accessibilityIdentifier("quickEventPills")
                 Button(action: onSubmit) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(submitForeground)
+                        .foregroundStyle(.white)
                         .frame(width: 36, height: 36)
-                        .background(draft.categoryOptions.selectedColor.color, in: Circle())
+                        .background(draft.categoryOptions.selectedColor.color.opacity(isSubmitDisabled ? 0.4 : 1), in: Circle())
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1)
+                .disabled(isSubmitDisabled)
                 .accessibilityLabel("Submit event")
                 .accessibilityHint("Adds the event using the values shown in the composer.")
                 .accessibilityIdentifier("quickAddSubmit")

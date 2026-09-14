@@ -1,0 +1,176 @@
+Almanac follow-up audit evidence — 2026-09-14
+Working tree: ec7c9d8 plus the six preexisting modified files.
+No production files changed by the audit.
+Diagnostic probes assert observed behavior; passing them means reproduction, not correctness.
+
+Simulators:
+  iOS 26.5: 4169CD22-A2F8-4E5D-9AF4-E5F84FE5694B
+  iOS 18.5: 9A959163-58F2-4EC1-978C-0AD10B2EB03E
+
+Source copy: /tmp/almanac-remaining-audit-source
+Model probes appended there to Up Next/Up NextTests/RegressionTests.swift.
+UI probes appended there to Up Next/Up NextUITests/EventFlowTests.swift.
+All 40 production Swift files byte-identical between source copy and real workspace at completion.
+
+========================================================================
+Full baseline
+/tmp/almanac-remaining-audit-baseline.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=4169CD22-A2F8-4E5D-9AF4-E5F84FE5694B" -derivedDataPath /tmp/almanac-scroll-verification -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-baseline.xcresult CODE_SIGN_IDENTITY=-
+
+Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Executed 2 tests, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Executed 4 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds
+Executed 108 tests, with 0 failures (0 unexpected) in 4.592 (4.622) seconds
+Executed 108 tests, with 0 failures (0 unexpected) in 4.592 (4.623) seconds
+Executed 21 tests, with 0 failures (0 unexpected) in 609.370 (609.395) seconds
+Executed 21 tests, with 0 failures (0 unexpected) in 609.370 (609.397) seconds
+Executed 21 tests, with 0 failures (0 unexpected) in 609.370 (609.400) seconds
+** TEST SUCCEEDED **
+
+========================================================================
+Debug model reproductions
+/tmp/almanac-remaining-audit-probes.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=9A959163-58F2-4EC1-978C-0AD10B2EB03E" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextTests/RemainingAuditProbes" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-probes.xcresult CODE_SIGN_IDENTITY=-
+
+AUDIT PERFORMANCE events=1000 editSeconds=0.1355395000136923 groupSeconds=0.005643749987939373
+AUDIT PERFORMANCE events=5000 editSeconds=3.2791197916667443 groupSeconds=0.025558749999618158
+AUDIT PERFORMANCE events=10000 editSeconds=13.029843249998521 groupSeconds=0.04723566665779799
+Executed 19 tests, with 0 failures (0 unexpected) in 16.668 (16.673) seconds
+Executed 19 tests, with 0 failures (0 unexpected) in 16.668 (16.674) seconds
+** TEST EXECUTE SUCCEEDED **
+
+========================================================================
+Release model reproductions
+/tmp/almanac-remaining-audit-release-probes.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -configuration Release -destination "platform=iOS Simulator,id=9A959163-58F2-4EC1-978C-0AD10B2EB03E" -derivedDataPath /tmp/almanac-remaining-audit-release-tests "-only-testing:Up NextTests/RemainingAuditProbes" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-release-probes.xcresult CODE_SIGN_IDENTITY=- ENABLE_TESTABILITY=YES
+
+Test Case '-[Up_NextTests.RemainingAuditProbes testCategoryMetadataSaveOverwritesColorOverride]' passed (0.061 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testCategoryRenameDuringRecoveryLeavesDanglingReference]' passed (0.031 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testCategoryRenameEmptiesSavedWidgetFilter]' passed (0.009 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testCrossYearRangeOmitsYears]' passed (0.001 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testDeletingOnlyOccurrenceLosesFutureSchedule]' passed (0.001 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testEndingChangeDropsStoredHistory]' passed (0.003 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testInvalidSupportedNamedDatesBecomeToday]' passed (0.011 seconds).
+AUDIT PERFORMANCE events=1000 editSeconds=0.04584291667561047 groupSeconds=0.003703791677253321
+AUDIT PERFORMANCE events=5000 editSeconds=1.1083933750051074 groupSeconds=0.018970333330798894
+AUDIT PERFORMANCE events=10000 editSeconds=4.352167041652137 groupSeconds=0.03673137500300072
+Test Case '-[Up_NextTests.RemainingAuditProbes testMeasureLargeSeriesEditsAndListGrouping]' passed (5.596 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testMovingMonthlySeriesDisagreesWithRule]' passed (0.001 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testOrdinaryTitlesIncorrectlyRequireScheduleReview]' passed (0.013 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testPaginationBoundaryDoesNotAdvanceWithToday]' passed (0.000 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testRecurrenceAfterLongInactivityOnlyRefillsTenThousandOldDays]' passed (0.023 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testShowMoreExhaustsStoredDailyRecurrencesAfterOneExtraDay]' passed (0.002 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testSingleOccurrenceEditsLeakIntoFutureSparseOccurrences]' passed (0.001 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testTimelineMarkersHaveTinyHitTargets]' passed (0.007 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testTimelineTodayDriftsAfterTimeZoneChange]' passed (0.003 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testUnreadableCategoryHasBackupButNoAutomaticRecovery]' passed (0.009 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testValidHistoricalDateLimitedSeriesCreatesNoEvents]' passed (0.002 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testValidRecurrenceHidesAnInvalidStartDate]' passed (0.004 seconds).
+Test Case '-[Up_NextTests.RemainingAuditProbes testWidgetRefillsHaveUnresolvableIDs]' passed (0.000 seconds).
+Executed 20 tests, with 0 failures (0 unexpected) in 5.777 (5.783) seconds
+Executed 20 tests, with 0 failures (0 unexpected) in 5.777 (5.784) seconds
+** TEST SUCCEEDED **
+
+========================================================================
+Initial UI reproductions and diagnostics
+/tmp/almanac-remaining-audit-ui.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=4169CD22-A2F8-4E5D-9AF4-E5F84FE5694B" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextUITests/RemainingAuditUIProbes" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-ui.xcresult CODE_SIGN_IDENTITY=-
+
+AUDIT ACCESSIBILITY event list: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x10ac9bd40, {{16.0, 296.3}, {37.3, 14.3}}, label: 'TODAY'
+AUDIT ACCESSIBILITY event list: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x107683340, {{16.0, 416.0}, {74.3, 14.3}}, label: 'IN 15 DAYS'
+AUDIT ACCESSIBILITY event list: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x10ad00280, {{140.0, 294.3}, {200.3, 64.3}}, label: 'Accessibility event with a long title to exercise wrapping'
+AUDIT ACCESSIBILITY event list: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x10ac9a6c0, {{140.0, 364.5}, {75.3, 15.7}}, label: 'Mon, Sep 14'
+AUDIT ACCESSIBILITY event list: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x10ad008c0, {{140.0, 414.1}, {40.7, 20.3}}, label: 'Later'
+AUDIT ACCESSIBILITY event list: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x10ac9a800, {{140.0, 440.3}, {72.7, 15.7}}, label: 'Tue, Sep 29'
+AUDIT ACCESSIBILITY event list: Dynamic Type font sizes are partially unsupported; User will not be able to change the font size of this SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x10ad01b80, {{147.3, 62.0}, {107.0, 44.0}}, identifier: 'appTitle', label: 'September'
+AUDIT ACCESSIBILITY event list: Text clipped; Text of this SwiftUI.AccessibilityNode may be clipped at larger Dynamic Type sizes.; element=Attributes: StaticText, 0x10ac9ae40, {{16.0, 416.0}, {74.3, 14.3}}, label: 'IN 15 DAYS'
+AUDIT ACCESSIBILITY composer: Hit area is too small; The size of this SwiftUI.AccessibilityNode is too small for user to interact.; element=Attributes: Button, 0x10ac98500, {{24.0, 375.3}, {354.0, 12.0}}, identifier: 'quickEntryDragHandle', label: 'Collapse event entry'
+AUDIT ACCESSIBILITY composer: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x118738140, {{16.0, 296.3}, {37.3, 14.3}}, label: 'TODAY'
+AUDIT ACCESSIBILITY composer: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x11872c140, {{16.0, 416.0}, {74.3, 14.3}}, label: 'IN 15 DAYS'
+AUDIT ACCESSIBILITY composer: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x118720000, {{140.0, 294.3}, {200.3, 64.3}}, label: 'Accessibility event with a long title to exercise wrapping'
+AUDIT ACCESSIBILITY composer: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x10ae7c140, {{140.0, 364.5}, {75.3, 15.7}}, label: 'Mon, Sep 14'
+AUDIT ACCESSIBILITY composer: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x1187648c0, {{140.0, 414.1}, {40.7, 20.3}}, label: 'Later'
+AUDIT ACCESSIBILITY composer: Contrast failed; Contrast failed for SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x11872c640, {{140.0, 440.3}, {72.7, 15.7}}, label: 'Tue, Sep 29'
+AUDIT ACCESSIBILITY composer: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x118765540, {{58.7, 493.8}, {34.7, 14.3}}, label: 'Today'
+AUDIT ACCESSIBILITY composer: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x10ae68280, {{135.3, 493.8}, {30.7, 14.3}}, label: 'None'
+AUDIT ACCESSIBILITY composer: Contrast nearly passed; Contrast is not high enough for SwiftUI.AccessibilityNode unless font size is larger.; element=Attributes: StaticText, 0x107683e80, {{207.7, 493.8}, {34.3, 14.3}}, label: 'Never'
+AUDIT ACCESSIBILITY composer: Dynamic Type font sizes are partially unsupported; User will not be able to change the font size of this SwiftUI.AccessibilityNode; element=Attributes: StaticText, 0x11875b200, {{147.3, 62.0}, {107.0, 44.0}}, identifier: 'appTitle', label: 'September'
+AUDIT ACCESSIBILITY composer: Text clipped; Text of this SwiftUI.AccessibilityNode may be clipped at larger Dynamic Type sizes.; element=Attributes: StaticText, 0x10ad00140, {{16.0, 416.0}, {74.3, 14.3}}, label: 'IN 15 DAYS'
+Executed 5 tests, with 0 failures (0 unexpected) in 94.594 (94.598) seconds
+Executed 5 tests, with 0 failures (0 unexpected) in 94.594 (94.600) seconds
+Executed 5 tests, with 0 failures (0 unexpected) in 94.594 (94.601) seconds
+** TEST EXECUTE SUCCEEDED **
+
+========================================================================
+UI confirmations
+/tmp/almanac-remaining-audit-ui-confirmation.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=4169CD22-A2F8-4E5D-9AF4-E5F84FE5694B" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextUITests/RemainingAuditUIProbes/testFullEditorCannotCommitItsInitiallySelectedEndDate" "-only-testing:Up NextUITests/RemainingAuditUIProbes/testInspectFocusWhileOverlayChangesHeight" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-ui-confirmation.xcresult CODE_SIGN_IDENTITY=-
+
+Test Case '-[Up_NextUITests.RemainingAuditUIProbes testFullEditorCannotCommitItsInitiallySelectedEndDate]' passed (11.462 seconds).
+AUDIT FOCUS step=9 bottom=292.0 height=176.0 value=Days view, Sep 29, 2026 – Oct 8, 2026 visible=["Later 1 day=30 y=308.3453776041666...328.6787109374999", "Later 2 day=45 y=384.14778645833326...404.4811197916667", "Later 3 day=60 y=506.28352864583326...526.6168619791666", "Later 4 day=75 y=582.0859374999999...602.4192708333333", "Later 5 day=90 y=704.2216796874999...724.5550130208334", "Later 6 day=105 y=780.0240885416665...800.3574218749999"]
+AUDIT HIDDEN CARDS maxY=[18.66666666666663, 92.33333778381348, 166.33333333333326, 240.0] overlayBottom=292.0
+Test Case '-[Up_NextUITests.RemainingAuditUIProbes testInspectFocusWhileOverlayChangesHeight]' passed (42.559 seconds).
+Executed 2 tests, with 0 failures (0 unexpected) in 54.021 (54.023) seconds
+Executed 2 tests, with 0 failures (0 unexpected) in 54.021 (54.024) seconds
+** TEST SUCCEEDED **
+
+========================================================================
+Older-system UI checks
+/tmp/almanac-remaining-audit-ios18-ui.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=9A959163-58F2-4EC1-978C-0AD10B2EB03E" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextUITests/EventFlowTests/testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing" "-only-testing:Up NextUITests/EventFlowTests/testComposerLayoutAndShortDragPreserveTheListAndKeyboard" "-only-testing:Up NextUITests/EventFlowTests/testShowMoreAppends365DayPagesWithoutMovingTheCurrentRow" "-only-testing:Up NextUITests/EventFlowTests/testVerticalBrowsingExpandsTheTimelineBeyondItsInitialInset" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-ios18-ui.xcresult CODE_SIGN_IDENTITY=-
+
+Test Case '-[Up_NextUITests.EventFlowTests testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing]' passed (22.430 seconds).
+Test Case '-[Up_NextUITests.EventFlowTests testComposerLayoutAndShortDragPreserveTheListAndKeyboard]' passed (17.471 seconds).
+Test Case '-[Up_NextUITests.EventFlowTests testShowMoreAppends365DayPagesWithoutMovingTheCurrentRow]' passed (8.453 seconds).
+Test Case '-[Up_NextUITests.EventFlowTests testVerticalBrowsingExpandsTheTimelineBeyondItsInitialInset]' passed (9.423 seconds).
+Executed 4 tests, with 0 failures (0 unexpected) in 57.777 (57.790) seconds
+Executed 4 tests, with 0 failures (0 unexpected) in 57.777 (57.791) seconds
+Executed 4 tests, with 0 failures (0 unexpected) in 57.777 (57.792) seconds
+** TEST EXECUTE SUCCEEDED **
+
+========================================================================
+Settled landscape check
+/tmp/almanac-remaining-audit-landscape.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=4169CD22-A2F8-4E5D-9AF4-E5F84FE5694B" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextUITests/RemainingAuditUIProbes/testLandscapeLayoutRetainsReachableControls" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-landscape.xcresult CODE_SIGN_IDENTITY=-
+
+AUDIT LANDSCAPE app=(0.0, 0.0, 874.0, 402.0) list=(0.0, 0.0, 874.0, 402.0)
+Test Case '-[Up_NextUITests.RemainingAuditUIProbes testLandscapeLayoutRetainsReachableControls]' passed (11.493 seconds).
+** TEST SUCCEEDED **
+
+========================================================================
+Largest accessibility text capture
+/tmp/almanac-remaining-audit-large-text.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -destination "platform=iOS Simulator,id=9A959163-58F2-4EC1-978C-0AD10B2EB03E" -derivedDataPath /tmp/almanac-remaining-audit-build "-only-testing:Up NextUITests/RemainingAuditUIProbes/testCaptureLargeTextLayout" -parallel-testing-enabled NO -resultBundlePath /tmp/almanac-remaining-audit-large-text.xcresult CODE_SIGN_IDENTITY=-
+
+Test Case '-[Up_NextUITests.RemainingAuditUIProbes testCaptureLargeTextLayout]' passed (8.677 seconds).
+** TEST EXECUTE SUCCEEDED **
+
+========================================================================
+Release device build
+/tmp/almanac-remaining-audit-release.log
+
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project "Up Next/Up Next.xcodeproj" -scheme "Up Next" -configuration Release -destination generic/platform=iOS -derivedDataPath /tmp/almanac-remaining-audit-release CODE_SIGNING_ALLOWED=NO
+
+** BUILD SUCCEEDED **
+
+Interpretation:
+  Full baseline: 108 unit tests and 21 UI tests passed.
+  Release model probes: 20 completed; intentionally reproduced faulty behavior and boundary/performance conditions.
+  iOS 18.5: four focused normal-text UI tests passed.
+  Same-day end and hidden-row focus: two UI confirmation probes passed (bug reproduction).
+  Category cancellation: initial UI probe saved and reopened the cleared category.
+  Accessibility collector accepts each diagnostic only so it can retain all findings; this is not an accessibility pass.
+  App screenshot landscape crop was malformed; full-screen capture was correctly oriented. Excluded as product bug.
+  Largest text screenshots visually reviewed; restored simulator to default large text afterward.
+  Release device build had no compiler warnings; no PrivacyInfo.xcprivacy in either built bundle.
+
+No physical-device install, production App Store transaction, archive submission, or multiweek background delivery test was performed.

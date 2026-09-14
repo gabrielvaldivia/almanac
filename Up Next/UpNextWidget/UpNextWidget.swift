@@ -110,8 +110,8 @@ struct UpNextWidgetEntryView: View {
                                         .padding(.vertical, 1)
                                     VStack(alignment: .leading) {
                                         Text(
-                                            rangeDescription(
-                                                from: event.date, to: event.endDate)
+                                            event.date.relativeDate(
+                                                to: event.endDate, now: entry.date)
                                         )
                                         .font(.caption)
                                         .foregroundColor(.gray)

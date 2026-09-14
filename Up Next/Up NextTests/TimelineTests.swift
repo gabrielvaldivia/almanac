@@ -471,6 +471,27 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(synchronization.sheetMoved(to: first), "Returning to the same event after panning still moves the timeline")
     }
 
+    func testEventListLoadsExact365DayPagesAcrossLeapYearAndDaylightSaving() {
+        let start = calendar.date(from: DateComponents(year: 2027, month: 3, day: 7, hour: 15))!
+        let today = calendar.startOfDay(for: start)
+        func date(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: today)! }
+        var window = EventListWindow(today: start, calendar: calendar)
+        XCTAssertEqual(window.end, calendar.date(from: DateComponents(year: 2028, month: 3, day: 6)))
+        XCTAssertTrue(window.contains(date(-1)), "History remains reachable above today")
+        XCTAssertTrue(window.contains(date(364)))
+        XCTAssertFalse(window.contains(date(365)))
+        window.loadMore()
+        XCTAssertEqual(window.dayCount, 730)
+        XCTAssertTrue(window.contains(date(365)))
+        XCTAssertTrue(window.contains(date(729)))
+        XCTAssertFalse(window.contains(date(730)))
+        window.include(date(730))
+        XCTAssertEqual(window.dayCount, 1095, "Selecting a distant timeline event reveals its page")
+        XCTAssertTrue(window.contains(date(730)))
+        window.include(today)
+        XCTAssertEqual(window.dayCount, 1095, "Revealing a loaded event does not collapse earlier pages")
+    }
+
     @MainActor
     func testFollowingSheetDatesPreservesZoomAndCalendarFocusAcrossRecycledWindows() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
@@ -620,8 +641,20 @@ final class TimelineTests: XCTestCase {
         }
         canvas.timeline.beginZoom(at: 0)
         canvas.timeline.changeZoom(scale: 0.15, at: 0)
-        canvas.timeline.endZoom()
+        // Live height changes must arrive before the gesture ends.
         await fulfillment(of: [weekHeight], timeout: 1)
+        canvas.timeline.endZoom()
+
+        let beforeDrag = canvas.timeline.preferredHeight
+        let quietHeight = expectation(description: "Quiet dates resize during the drag")
+        canvas.timeline.onHeightChange = { height in
+            XCTAssertLessThan(height, beforeDrag)
+            quietHeight.fulfill()
+        }
+        canvas.timeline.scrollViewWillBeginDragging(canvas.timeline)
+        canvas.timeline.setDayPosition(500)
+        canvas.timeline.layoutIfNeeded()
+        await fulfillment(of: [quietHeight], timeout: 1)
     }
 
     func testViewportIncludesPartiallyVisibleDays() {

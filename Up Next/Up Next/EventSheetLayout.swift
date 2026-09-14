@@ -6,15 +6,39 @@ struct EventSheetScrollRequest: Equatable {
     var animated = false
 }
 
-struct EventSheetVisibleDay: Equatable {
-    let date: Date
-    let minY: CGFloat
-    let maxY: CGFloat
+/// Page future events in calendar days while keeping existing history reachable.
+struct EventListWindow {
+    private let calendar: Calendar
+    private let start: Date
+    private(set) var dayCount = 365
+
+    init(today: Date = Date(), calendar: Calendar = .current) {
+        self.calendar = calendar
+        start = calendar.startOfDay(for: today)
+    }
+
+    var end: Date { calendar.date(byAdding: .day, value: dayCount, to: start)! }
+
+    func contains(_ date: Date) -> Bool { date < end }
+
+    mutating func loadMore() { dayCount += 365 }
+
+    mutating func include(_ date: Date) {
+        guard !contains(date) else { return }
+        let offset = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? 0
+        dayCount = (offset / 365 + 1) * 365
+    }
 }
 
-struct EventSheetVisibleDaysKey: PreferenceKey {
-    static var defaultValue: [EventSheetVisibleDay] = []
-    static func reduce(value: inout [EventSheetVisibleDay], nextValue: () -> [EventSheetVisibleDay]) { value += nextValue() }
+/// Rows are chronological, so the earliest date still below the top edge is
+/// the focused date. Pixel-by-pixel geometry stays local to each row instead
+/// of invalidating the whole list with an array of changing frames.
+struct EventSheetTopDateKey: PreferenceKey {
+    static var defaultValue: Date?
+    static func reduce(value: inout Date?, nextValue: () -> Date?) {
+        guard let next = nextValue() else { return }
+        value = value.map { min($0, next) } ?? next
+    }
 }
 
 enum EventSheetSelection {
@@ -63,7 +87,9 @@ struct EventSheetScrollTracking: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 18, *) {
             content.onScrollPhaseChange { _, phase in
-                if phase == .interacting { onInteraction() }
+                // Claim ownership on touch-down, before queued timeline updates
+                // can start another programmatic list scroll.
+                if phase == .tracking || phase == .interacting { onInteraction() }
             }
         } else {
             content.simultaneousGesture(DragGesture(minimumDistance: 4).onChanged { value in

@@ -76,8 +76,12 @@ final class EventFlowTests: XCTestCase {
         list.swipeDown()
         waitForTimelineLayout(timeline)
         XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "Pulling the list cannot expand the timeline")
-        list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.01))
-            .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        // The scroll view now extends underneath its timeline inset. Start on
+        // the visible list edge, below the timeline's own gesture surface.
+        list.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: list.frame.width * 0.5, dy: timeline.frame.maxY - list.frame.minY + 2))
+            .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
+        waitForTimelineLayout(timeline)
         XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "The list's top edge is not a resize handle")
         timeline.buttons[names[0]].tap()
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
@@ -90,8 +94,11 @@ final class EventFlowTests: XCTestCase {
                    withVelocity: .slow, thenHoldForDuration: 0.2)
         let later = list.staticTexts[names[2]].firstMatch
         let first = list.staticTexts[names[0]].firstMatch
+        func isVisible(_ row: XCUIElement) -> Bool {
+            row.exists && row.frame.maxY > timeline.frame.maxY && row.frame.minY < list.frame.maxY - 100
+        }
         let revealed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            later.isHittable && !first.isHittable
+            later.isHittable && isVisible(later) && !isVisible(first)
         }, object: list)
         XCTAssertEqual(XCTWaiter.wait(for: [revealed], timeout: 5), .completed,
                        "The list must follow the timeline: \(timeline.value as? String ?? "missing")")
@@ -101,13 +108,20 @@ final class EventFlowTests: XCTestCase {
         // it can complete without moving the list. Use a sustained drag, then
         // verify the list's position before asserting the timeline follows it.
         func dragList(from start: CGFloat, to end: CGFloat) {
-            list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: start))
+            // The list fills the viewport underneath the timeline overlay.
+            // Keep both ends within the actually visible list surface.
+            let top = timeline.frame.maxY - list.frame.minY + 20
+            let height = list.frame.height - 100 - top
+            let origin = list.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: list.frame.width * 0.5, dy: top + height * start))
                 .press(forDuration: 0.1,
-                       thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: end)),
+                       thenDragTo: origin.withOffset(CGVector(dx: list.frame.width * 0.5, dy: top + height * end)),
                        withVelocity: .slow, thenHoldForDuration: 0.3)
         }
         dragList(from: 0.15, to: 0.85)
-        let firstRevealed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: first)
+        let firstRevealed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            first.isHittable && isVisible(first)
+        }, object: list)
         XCTAssertEqual(XCTWaiter.wait(for: [firstRevealed], timeout: 5), .completed,
                        "Dragging the list back must reveal today's events")
         let todayPrefix = "Days view, \(Date().formatted(date: .abbreviated, time: .omitted))"
@@ -116,7 +130,7 @@ final class EventFlowTests: XCTestCase {
                        "Timeline must follow the list back to today: \(timeline.value as? String ?? "missing")")
         XCTAssertNotEqual(timeline.value as? String, timelineAfterPan)
         dragList(from: 0.85, to: 0.15)
-        let firstHidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == false"), object: first)
+        let firstHidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !isVisible(first) }, object: list)
         XCTAssertEqual(XCTWaiter.wait(for: [firstHidden], timeout: 5), .completed,
                        "Dragging the list forward must move today's events offscreen")
         let advanced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (value BEGINSWITH %@)", todayPrefix), object: timeline)
@@ -124,6 +138,160 @@ final class EventFlowTests: XCTestCase {
                        "Timeline must follow the list forward: \(timeline.value as? String ?? "missing")")
         screenshot("List scrolling advances the timeline")
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
+    }
+
+    func testVerticalBrowsingKeepsTheListFrameStableAcrossTimelineDensityChanges() throws {
+        continueAfterFailure = false
+        let crowded = (1...4).map { ("Crowded day \($0)", 0) }
+        // Calibrate against a constant-height timeline: UIKit's synthesized
+        // pan includes gesture recognition and rounding beyond the endpoint delta.
+        let controlApp = makeApp()
+        let controlEvents = (1...12).flatMap { day in
+            (1...4).map { ("Control day \(day) event \($0)", day * 7) }
+        }
+        try seedEvents(crowded + controlEvents, in: controlApp)
+        controlApp.launch()
+        let controlList = controlApp.scrollViews["eventList"]
+        let controlTimeline = controlApp.scrollViews["eventTimeline"]
+        XCTAssertTrue(controlList.waitForExistence(timeout: 5))
+        waitForTimelineLayout(controlTimeline)
+        let controlHeight = controlTimeline.frame.height
+        let referenceName = (1...4).map { "Control day 1 event \($0)" }
+            .min { controlList.staticTexts[$0].frame.minY < controlList.staticTexts[$1].frame.minY }!
+        let controlTop = controlList.staticTexts[referenceName].frame.minY
+        controlApp.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.8))
+            .press(forDuration: 0.1,
+                   thenDragTo: controlApp.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.3)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        waitForTimelineLayout(controlTimeline)
+        let nativeDragDistance = controlTop - controlList.staticTexts[referenceName].frame.minY
+        XCTAssertEqual(controlTimeline.frame.height, controlHeight, accuracy: 1)
+        controlApp.terminate()
+        testStoreID = UUID().uuidString
+
+        let app = makeApp()
+        let sparse = (1...12).map { ("Later event \($0)", $0 * 15) }
+        try seedEvents(crowded + sparse, in: app)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        let timeline = app.scrollViews["eventTimeline"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        waitForTimelineLayout(timeline)
+        let initialTop = list.frame.minY
+        let initialHeight = timeline.frame.height
+        let todayPrefix = "Days view, \(Date().formatted(date: .abbreviated, time: .omitted))"
+
+        for index in 0..<3 {
+            let referenceTop = index == 0 ? list.staticTexts["Later event 1"].frame.minY : 0
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.8))
+                .press(forDuration: 0.1,
+                       thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.3)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+            waitForTimelineLayout(timeline)
+            XCTAssertEqual(list.frame.minY, initialTop, accuracy: 1,
+                           "Following list dates must not resize the viewport under the user's finger")
+            if index == 0 {
+                XCTAssertEqual(referenceTop - list.staticTexts["Later event 1"].frame.minY, nativeDragDistance, accuracy: 4,
+                               "The row must follow only the finger, without an extra jump when the timeline resizes")
+            }
+        }
+        XCTAssertFalse((timeline.value as? String ?? "").hasPrefix(todayPrefix),
+                       "The timeline must still follow vertical scrolling")
+        XCTAssertFalse(list.staticTexts["Crowded day 1"].isHittable)
+
+        let resized = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            timeline.frame.height < initialHeight - 1
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [resized], timeout: 5), .completed,
+                       "Following quiet dates must shrink the timeline while browsing the list")
+        for _ in 0..<5 where !(timeline.value as? String ?? "").hasPrefix(todayPrefix) {
+            list.swipeDown()
+        }
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            timeline.frame.height >= initialHeight - 1
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed,
+                       "Following crowded dates must expand the timeline again")
+        XCTAssertEqual(list.frame.minY, initialTop, accuracy: 1)
+        for index in 1...4 {
+            let marker = timeline.buttons["Crowded day \(index)"]
+            XCTAssertTrue(marker.isHittable, "Every overlapping event must fit in the expanded timeline")
+            XCTAssertLessThanOrEqual(marker.frame.maxY, timeline.frame.maxY)
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Timeline expands for overlapping events after vertical scrolling"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    func testVerticalBrowsingExpandsTheTimelineBeyondItsInitialInset() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        let crowded = (1...4).map { ("Overlapping event \($0)", 15) }
+        let later = (1...8).map { ("Later \($0)", 30 + $0 * 15) }
+        try seedEvents([("Quiet today", 0)] + crowded + later, in: app)
+        app.launch()
+        let timeline = app.scrollViews["eventTimeline"]
+        let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        waitForTimelineLayout(timeline)
+        let initialHeight = timeline.frame.height
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.8))
+            .press(forDuration: 0.1,
+                   thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.6)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            timeline.frame.height > initialHeight + 50
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed)
+        for index in 1...4 {
+            let marker = timeline.buttons["Overlapping event \(index)"]
+            XCTAssertTrue(marker.isHittable, "Expanded markers must remain visible and interactive beyond the original inset")
+            XCTAssertLessThanOrEqual(marker.frame.maxY, timeline.frame.maxY)
+        }
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Timeline grows beyond its original inset without clipping"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    func testShowMoreAppends365DayPagesWithoutMovingTheCurrentRow() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        try seedEvents([("Today event", 0), ("First page end", 364), ("Second page start", 365),
+                        ("Second page end", 729), ("Third page start", 730)], in: app)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        waitForTimelineLayout(app.scrollViews["eventTimeline"])
+        XCTAssertTrue(list.staticTexts["First page end"].isHittable)
+        XCTAssertFalse(list.staticTexts["Second page start"].exists)
+        let initialRow = list.staticTexts["Today event"].frame
+        let more = list.buttons["showMoreEvents"]
+        more.tap()
+        XCTAssertTrue(list.staticTexts["Second page start"].waitForExistence(timeout: 5))
+        XCTAssertEqual(list.staticTexts["Today event"].frame.minY, initialRow.minY, accuracy: 1)
+        XCTAssertFalse(list.staticTexts["Third page start"].exists)
+        for _ in 0..<3 where !more.isHittable { list.swipeUp() }
+        more.tap()
+        for _ in 0..<3 where !list.staticTexts["Third page start"].isHittable { list.swipeUp() }
+        XCTAssertTrue(list.staticTexts["Third page start"].isHittable)
+        XCTAssertFalse(more.exists, "The button disappears once all later events are loaded")
+    }
+
+    func testShowMoreCanAdvanceThroughEmpty365DayPages() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        try seedEvents([("Distant event", 800)], in: app)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        XCTAssertTrue(list.staticTexts["No events in the next 365 days"].exists)
+        list.buttons["showMoreEvents"].tap()
+        XCTAssertTrue(list.staticTexts["No events in the next 730 days"].exists)
+        list.buttons["showMoreEvents"].tap()
+        XCTAssertTrue(list.staticTexts["Distant event"].waitForExistence(timeout: 5))
+        XCTAssertFalse(list.buttons["showMoreEvents"].exists)
     }
 
     func testPinchZoomsTheAutomaticallySizedTimelineThroughEveryScale() {
