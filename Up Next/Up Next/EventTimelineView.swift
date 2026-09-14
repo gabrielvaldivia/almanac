@@ -160,24 +160,18 @@ private enum TimelineAxisTypography {
     }
 }
 
-struct EventTimelineView: UIViewRepresentable, Animatable {
+struct EventTimelineView: UIViewRepresentable {
     var events: [Event]
     var tint: Color
     var highlightedEventID: UUID?
     var scrollToTodayRequest: UUID?
     var scrollToDateRequest: EventSheetScrollRequest?
     var animateScrolling: Bool
-    var expanded: Bool
-    var expansionProgress: CGFloat
+    var onHeightChange: (CGFloat) -> Void
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
     var onInteractionBegan: () -> Void
     var onPositionChange: (CGFloat, Date, CGFloat) -> Void
-
-    var animatableData: CGFloat {
-        get { expansionProgress }
-        set { expansionProgress = newValue }
-    }
 
     final class Coordinator {
         var lastScrollToTodayRequest: UUID?
@@ -192,7 +186,8 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
         canvas.timeline.onInteractionBegan = onInteractionBegan
         canvas.onPositionChange = onPositionChange
         canvas.timeline.onTodayVisibilityChange = onTodayVisibilityChange
-        canvas.update(events: events, expanded: expanded, progress: expansionProgress, highlightedEventID: highlightedEventID)
+        canvas.timeline.onHeightChange = onHeightChange
+        canvas.update(events: events, highlightedEventID: highlightedEventID)
         if let request = scrollToTodayRequest, context.coordinator.lastScrollToTodayRequest != request {
             context.coordinator.lastScrollToTodayRequest = request
             canvas.timeline.scrollToToday(animated: animateScrolling)
@@ -220,9 +215,7 @@ final class TimelineCanvasView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func update(events: [Event], expanded: Bool, progress: CGFloat, highlightedEventID: UUID?) {
-        timeline.setExpanded(expanded)
-        timeline.expansionProgress = progress
+    func update(events: [Event], highlightedEventID: UUID?) {
         timeline.update(events: events)
         timeline.highlightedEventID = highlightedEventID
         setNeedsLayout()
@@ -245,6 +238,9 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var onInteractionBegan: (() -> Void)?
     var onTodayVisibilityChange: ((Bool) -> Void)?
     var onScrollPositionChange: ((CGFloat) -> Void)?
+    var onHeightChange: ((CGFloat) -> Void)?
+    private(set) var preferredHeight: CGFloat = 100
+    private let eventVerticalPadding: CGFloat = 24
     var highlightedEventID: UUID? {
         didSet {
             guard highlightedEventID != oldValue else { return }
@@ -262,10 +258,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private let axisHeader = UIView()
     private let axisDivider = UIView()
     private var axisHeight: CGFloat = TimelineAxisTypography.height
-    private let eventLabels = TimelineEventLabelsView()
-    private var labelEvents: [(event: Event, frame: CGRect)] = []
-    private var markerContentHeight: CGFloat = 0
-    private var titleMinimumY: CGFloat = 0
     private let todayLine = UIView()
     private let zoomGesture = UIPinchGestureRecognizer()
     private var pinch: (width: CGFloat, day: CGFloat, focusedDay: CGFloat)?
@@ -281,14 +273,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var isLayingOut = false
     private var needsEventLayout = true
     private var renderedSize: CGSize = .zero
-    private var expanded = false
-    var expansionProgress: CGFloat = 0 {
-        didSet {
-            guard expansionProgress != oldValue else { return }
-            needsEventLayout = true
-            setNeedsLayout()
-        }
-    }
 
     override var accessibilityValue: String? {
         get {
@@ -317,18 +301,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         setNeedsLayout()
     }
 
-    func setExpanded(_ expanded: Bool) {
-        guard self.expanded != expanded else { return }
-        self.expanded = expanded
-        expansionProgress = expanded ? 1 : 0
-        if !expanded {
-            contentOffset.y = 0
-        }
-        showsVerticalScrollIndicator = expanded
-        needsEventLayout = true
-        setNeedsLayout()
-    }
-
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
@@ -350,7 +322,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         todayLine.backgroundColor = tintColor
         todayLine.isUserInteractionEnabled = false
         addSubview(todayLine)
-        addSubview(eventLabels)
         axisHeader.backgroundColor = .systemBackground
         axisHeader.clipsToBounds = true
         axisHeader.accessibilityIdentifier = "timelineAxis"
@@ -360,11 +331,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         axisDivider.accessibilityIdentifier = "timelineAxisDivider"
         axisHeader.addSubview(axisDivider)
         addSubview(axisHeader)
-        eventLabels.onSelect = { [weak self] id in
-            guard let self, let button = self.eventButtons[id] else { return }
-            self.prepareSelectionFeedback()
-            self.selectedEvent(button)
-        }
         registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: TimelineScrollView, _: UITraitCollection) in
             view.needsEventLayout = true
             view.setNeedsLayout()
@@ -536,7 +502,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             needsEventLayout = false
             render(visibleDays: visibleDays)
         }
-        layoutEventTitles()
         // Pin only the date header vertically. Its horizontal coordinate space
         // follows the timeline, including fractional pans and recycled windows.
         let headerHeight = axisHeight + 8
@@ -549,6 +514,11 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         for view in periodViews.values { view.layoutLabels(in: axisHeader.bounds, grid: grid) }
         todayLine.frame.origin.y = grid.minY
         todayLine.frame.size.height = grid.height
+        let eventViewport = CGRect(x: bounds.minX, y: bounds.minY + headerHeight,
+                                   width: bounds.width, height: max(0, bounds.height - headerHeight))
+        for button in eventButtons.values {
+            button.isAccessibilityElement = button.frame.intersects(eventViewport)
+        }
         axisHeader.bringSubviewToFront(axisDivider)
         bringSubviewToFront(axisHeader)
     }
@@ -581,14 +551,22 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                                          visibleDays: minimumDaySpan > 1 ? bufferedDays : visibleDays,
                                          minimumDaySpan: minimumDaySpan)
         let markerHeight = max(0, CGFloat(layout.laneCount) * markerPitch - 4)
-        // Center the whole group of lanes between the day labels and the event sheet.
-        // Crowded days retain their spacing and can still scroll vertically.
+        // The date header and all visible event lanes determine the timeline's
+        // natural height. Give the marker group identical top/bottom padding.
         axisHeight = TimelineAxisTypography.height -
             (TimelineAxisTypography.firstRowHeight + 4) * weights.weeks
         let headerHeight = axisHeight + 8
-        let centeredTop = max(headerHeight + 4, (headerHeight + bounds.height - markerHeight) / 2)
-        let markerTop = headerHeight + 4 + (centeredTop - headerHeight - 4) * expansionProgress
-        titleMinimumY = headerHeight
+        let height = ceil(headerHeight + markerHeight + 2 * eventVerticalPadding)
+        if preferredHeight != height {
+            preferredHeight = height
+            // Report after UIKit layout finishes, avoiding SwiftUI state changes
+            // during updateUIView. Read the latest height if another pinch arrives.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.onHeightChange?(self.preferredHeight)
+            }
+        }
+        let markerTop = headerHeight + max(eventVerticalPadding, (bounds.height - headerHeight - markerHeight) / 2)
         // Only one hierarchy occupies the text rows. Keep labels visible even
         // when a pinch stops exactly between scales; the grid remains continuous.
         let axisFont = TimelineAxisTypography.font
@@ -607,7 +585,11 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         let periodLabelAlpha: CGFloat = showsDayLabels ? 0 : 1
         let needsDayViews = showsDayLabels || weights.days > 0
         contentSize = CGSize(width: scrollWindow.contentWidth,
-                             height: max(bounds.height, markerTop + markerHeight + 4))
+                             height: max(bounds.height, markerTop + markerHeight + eventVerticalPadding))
+        showsVerticalScrollIndicator = preferredHeight > bounds.height + 1
+        if !isDragging && !isDecelerating {
+            contentOffset.y = min(max(0, contentOffset.y), max(0, contentSize.height - bounds.height))
+        }
         for day in Array(dayViews.keys) where !needsDayViews || !bufferedDays.contains(day) {
             let view = dayViews.removeValue(forKey: day)
             view?.divider.removeFromSuperview()
@@ -622,7 +604,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 insertSubview(dayView.divider, at: 0)
             }
             dayView.configure(date: date, labelAlpha: dayLabelAlpha, showsWeekday: showsWeekdays,
-                              dividerAlpha: max(0, weights.days * 2 - 1) * expansionProgress, axisHeight: axisHeight)
+                              dividerAlpha: max(0, weights.days * 2 - 1), axisHeight: axisHeight)
             dayView.frame = CGRect(x: CGFloat(day - scrollWindow.firstDay) * pointsPerDay,
                                    y: 0, width: pointsPerDay, height: headerHeight)
         }
@@ -673,7 +655,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         for id in Array(eventButtons.keys) where !visibleIDs.contains(id) {
             eventButtons.removeValue(forKey: id)?.removeFromSuperview()
         }
-        labelEvents = []
         for placement in layout.placements {
             let button = eventButtons[placement.event.id] ?? TimelineEventButton(type: .custom)
             if eventButtons[placement.event.id] == nil {
@@ -698,10 +679,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             button.accessibilityLabel = placement.event.title
             button.accessibilityValue = placement.event.date.formatted(date: .abbreviated, time: .omitted)
             button.accessibilityHint = "Show event"
-            labelEvents.append((placement.event, button.frame))
         }
-        markerContentHeight = markerTop + markerHeight + 4
-        bringSubviewToFront(eventLabels)
 
         accessibilityHint = "Pinch to zoom between days, weeks, and months. Swipe to move through dates."
         let showsToday = visibleDays.contains(todayDay)
@@ -711,25 +689,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 guard let self, let visible = self.reportedTodayVisibility else { return }
                 self.onTodayVisibilityChange?(visible)
             }
-        }
-    }
-
-    private func layoutEventTitles() {
-        let opacity = min(1, max(0, (expansionProgress - 0.35) / 0.65))
-        let visible = labelEvents.filter { $0.frame.maxX >= bounds.minX && $0.frame.minX <= bounds.maxX }
-        let eventViewport = CGRect(x: bounds.minX, y: bounds.minY + axisHeight + 8,
-                                   width: bounds.width, height: max(0, bounds.height - axisHeight - 8))
-        let titleBottom = eventLabels.update(events: visible, viewport: eventViewport, opacity: opacity, minimumY: titleMinimumY)
-        for entry in labelEvents { eventButtons[entry.event.id]?.frame = entry.frame }
-        for placement in eventLabels.placements { eventButtons[placement.id]?.frame = placement.marker }
-        contentSize.height = max(bounds.height, markerContentHeight, titleBottom > 0 ? titleBottom + 16 : 0)
-        eventLabels.frame = CGRect(origin: .zero, size: contentSize)
-        for (id, button) in eventButtons {
-            // Expose a single accessible control for each event when its title is visible.
-            let titleVisible = opacity > 0.01 && eventLabels.placements.contains {
-                $0.id == id && $0.frame.intersects(eventViewport)
-            }
-            button.isAccessibilityElement = !titleVisible && button.frame.intersects(eventViewport)
         }
     }
 

@@ -26,204 +26,19 @@ final class TimelineTests: XCTestCase {
             .filter { !$0.isHidden && $0.alpha > 0 }
     }
 
-    func testExpandedTitlePrefersRightAndMovesAboveWhenAnotherDotBlocksIt() {
-        let first = TimelineLabelItem(id: UUID(), marker: CGRect(x: 20, y: 100, width: 20, height: 20),
-                                      size: CGSize(width: 90, height: 20))
-        let alone = TimelineEventLabelLayout.make(items: [first], horizontalBounds: 8...385)
-        XCTAssertEqual(alone[0].frame.minX, first.marker.maxX + 6)
-        XCTAssertEqual(alone[0].frame.midY, first.marker.midY)
-        let neighbor = TimelineLabelItem(id: UUID(), marker: CGRect(x: 64, y: 100, width: 20, height: 20),
-                                         size: CGSize(width: 120, height: 38))
-        let crowded = TimelineEventLabelLayout.make(items: [first, neighbor], horizontalBounds: 8...385)
-        let displaced = crowded.first { $0.id == first.id }!
-        XCTAssertLessThanOrEqual(displaced.frame.maxY, first.marker.minY - TimelineEventLabelLayout.gap)
-        XCTAssertEqual(displaced.connector.first, CGPoint(x: first.marker.midX, y: first.marker.minY - 2))
-        XCTAssertEqual(displaced.connector.last!.y, displaced.frame.maxY + 2)
-        XCTAssertFalse(displaced.frame.intersects(neighbor.marker))
-    }
-
-    func testExpandedTitlesAvoidDotsAndEachOtherForStacksLongNamesAndNarrowViewports() {
-        for width: CGFloat in [320, 393, 600] {
-            let items = (0..<45).map { index in
-                TimelineLabelItem(id: UUID(), marker: CGRect(x: CGFloat(index / 5) * 32 + 8,
-                    y: 150 + CGFloat(index % 5) * 24, width: 20, height: 20),
-                    size: CGSize(width: min(150, width * 0.46), height: index.isMultiple(of: 3) ? 58 : 20))
-            }
-            let placements = TimelineEventLabelLayout.make(items: items, horizontalBounds: 8...(width - 8))
-            XCTAssertEqual(placements.count, items.count)
-            for (index, label) in placements.enumerated() {
-                XCTAssertGreaterThanOrEqual(label.frame.minX, 8)
-                XCTAssertLessThanOrEqual(label.frame.maxX, width - 8)
-                XCTAssertEqual(label.marker.minX, items.first { $0.id == label.id }!.marker.minX, "An event must keep its calendar position")
-                for other in placements {
-                    XCTAssertFalse(label.frame.intersects(other.marker))
-                    if label.id != other.id { XCTAssertFalse(label.frame.intersects(other.frame)) }
-                    for (start, end) in zip(label.connector, label.connector.dropFirst()) {
-                        XCTAssertTrue(start.x == end.x || start.y == end.y, "Connections cannot contain diagonal segments")
-                        XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.frame))
-                        if label.id != other.id {
-                            XCTAssertFalse(TimelineEventLabelLayout.segment(start, end, intersects: other.marker))
-                        }
-                    }
-                }
-                for other in placements.dropFirst(index + 1) {
-                    XCTAssertFalse(label.marker.intersects(other.marker))
-                    for (a, b) in zip(label.connector, label.connector.dropFirst()) {
-                        for (c, d) in zip(other.connector, other.connector.dropFirst()) {
-                            XCTAssertFalse(TimelineEventLabelLayout.segmentsCross(a, b, c, d))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @MainActor
-    func testBirthdayAndReleaseLabelsUseBothSidesWithCenteredConnections() {
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 360))
-        container.backgroundColor = .systemBackground
-        let titles = TimelineEventLabelsView(frame: container.bounds)
-        container.addSubview(titles)
-        let names = ["Bryan Lewis’s birthday", "Zelda: Ocarina of Time", "GTA 6"]
-        let centers: [CGFloat] = [112, 132, 264]
-        let entries = names.enumerated().map { index, name in
-            (event: Event(title: name, date: Date(), color: CodableColor(color: index == 0 ? .red : .blue)),
-             frame: CGRect(x: centers[index] - 4.5, y: 175, width: 9, height: 9))
-        }
-        _ = titles.update(events: entries, viewport: container.bounds, opacity: 1, minimumY: 40)
-        let placements = titles.placements
-        XCTAssertEqual(placements.count, 3)
-        XCTAssertTrue(placements.contains { $0.frame.maxY < $0.marker.minY })
-        XCTAssertTrue(placements.contains { $0.frame.minY > $0.marker.maxY })
-        for placement in placements {
-            XCTAssertEqual(placement.marker.minY, 175, "This small cluster has room without moving its dots")
-            let entry = entries.first { $0.event.id == placement.id }!
-            let dot = UIView(frame: placement.marker)
-            dot.backgroundColor = UIColor(entry.event.color.color)
-            dot.layer.cornerRadius = 4.5
-            container.addSubview(dot)
-            XCTAssertLessThanOrEqual(placement.connector.count, 4)
-            if let start = placement.connector.first, let end = placement.connector.last {
-                XCTAssertEqual(start.x, placement.marker.midX)
-                XCTAssertEqual(end.x, placement.frame.midX)
-            }
-        }
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        layoutTree(container)
-        let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
-        let screenshot = XCTAttachment(image: image)
-        screenshot.name = "Birthday and releases with balanced centered labels"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
-    }
-
-    @MainActor
-    func testStackedReleaseLabelsConnectAtTheirCentersWithRoundedOrthogonalBends() {
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 360))
-        container.overrideUserInterfaceStyle = .light
-        container.backgroundColor = .systemBackground
-        let titles = TimelineEventLabelsView(frame: container.bounds)
-        container.addSubview(titles)
-        let entries = ["Dune 3", "Avengers Doomsday"].enumerated().map { index, title in
-            (event: Event(title: title, date: Date(), color: CodableColor(color: .purple)),
-             frame: CGRect(x: 360, y: 175 + CGFloat(index) * 24, width: 20, height: 20))
-        }
-        _ = titles.update(events: entries, viewport: container.bounds, opacity: 1, minimumY: 40)
-        XCTAssertEqual(titles.placements.count, 2)
-        XCTAssertTrue(titles.placements.contains { $0.frame.maxY < $0.marker.minY })
-        XCTAssertTrue(titles.placements.contains { $0.frame.minY > $0.marker.maxY })
-        for placement in titles.placements {
-            let points = placement.connector
-            XCTAssertEqual(points.count, 4)
-            guard points.count == 4 else { continue }
-            let above = placement.frame.maxY < placement.marker.minY
-            XCTAssertEqual(points.first, CGPoint(x: placement.marker.midX,
-                                                 y: above ? placement.marker.minY - 2 : placement.marker.maxY + 2))
-            XCTAssertEqual(points.last, CGPoint(x: placement.frame.midX,
-                                                y: above ? placement.frame.maxY + 2 : placement.frame.minY - 2))
-            XCTAssertEqual(points[0].x, points[1].x)
-            XCTAssertEqual(points[1].y, points[2].y)
-            XCTAssertEqual(points[2].x, points[3].x)
-            var curves = 0
-            var previous = points[0]
-            TimelineEventLabelLayout.roundedConnectorPath(points).cgPath.applyWithBlock { element in
-                switch element.pointee.type {
-                case .addQuadCurveToPoint:
-                    curves += 1
-                    previous = element.pointee.points[1]
-                case .addLineToPoint:
-                    let end = element.pointee.points[0]
-                    XCTAssertTrue(previous.x == end.x || previous.y == end.y)
-                    previous = end
-                default: break
-                }
-            }
-            XCTAssertEqual(curves, 2, "Both bends must be rounded, not sharp line joins")
-            let dot = UIView(frame: placement.marker)
-            dot.backgroundColor = .systemPurple
-            dot.layer.cornerRadius = 10
-            container.addSubview(dot)
-        }
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        layoutTree(container)
-        let image = UIGraphicsImageRenderer(bounds: container.bounds).image { container.layer.render(in: $0.cgContext) }
-        let screenshot = XCTAttachment(image: image)
-        screenshot.name = "Stacked releases with rounded centered connectors"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
-    }
-
-    func testExpandedTitlesRetainAFreePositionDuringSmallPansAndAvoidTheAxis() {
-        let item = TimelineLabelItem(id: UUID(), marker: CGRect(x: 80, y: 100, width: 20, height: 20),
-                                     size: CGSize(width: 150, height: 120))
-        let initial = TimelineEventLabelLayout.make(items: [item], horizontalBounds: 8...385, minimumY: 60)[0]
-        XCTAssertGreaterThanOrEqual(initial.frame.minY, item.marker.maxY + 6, "A tall title must not cover the calendar axis")
-        let moved = TimelineEventLabelLayout.make(items: [item], horizontalBounds: 12...389, minimumY: 60,
-                                                  previous: [item.id: initial.frame])[0]
-        XCTAssertEqual(moved.frame, initial.frame, "A small pan must not make labels jump to another column")
-    }
-
-    @MainActor
-    func testExpandedTitlesFollowPanZoomAndSelectionAndDisappearWhenCollapsed() {
-        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
-        let events = (0..<8).map { day in
-            Event(title: "Event \(day) with a longer title", date: Calendar.current.date(byAdding: .day, value: day / 2, to: timeline.anchor)!,
-                  color: CodableColor(color: .blue))
-        }
-        timeline.update(events: events)
-        timeline.setExpanded(true)
+    func testTappingTimelineDotHighlightsItsEvent() throws {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 124))
+        let event = Event(title: "Birthday", date: timeline.anchor, color: CodableColor(color: .red))
+        timeline.update(events: [event])
         timeline.layoutIfNeeded()
-        let overlay = timeline.subviews.compactMap { $0 as? TimelineEventLabelsView }.first!
-        XCTAssertFalse(overlay.placements.isEmpty)
-        for scale: CGFloat in [1, 0.15, 0.03] {
-            timeline.beginZoom(at: 0)
-            timeline.changeZoom(scale: scale, at: 0)
-            timeline.endZoom()
-            for day: CGFloat in [0, 0.25, 1.7] {
-                timeline.setDayPosition(day)
-                timeline.layoutIfNeeded()
-                let markers = timeline.subviews.compactMap { $0 as? UIButton }
-                for (index, placement) in overlay.placements.enumerated() {
-                    for marker in markers { XCTAssertFalse(placement.frame.intersects(marker.frame)) }
-                    for other in overlay.placements.dropFirst(index + 1) {
-                        XCTAssertFalse(placement.frame.intersects(other.frame))
-                    }
-                    XCTAssertGreaterThanOrEqual(placement.frame.minX, timeline.bounds.minX)
-                    XCTAssertLessThanOrEqual(placement.frame.maxX, timeline.bounds.maxX)
-                    XCTAssertLessThanOrEqual(placement.frame.maxY, timeline.contentSize.height)
-                }
-            }
-        }
         var selected: UUID?
         timeline.onSelectEvent = { selected = $0.id }
-        let title = overlay.subviews.compactMap { $0 as? UIButton }.first!
-        title.sendActions(for: .touchUpInside)
-        XCTAssertNotNil(selected)
-        XCTAssertEqual(timeline.highlightedEventID, selected)
-        timeline.setExpanded(false)
-        timeline.layoutIfNeeded()
-        XCTAssertTrue(overlay.placements.isEmpty)
-        XCTAssertEqual(overlay.alpha, 0)
+        let dot = try XCTUnwrap(timeline.subviews.compactMap { $0 as? UIButton }.first)
+        dot.sendActions(for: .touchUpInside)
+        XCTAssertEqual(selected, event.id)
+        XCTAssertEqual(timeline.highlightedEventID, event.id)
+        XCTAssertTrue(dot.isSelected)
     }
 
     func testRecyclingPreservesDatesAndFractionalPositionInBothDirections() {
@@ -264,9 +79,8 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testPinchContinuouslyAnchorsTheDateAndPreservesZoomAcrossSheetSizes() {
+    func testPinchContinuouslyAnchorsTheDateAndPreservesZoomAcrossHeightChanges() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 600))
-        timeline.setExpanded(true)
         timeline.layoutIfNeeded()
         timeline.setDayPosition(20.25)
         let focusedDay = timeline.focusedDayPosition
@@ -283,8 +97,8 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(timeline.zoomLevel, .weeks)
         timeline.endZoom()
         let leftDay = timeline.dayPosition
-        for expanded in [false, true, false] {
-            timeline.setExpanded(expanded)
+        for height: CGFloat in [100, 250, 150] {
+            timeline.frame.size.height = height
             timeline.layoutIfNeeded()
             XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001)
             XCTAssertEqual(timeline.dayPosition, leftDay, accuracy: 0.00001)
@@ -293,11 +107,11 @@ final class TimelineTests: XCTestCase {
         timeline.beginZoom(at: 180)
         timeline.changeZoom(scale: 0.1, at: 180)
         timeline.endZoom()
-        XCTAssertEqual(timeline.zoomLevel, .months, "The timeline can zoom out above the large sheet")
+        XCTAssertEqual(timeline.zoomLevel, .months, "The timeline can zoom out above the event list")
         timeline.beginZoom(at: 180)
         timeline.changeZoom(scale: 30, at: 180)
         timeline.endZoom()
-        XCTAssertEqual(timeline.zoomLevel, .days, "The timeline can zoom back in above the large sheet")
+        XCTAssertEqual(timeline.zoomLevel, .days, "The timeline can zoom back in above the event list")
     }
 
     func testZoomPeriodsUseRealMonthLengthsAndCalendarWeeksAcrossDST() {
@@ -378,10 +192,9 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testTimelineKeepsEveryMonthAndDayUntilDatesWouldOverlapAboveBothSheetSizes() {
+    func testTimelineKeepsEveryMonthAndDayUntilDatesWouldOverlapAtDifferentHeights() {
         for height: CGFloat in [100, 600] {
             let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
-            timeline.setExpanded(height > 100)
             timeline.layoutIfNeeded()
             for spacing: CGFloat in [44, 40, 26.4, 18] {
                 timeline.beginZoom(at: 196)
@@ -420,7 +233,6 @@ final class TimelineTests: XCTestCase {
             UITraitCollection(preferredContentSizeCategory: category).performAsCurrent {
                 for width: CGFloat in [320, 393, 600] {
                     let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: width, height: 600))
-                    timeline.setExpanded(true)
                     timeline.layoutIfNeeded()
                     // Include the exact week/month blend that previously drew both
                     // month names on top of one another, and densely spaced weekdays.
@@ -453,7 +265,6 @@ final class TimelineTests: XCTestCase {
     @MainActor
     func testWeekGridKeepsEvenSpacingAcrossMonthBoundariesAndZoomBlends() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 800, height: 500))
-        timeline.setExpanded(true)
         timeline.layoutIfNeeded()
         for spacing: CGFloat in [29, 18, 6.6, 5.3, 4.6] {
             timeline.beginZoom(at: 400)
@@ -478,7 +289,6 @@ final class TimelineTests: XCTestCase {
             container.backgroundColor = .systemBackground
             let timeline = TimelineScrollView(frame: container.bounds)
             container.addSubview(timeline)
-            timeline.setExpanded(true)
             timeline.update(events: (0..<80).map {
                 Event(title: "Stacked event \($0)", date: timeline.anchor, color: CodableColor(color: .blue))
             })
@@ -549,7 +359,6 @@ final class TimelineTests: XCTestCase {
                   color: CodableColor(color: .blue))
         }
         timeline.update(events: events)
-        timeline.setExpanded(true)
         timeline.layoutIfNeeded()
         timeline.beginZoom(at: 196)
         timeline.changeZoom(scale: 1.0 / 30, at: 196)
@@ -560,35 +369,10 @@ final class TimelineTests: XCTestCase {
             let markers = timeline.subviews.compactMap { $0 as? UIButton }
             XCTAssertLessThan(markers.count, 280)
             XCTAssertLessThan(timeline.subviews.count, 300)
-            let titles = timeline.subviews.compactMap { $0 as? TimelineEventLabelsView }.first!
-            XCTAssertLessThan(titles.subviews.count, markers.count)
-            for title in titles.subviews {
-                XCTAssertTrue(title.frame.intersects(timeline.bounds.insetBy(dx: 0, dy: -80)),
-                              "Titles outside the vertical viewport must be recycled")
-            }
             for (index, marker) in markers.enumerated() {
                 for other in markers.dropFirst(index + 1) { XCTAssertFalse(marker.frame.intersects(other.frame)) }
             }
         }
-    }
-
-    func testEventSheetHasTwoStopsAndTracksTheHandleWithinItsBounds() {
-        let heights = EventSheetHeights(available: 750, compactTimeline: 108)
-        XCTAssertEqual(heights.large, 642)
-        XCTAssertEqual(heights.small, 240)
-        XCTAssertEqual(heights.nearest(to: 100), .small)
-        XCTAssertEqual(heights.nearest(to: 700), .large)
-        var drag = EventSheetDrag(heights: heights, startHeight: heights.large)
-        drag.translation = 150
-        XCTAssertEqual(drag.height, 492)
-        XCTAssertGreaterThan(heights.timelineExpansion(at: drag.height), 0)
-        XCTAssertLessThan(heights.timelineExpansion(at: drag.height), 1)
-        drag.translation = 1000
-        XCTAssertEqual(drag.height, heights.small)
-        drag.translation = -1000
-        XCTAssertEqual(drag.height, heights.large)
-        XCTAssertEqual(EventSheetHeights(available: 100, compactTimeline: 500).large, 100)
-        XCTAssertEqual(EventSheetHeights(available: -10, compactTimeline: 100).small, 0)
     }
 
     func testSheetSelectionFindsTheNearestCalendarDayAcrossDSTAndLargeGaps() {
@@ -628,7 +412,6 @@ final class TimelineTests: XCTestCase {
     @MainActor
     func testFollowingSheetDatesPreservesZoomAndCalendarFocusAcrossRecycledWindows() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
-        timeline.setExpanded(true)
         timeline.layoutIfNeeded()
         for level in TimelineZoomLevel.allCases {
             timeline.beginZoom(at: 196)
@@ -653,7 +436,7 @@ final class TimelineTests: XCTestCase {
     @MainActor
     func testTimelineReportsTheFocusedDayWhileZoomingAndReturningToToday() {
         let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
-        canvas.update(events: [], expanded: true, progress: 1, highlightedEventID: nil)
+        canvas.update(events: [], highlightedEventID: nil)
         canvas.layoutIfNeeded()
         canvas.timeline.layoutIfNeeded()
         var reportedDay: CGFloat?
@@ -689,12 +472,12 @@ final class TimelineTests: XCTestCase {
         let zoom = try XCTUnwrap(canvas.gestureRecognizers?.first { $0 is UIPinchGestureRecognizer })
         XCTAssertTrue(timeline.gestureRecognizer(zoom, shouldRecognizeSimultaneouslyWith: timeline.panGestureRecognizer))
         XCTAssertFalse(timeline.gestureRecognizer(zoom, shouldRecognizeSimultaneouslyWith: UITapGestureRecognizer()))
-        for expanded in [false, true] {
-            timeline.setExpanded(expanded)
+        for height: CGFloat in [100, 250] {
+            timeline.frame.size.height = height
             timeline.beginZoom(at: 180)
             XCTAssertFalse(timeline.panGestureRecognizer.isEnabled, "Scrolling cannot move dates under an active pinch")
             timeline.changeZoom(scale: 0.6, at: 180)
-            timeline.setExpanded(!expanded)
+            timeline.frame.size.height = height + 24
             timeline.changeZoom(scale: 0.8, at: 180)
             timeline.endZoom()
             XCTAssertTrue(timeline.panGestureRecognizer.isEnabled)
@@ -702,27 +485,74 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testDotsMoveContinuouslyAsTheEventSheetShrinks() {
-        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 80))
-        let events = [Event(title: "Today", date: canvas.timeline.anchor, color: CodableColor(color: .blue))]
-        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
-        var previousTop: CGFloat = 48
-        for step in 0...10 {
-            let progress = CGFloat(step) / 10
-            canvas.frame.size.height = 80 + 470 * progress
-            canvas.update(events: events, expanded: false, progress: progress, highlightedEventID: nil)
-            layoutTree(canvas)
-            let marker = canvas.timeline.subviews.compactMap { $0 as? UIButton }.first { $0.accessibilityLabel == "Today" }!
-            XCTAssertGreaterThanOrEqual(marker.frame.minY, previousTop)
-            if step == 5 { XCTAssertGreaterThan(marker.frame.minY, 80) }
-            previousTop = marker.frame.minY
+    func testTimelineFitsVisibleLanesWithEqualPaddingAtEveryZoom() {
+        for category in [UIContentSizeCategory.large, .accessibilityExtraExtraExtraLarge] {
+            UITraitCollection(preferredContentSizeCategory: category).performAsCurrent {
+                let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 100))
+                for level in TimelineZoomLevel.allCases {
+                    timeline.beginZoom(at: 0)
+                    timeline.changeZoom(scale: level.pointsPerDay / timeline.pointsPerDay, at: 0)
+                    timeline.endZoom()
+                    timeline.setDayPosition(0)
+                    var lastHeight: CGFloat = 0
+                    for count in [0, 1, 2, 5] {
+                        timeline.update(events: (0..<count).map {
+                            Event(title: "Event \($0)", date: timeline.anchor, color: CodableColor(color: .blue))
+                        })
+                        timeline.layoutIfNeeded()
+                        timeline.frame.size.height = timeline.preferredHeight
+                        timeline.layoutIfNeeded()
+                        guard let header = timeline.subviews.first(where: { $0.accessibilityIdentifier == "timelineAxis" }) else {
+                            XCTFail("Missing timeline date header"); return
+                        }
+                        let markers = timeline.subviews.compactMap { $0 as? UIButton }
+                        XCTAssertEqual(markers.count, count)
+                        XCTAssertGreaterThan(timeline.preferredHeight, lastHeight)
+                        lastHeight = timeline.preferredHeight
+                        XCTAssertEqual(timeline.contentSize.height, timeline.bounds.height, accuracy: 1)
+                        if let top = markers.map(\.frame.minY).min(), let bottom = markers.map(\.frame.maxY).max() {
+                            let above = top - header.bounds.height
+                            let below = timeline.bounds.height - bottom
+                            XCTAssertEqual(above, below, accuracy: 1, "The marker group must be centered below the date header")
+                            XCTAssertEqual(above, 24, accuracy: 1)
+                        }
+                    }
+                    timeline.setDayPosition(500)
+                    timeline.layoutIfNeeded()
+                    XCTAssertLessThan(timeline.preferredHeight, lastHeight, "Quiet dates shrink the timeline")
+                    timeline.frame.size.height = timeline.preferredHeight
+                    timeline.layoutIfNeeded()
+                    XCTAssertTrue(timeline.subviews.compactMap { $0 as? UIButton }.isEmpty)
+                    XCTAssertEqual(timeline.contentOffset.y, 0)
+                }
+            }
         }
-        canvas.update(events: events, expanded: true, progress: 1, highlightedEventID: nil)
-        layoutTree(canvas)
-        let marker = canvas.timeline.subviews.compactMap { $0 as? UIButton }.first { $0.accessibilityLabel == "Today" }!
-        XCTAssertEqual(marker.frame.minY, previousTop, accuracy: 0.5)
-        let header = canvas.timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" }!
-        XCTAssertEqual(marker.frame.minY - header.bounds.height, canvas.timeline.bounds.height - marker.frame.maxY, accuracy: 1)
+    }
+
+    @MainActor
+    func testHeightReportsFollowHeaderZoomAndVisibleEventChanges() async {
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 100))
+        let events = (0..<3).map {
+            Event(title: "Event \($0)", date: canvas.timeline.anchor, color: CodableColor(color: .blue))
+        }
+        let dayHeight = expectation(description: "Day header and three lanes reported")
+        canvas.timeline.onHeightChange = { height in
+            XCTAssertEqual(height, 168, accuracy: 1)
+            dayHeight.fulfill()
+        }
+        canvas.update(events: events, highlightedEventID: nil)
+        canvas.layoutIfNeeded()
+        canvas.timeline.layoutIfNeeded()
+        await fulfillment(of: [dayHeight], timeout: 1)
+        let weekHeight = expectation(description: "Single-row week header and smaller dots reported")
+        canvas.timeline.onHeightChange = { height in
+            XCTAssertLessThan(height, 168)
+            weekHeight.fulfill()
+        }
+        canvas.timeline.beginZoom(at: 0)
+        canvas.timeline.changeZoom(scale: 0.15, at: 0)
+        canvas.timeline.endZoom()
+        await fulfillment(of: [weekHeight], timeout: 1)
     }
 
     func testViewportIncludesPartiallyVisibleDays() {

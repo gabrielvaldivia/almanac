@@ -33,14 +33,12 @@ struct ContentView: View {
     @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
-    @State private var eventSheetSize: EventSheetSize = .large
+    @State private var timelineHeight: CGFloat = 100
     @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var timelineUsesYearHeading = false
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
     @State private var timelineScrollRequest: EventSheetScrollRequest?
     @State private var scrollSynchronization = EventScrollSynchronization()
-    @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
-    private var eventSheetDrag: EventSheetDrag?
     @State private var scrollToTodayRequest: UUID?
     @State private var eventDetails = EventDetails(
         title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
@@ -156,15 +154,12 @@ struct ContentView: View {
         let days = EventListDay.group(events: timelineEvents)
 
         return GeometryReader { geometry in
-            let heights = EventSheetHeights(available: geometry.size.height, compactTimeline: 108)
-            let sheetHeight = eventSheetDrag?.height ?? heights.height(for: eventSheetSize)
-            let progress = heights.timelineExpansion(at: sheetHeight)
-            ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
                 EventTimelineView(
                     events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
                     scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
                     animateScrolling: !reduceMotion,
-                    expanded: eventSheetSize == .small, expansionProgress: progress,
+                    onHeightChange: { timelineHeight = $0 },
                     onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
                     onInteractionBegan: beginTimelineInteraction,
                     onPositionChange: { day, anchor, visibleDayCount in
@@ -183,24 +178,18 @@ struct ContentView: View {
                         }
                     }
                 )
-                .padding(.top, 4)
-                .frame(height: max(0, geometry.size.height - sheetHeight))
-                .frame(maxHeight: .infinity, alignment: .top)
-                .background(Color(uiColor: .systemBackground))
+                // Keep the list usable on crowded dates and with the keyboard
+                // open; overflowing event lanes can scroll inside the timeline.
+                .frame(height: min(timelineHeight, max(80, geometry.size.height * 0.5)))
 
-                eventSheet(days: days, heights: heights)
-                    .frame(height: sheetHeight, alignment: .top)
-                    .background(Color(uiColor: .secondarySystemBackground))
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
-                    .overlay {
-                        UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24)
-                            .strokeBorder(Color(uiColor: .separator).opacity(0.5), lineWidth: 0.5)
-                            .allowsHitTesting(false)
-                    }
+                Divider().accessibilityIdentifier("timelineListDivider")
+                eventList(days: days)
+                    .frame(maxHeight: .infinity, alignment: .top)
             }
-            .frame(height: geometry.size.height, alignment: .bottom)
+            .background(Color(uiColor: .systemBackground))
+            .frame(height: geometry.size.height, alignment: .top)
             .clipped()
-            .transaction { if eventSheetDrag != nil || reduceMotion { $0.animation = nil } }
+            .transaction { if reduceMotion { $0.animation = nil } }
         }
         .safeAreaInset(edge: .top) {
             if let error = appData.storageError {
@@ -268,42 +257,15 @@ struct ContentView: View {
         }
     }
 
-    private func eventSheet(days: [EventListDay], heights: EventSheetHeights) -> some View {
+    private func eventList(days: [EventListDay]) -> some View {
         VStack(spacing: 0) {
-            Button { setEventSheetSize(eventSheetSize == .large ? .small : .large) } label: {
-                Capsule().fill(.tertiary).frame(width: 28, height: 4)
-                    .frame(maxWidth: .infinity).frame(height: 32).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Resize events sheet")
-            .accessibilityValue(eventSheetSize.rawValue)
-            .accessibilityHint("Drag down for a larger timeline, or up for a larger events sheet.")
-            .accessibilityIdentifier("eventSheetResizeHandle")
-            .accessibilityAction(named: "Large events sheet") { setEventSheetSize(.large) }
-            .accessibilityAction(named: "Small events sheet") { setEventSheetSize(.small) }
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 4, coordinateSpace: .global)
-                    .updating($eventSheetDrag) { value, state, transaction in
-                        if state == nil {
-                            guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                            state = EventSheetDrag(heights: heights, startHeight: heights.height(for: eventSheetSize))
-                        }
-                        state?.translation = value.translation.height
-                        transaction.animation = nil
-                    }
-                    .onEnded { value in
-                        guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                        let stops = eventSheetDrag?.heights ?? heights
-                        let start = eventSheetDrag?.startHeight ?? stops.height(for: eventSheetSize)
-                        setEventSheetSize(stops.nearest(to: start - value.predictedEndTranslation.height))
-                    }
-            )
-
             Text("Up Next")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal).padding(.bottom, 10)
+                .padding(.horizontal).padding(.top, 16).padding(.bottom, 10)
                 .fixedSize(horizontal: false, vertical: true)
+                .background(Color(uiColor: .systemBackground))
+                .zIndex(1)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("eventSheetTitle")
 
@@ -370,13 +332,8 @@ struct ContentView: View {
     }
 
     private func synchronizeTimeline(to date: Date) {
-        guard eventSheetDrag == nil, scrollSynchronization.sheetMoved(to: date) else { return }
+        guard scrollSynchronization.sheetMoved(to: date) else { return }
         timelineScrollRequest = EventSheetScrollRequest(date: date, animated: true)
-    }
-
-    private func setEventSheetSize(_ size: EventSheetSize) {
-        beginTimelineInteraction()
-        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) { eventSheetSize = size }
     }
 
     private var settingsButton: some View {

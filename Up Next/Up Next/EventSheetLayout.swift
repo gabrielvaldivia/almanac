@@ -1,30 +1,5 @@
 import SwiftUI
 
-enum EventSheetSize: String, CaseIterable { case large = "Large", small = "Small" }
-
-struct EventSheetHeights {
-    let large: CGFloat
-    let small: CGFloat
-
-    init(available: CGFloat, compactTimeline: CGFloat) {
-        let available = max(0, available)
-        small = min(available, max(200, min(260, available * 0.32)))
-        large = max(small, available - min(max(80, compactTimeline), available * 0.25))
-    }
-
-    func height(for size: EventSheetSize) -> CGFloat { size == .large ? large : small }
-    func clamped(_ height: CGFloat) -> CGFloat { min(large, max(small, height)) }
-    func nearest(to height: CGFloat) -> EventSheetSize { height < (large + small) / 2 ? .small : .large }
-    func timelineExpansion(at height: CGFloat) -> CGFloat { min(1, max(0, (large - height) / max(1, large - small))) }
-}
-
-struct EventSheetDrag {
-    let heights: EventSheetHeights
-    let startHeight: CGFloat
-    var translation: CGFloat = 0
-    var height: CGFloat { heights.clamped(startHeight - translation) }
-}
-
 struct EventSheetScrollRequest: Equatable {
     let id = UUID()
     let date: Date

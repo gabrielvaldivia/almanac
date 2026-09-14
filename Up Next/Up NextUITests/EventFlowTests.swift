@@ -1,70 +1,67 @@
 import XCTest
 
 final class EventFlowTests: XCTestCase {
-    func testEventSheetResizesAndTimelineScrollsTheSameEventList() {
+    func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() {
         continueAfterFailure = false
+        executionTimeAllowance = 240 // Create and remove enough rows to scroll the full-height list.
         let app = XCUIApplication()
         app.launch()
-        let prefix = "Sheet \(UUID().uuidString.prefix(6))"
-        let names = ["\(prefix) First planning session", "\(prefix) Second", "\(prefix) Later"]
-        for (index, name) in names.enumerated() {
+        let prefix = "Timeline \(UUID().uuidString.prefix(6))"
+        // The plain list is taller than the old sheet; provide enough rows to
+        // scroll today's entire group offscreen and exercise date synchronization.
+        let names = ["\(prefix) First planning session", "\(prefix) Second", "\(prefix) Later"] +
+            (1...9).map { "\(prefix) Future \($0)" }
+        let offsets = [0, 0, 3, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+        for (name, offset) in zip(names, offsets) {
             openComposer(app)
             let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
-            input.typeText("\(name) \(index == 2 ? "in 3 days" : "today")")
+            input.typeText("\(name) \(offset == 0 ? "today" : "in \(offset) days")")
             app.buttons["quickAddSubmit"].tap()
         }
-        let handle = app.buttons["eventSheetResizeHandle"]
         let list = app.scrollViews["eventList"]
         let timeline = app.scrollViews["eventTimeline"]
-        XCTAssertEqual(handle.value as? String, "Large")
+        if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
+        waitForTimelineLayout(timeline)
+        XCTAssertFalse(app.buttons["eventSheetResizeHandle"].exists)
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
         XCTAssertGreaterThan(list.frame.maxY, app.buttons["quickAddButton"].frame.maxY)
-        let originalTimelineHeight = timeline.frame.height
-        let originalHandleY = handle.frame.midY
+        let originalHeight = timeline.frame.height
         func screenshot(_ name: String) {
             let attachment = XCTAttachment(screenshot: app.screenshot())
             attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
         }
-        screenshot("Large events sheet and compact timeline")
-        handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
-        XCTAssertEqual(handle.value as? String, "Small")
-        XCTAssertGreaterThan(handle.frame.midY, originalHandleY)
-        XCTAssertGreaterThan(timeline.frame.height, originalTimelineHeight)
-        XCTAssertFalse(app.scrollViews["timelineEventCards"].exists, "Both sizes use the same event list")
-        let timelineTitles = timeline.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "timelineEventTitle-"))
-        XCTAssertTrue(timelineTitles.firstMatch.waitForExistence(timeout: 5))
-        screenshot("Expanded timeline with connected event titles")
-        timelineTitles.matching(NSPredicate(format: "label == %@", names[0])).firstMatch.tap()
+        screenshot("Automatic timeline above plain event list")
+        list.swipeDown()
+        waitForTimelineLayout(timeline)
+        XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "Pulling the list cannot expand the timeline")
+        app.staticTexts["eventSheetTitle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        XCTAssertEqual(timeline.frame.height, originalHeight, accuracy: 1, "The list heading is not a resize handle")
+        timeline.buttons[names[0]].tap()
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
-        XCTAssertFalse(app.navigationBars["Edit Event"].exists, "A timeline title reveals and highlights its event")
-        let smallSheetTop = handle.frame.midY
-        timeline.swipeLeft()
-        XCTAssertEqual(handle.frame.midY, smallSheetTop, accuracy: 1)
+        XCTAssertFalse(app.navigationBars["Edit Event"].exists, "A timeline dot reveals and highlights its event")
+        // A fling can coast several weeks. Drag a few days and hold before
+        // releasing so this assertion targets the event three days from now.
+        timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.75))
+            .press(forDuration: 0.1,
+                   thenDragTo: timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.75)),
+                   withVelocity: .slow, thenHoldForDuration: 0.2)
         let later = list.staticTexts[names[2]].firstMatch
         let revealed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: later)
-        XCTAssertEqual(XCTWaiter.wait(for: [revealed], timeout: 5), .completed)
-        screenshot("Small events sheet follows timeline scrolling")
+        XCTAssertEqual(XCTWaiter.wait(for: [revealed], timeout: 5), .completed,
+                       "The list must follow the timeline: \(timeline.value as? String ?? "missing")")
+        screenshot("Timeline pan scrolls the plain event list")
         let timelineAfterPan = timeline.value as? String
         list.swipeDown()
-        func assertTimelineStarts(on date: Date, file: StaticString = #filePath, line: UInt = #line) {
-            let prefix = "Days view, \(date.formatted(date: .abbreviated, time: .omitted))"
-            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", prefix), object: timeline)
-            XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed,
-                           "Actual timeline: \(timeline.value as? String ?? "missing")", file: file, line: line)
-        }
-        assertTimelineStarts(on: Date())
+        let todayPrefix = "Days view, \(Date().formatted(date: .abbreviated, time: .omitted))"
+        let returned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", todayPrefix), object: timeline)
+        XCTAssertEqual(XCTWaiter.wait(for: [returned], timeout: 5), .completed)
         XCTAssertNotEqual(timeline.value as? String, timelineAfterPan)
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
-        screenshot("Scrolling the sheet returns the timeline to today's events")
         list.swipeUp()
-        screenshot("Events sheet after scrolling forward")
-        assertTimelineStarts(on: Calendar.current.date(byAdding: .day, value: 3, to: Date())!)
-        XCTAssertTrue(later.isHittable)
-        screenshot("Scrolling the sheet advances the timeline to the next event date")
-        handle.tap()
-        XCTAssertEqual(handle.value as? String, "Large")
-        XCTAssertTrue(later.isHittable)
+        let advanced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (value BEGINSWITH %@)", todayPrefix), object: timeline)
+        XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed)
+        screenshot("List scrolling advances the timeline")
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
         for name in names {
             let title = list.staticTexts[name].firstMatch
@@ -77,57 +74,32 @@ final class EventFlowTests: XCTestCase {
         }
     }
 
-    func testPinchZoomsTheTimelineInBothEventSheetSizes() {
+    func testPinchZoomsTheAutomaticallySizedTimelineThroughEveryScale() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
         let monthTitle = app.staticTexts["appTitle"]
         XCTAssertTrue(monthTitle.waitForExistence(timeout: 5))
         XCTAssertEqual(monthTitle.label, Date().formatted(.dateTime.month(.wide)))
-        XCTAssertFalse(app.staticTexts["timelineScaleHeader"].exists)
-        let handle = app.buttons["eventSheetResizeHandle"]
-        XCTAssertTrue(handle.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["eventSheetResizeHandle"].exists)
         let timeline = app.scrollViews["eventTimeline"]
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Small")
+        waitForTimelineLayout(timeline)
         func assertScale(_ scale: String, file: StaticString = #filePath, line: UInt = #line) {
             let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "\(scale) view,"), object: timeline)
             XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 5), .completed, file: file, line: line)
             XCTAssertEqual(app.staticTexts["eventSheetTitle"].label, "Up Next", file: file, line: line)
             XCTAssertTrue(app.staticTexts["eventSheetTitle"].isHittable, file: file, line: line)
-            XCTAssertFalse(app.staticTexts["timelineScaleHeader"].exists, file: file, line: line)
             XCTAssertEqual(monthTitle.label, scale == "Days" ? Date().formatted(.dateTime.month(.wide)) : Date().formatted(.dateTime.year()),
                            file: file, line: line)
+            waitForTimelineLayout(timeline)
             let screenshot = XCTAttachment(screenshot: app.screenshot())
-            screenshot.name = "Event sheet with linear \(scale.lowercased()) timeline"
+            screenshot.name = "Automatic timeline at \(scale.lowercased()) zoom"
             screenshot.lifetime = .keepAlways; add(screenshot)
         }
         timeline.pinch(withScale: 0.15, velocity: -1)
         assertScale("Weeks")
-        let weekDates = timeline.value as? String
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Large")
-        assertScale("Weeks")
-        XCTAssertEqual(timeline.value as? String, weekDates)
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
-        timeline.pinch(withScale: 5, velocity: 2)
-        assertScale("Weeks")
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Small")
-        timeline.pinch(withScale: 0.7, velocity: -1)
-        let transition = XCTAttachment(screenshot: app.screenshot())
-        transition.name = "Readable labels between weeks and months"
-        transition.lifetime = .keepAlways; add(transition)
-        timeline.pinch(withScale: 0.2, velocity: -1)
-        assertScale("Months")
-        let monthDates = timeline.value as? String
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Large")
-        assertScale("Months")
-        XCTAssertEqual(timeline.value as? String, monthDates)
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 5, velocity: 2)
         assertScale("Weeks")
         timeline.pinch(withScale: 8, velocity: 2)
@@ -138,45 +110,32 @@ final class EventFlowTests: XCTestCase {
         app.buttons["scrollToToday"].tap()
         let todayMonth = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", Date().formatted(.dateTime.year())), object: monthTitle)
         XCTAssertEqual(XCTWaiter.wait(for: [todayMonth], timeout: 5), .completed)
-        resizeEventSheet(handle, timeline: timeline)
-        XCTAssertEqual(handle.value as? String, "Large")
     }
 
-    func testShortPinchesRespondAboveBothSheetSizesAndKeepTheMonthHeading() {
+    func testShortPinchesRespondWhileTimelineHeightChangesAndKeepTheMonthHeading() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
         let timeline = app.scrollViews["eventTimeline"]
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
-        let handle = app.buttons["eventSheetResizeHandle"]
-        for size in ["Large", "Small"] {
-            XCTAssertEqual(handle.value as? String, size)
-            for _ in 0..<3 {
-                timeline.pinch(withScale: 0.6, velocity: -2)
-                let zoomedOut = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Weeks view,'"), object: timeline)
-                XCTAssertEqual(XCTWaiter.wait(for: [zoomedOut], timeout: 5), .completed)
-                XCTAssertEqual(app.staticTexts["appTitle"].label, Date().formatted(.dateTime.month(.wide)))
-                let screenshot = XCTAttachment(screenshot: app.screenshot())
-                screenshot.name = "Close weekly zoom above the \(size.lowercased()) sheet"
-                screenshot.lifetime = .keepAlways
-                add(screenshot)
-                timeline.pinch(withScale: 2, velocity: 2)
-                let zoomedIn = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Days view,'"), object: timeline)
-                XCTAssertEqual(XCTWaiter.wait(for: [zoomedIn], timeout: 5), .completed)
-            }
-            let beforeScroll = timeline.value as? String
-            timeline.swipeLeft()
-            XCTAssertNotEqual(timeline.value as? String, beforeScroll, "Single-finger scrolling must still work after pinching")
-            app.buttons["scrollToToday"].tap()
-            resizeEventSheet(handle, timeline: timeline)
+        for _ in 0..<3 {
+            timeline.pinch(withScale: 0.6, velocity: -2)
+            let zoomedOut = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Weeks view,'"), object: timeline)
+            XCTAssertEqual(XCTWaiter.wait(for: [zoomedOut], timeout: 5), .completed)
+            XCTAssertEqual(app.staticTexts["appTitle"].label, Date().formatted(.dateTime.month(.wide)))
+            waitForTimelineLayout(timeline)
+            timeline.pinch(withScale: 2, velocity: 2)
+            let zoomedIn = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Days view,'"), object: timeline)
+            XCTAssertEqual(XCTWaiter.wait(for: [zoomedIn], timeout: 5), .completed)
+            waitForTimelineLayout(timeline)
         }
+        let beforeScroll = timeline.value as? String
+        timeline.swipeLeft()
+        XCTAssertNotEqual(timeline.value as? String, beforeScroll, "Single-finger scrolling must still work after pinching")
+        app.buttons["scrollToToday"].tap()
     }
 
-    private func resizeEventSheet(_ handle: XCUIElement, timeline: XCUIElement,
-                                  file: StaticString = #filePath, line: UInt = #line) {
-        handle.tap()
-        // The sheet's value changes before its spring finishes. Pinching the
-        // destination frame too early puts one finger on the moving sheet.
+    private func waitForTimelineLayout(_ timeline: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         var previousFrame: CGRect?
         let settled = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             let frame = timeline.frame
