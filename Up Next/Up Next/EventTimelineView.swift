@@ -237,7 +237,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var needsEventLayout = true
     private var renderedSize: CGSize = .zero
     private var expanded = false
-    var bottomOverlayHeight: CGFloat = 0
+    var bottomOverlayHeight: CGFloat = 0 {
+        didSet {
+            guard bottomOverlayHeight != oldValue else { return }
+            needsEventLayout = true
+            setNeedsLayout()
+        }
+    }
 
     var dayPosition: CGFloat {
         CGFloat(scrollWindow.firstDay) + contentOffset.x / TimelineScrollWindow.dayWidth
@@ -356,8 +362,14 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private func render(visibleDays: ClosedRange<Int>) {
         let calendar = Calendar.current
         let layout = TimelineLayout.make(indexedEvents: indexedEvents, visibleDays: visibleDays)
+        let markerHeight = max(0, CGFloat(layout.laneCount) * 28 - 4)
+        // Center the whole group of lanes between the day labels and the cards.
+        // Crowded days retain their spacing and can still scroll vertically.
+        let markerTop: CGFloat = expanded
+            ? max(48, (44 + bounds.height - bottomOverlayHeight - markerHeight) / 2)
+            : 48
         contentSize = CGSize(width: scrollWindow.contentWidth,
-                             height: expanded ? max(bounds.height, TimelineLayout.height(for: layout.laneCount) + bottomOverlayHeight) : bounds.height)
+                             height: expanded ? max(bounds.height, markerTop + markerHeight + 4 + bottomOverlayHeight) : bounds.height)
         let bufferedDays = (visibleDays.lowerBound - 1)...(visibleDays.upperBound + 1)
         for day in Array(dayViews.keys) where !bufferedDays.contains(day) {
             dayViews.removeValue(forKey: day)?.removeFromSuperview()
@@ -394,7 +406,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             button.placement = placement
             button.isSelected = placement.event.id == highlightedEventID
             button.layer.cornerRadius = 12
-            button.frame = CGRect(x: x + (isSingleDay ? 10 : 2), y: 48 + CGFloat(placement.lane) * 28,
+            button.frame = CGRect(x: x + (isSingleDay ? 10 : 2), y: markerTop + CGFloat(placement.lane) * 28,
                                   width: isSingleDay ? 24 : width - 4, height: 24)
             button.accessibilityLabel = placement.event.title
             button.accessibilityValue = placement.event.date.formatted(date: .abbreviated, time: .omitted)

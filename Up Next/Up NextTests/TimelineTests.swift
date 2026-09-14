@@ -105,6 +105,43 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testExpandedDotsStayCenteredAsCardsExpandAndTheViewportResizes() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let events = [Event(title: "First", date: today, color: CodableColor(color: .blue)),
+                      Event(title: "Second", date: today, color: CodableColor(color: .blue))]
+        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
+        container.update(events: events, expanded: true)
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        func markerBounds() -> CGRect {
+            container.timeline.subviews.compactMap { $0 as? UIButton }
+                .filter { events.map(\.title).contains($0.accessibilityLabel ?? "") }
+                .reduce(CGRect.null) { $0.union($1.frame) }
+        }
+        func assertCentered(file: StaticString = #filePath, line: UInt = #line) {
+            let markers = markerBounds()
+            let spaceAbove = markers.minY - 44
+            let spaceBelow = container.timeline.bounds.height - container.timeline.bottomOverlayHeight - markers.maxY
+            XCTAssertEqual(spaceAbove, spaceBelow, accuracy: 1, file: file, line: line)
+            XCTAssertGreaterThan(spaceAbove, 0, file: file, line: line)
+        }
+        layoutTree(container)
+        assertCentered()
+        let originalTop = markerBounds().minY
+        let originalTimelineSize = container.timeline.bounds.size
+        container.cards.toggleStack(for: today)
+        layoutTree(container)
+        XCTAssertEqual(container.timeline.bounds.size, originalTimelineSize)
+        XCTAssertLessThan(markerBounds().minY, originalTop, "A taller card stack must recenter dots without a timeline resize")
+        assertCentered()
+        container.frame.size.height = 500
+        layoutTree(container)
+        assertCentered()
+        container.update(events: events, expanded: false)
+        layoutTree(container)
+        XCTAssertEqual(markerBounds().minY, 48, "Compact mode keeps dots directly below the days")
+    }
+
+    @MainActor
     func testCardsFitShortAndWrappedTitlesAndResizeWhilePaging() {
         let today = Calendar.current.startOfDay(for: Date())
         let short = Event(title: "Dinner", date: Calendar.current.date(byAdding: .day, value: 3, to: today)!,
