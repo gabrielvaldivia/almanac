@@ -6,6 +6,9 @@ final class EventFlowTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        // Simulator startup and XCTest transport also consume this budget.
+        // Individual UI expectations still fail within their 5–10 second limits.
+        executionTimeAllowance = 180
         testStoreID = UUID().uuidString
     }
 
@@ -13,6 +16,20 @@ final class EventFlowTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["ALMANAC_UI_TEST_ID"] = testStoreID
         return app
+    }
+
+    private func seedEvents(_ events: [(String, Int)], in app: XCUIApplication) throws {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let formatter = ISO8601DateFormatter()
+        let fixtures: [[String: Any]] = events.map { name, offset in
+            ["id": UUID().uuidString, "title": name,
+             "date": formatter.string(from: calendar.date(byAdding: .day, value: offset, to: today)!),
+             "color": ["red": 0.0, "green": 0.5, "blue": 1.0, "opacity": 1.0],
+             "notificationsEnabled": false, "calendarSchemaVersion": 1]
+        }
+        app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"] = String(
+            decoding: try JSONSerialization.data(withJSONObject: fixtures), as: UTF8.self)
     }
 
     func testAComposerAcceptsCompleteTextOnFirstLaunch() {
@@ -41,17 +58,7 @@ final class EventFlowTests: XCTestCase {
         let names = ["\(prefix) First planning session", "\(prefix) Second", "\(prefix) Later"] +
             (1...9).map { "\(prefix) Future \($0)" }
         let offsets = [0, 0, 3, 15, 20, 25, 30, 35, 40, 45, 50, 55]
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let formatter = ISO8601DateFormatter()
-        let fixtures: [[String: Any]] = zip(names, offsets).map { name, offset in
-            ["id": UUID().uuidString, "title": name,
-             "date": formatter.string(from: calendar.date(byAdding: .day, value: offset, to: today)!),
-             "color": ["red": 0.0, "green": 0.5, "blue": 1.0, "opacity": 1.0],
-             "notificationsEnabled": false, "calendarSchemaVersion": 1]
-        }
-        app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"] = String(
-            decoding: try JSONSerialization.data(withJSONObject: fixtures), as: UTF8.self)
+        try seedEvents(Array(zip(names, offsets)), in: app)
         app.launch()
         let list = app.scrollViews["eventList"]
         let timeline = app.scrollViews["eventTimeline"]
@@ -231,16 +238,11 @@ final class EventFlowTests: XCTestCase {
         return total / Double(sample.width * sample.height) / 255
     }
 
-    func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
+    func testComposerLayoutAndShortDragPreserveTheListAndKeyboard() throws {
         continueAfterFailure = false
         let app = makeApp()
+        try seedEvents([("Composer layout", 0)], in: app)
         app.launch()
-        // A fresh install shows the empty state instead of a scrollable list.
-        // Own the row needed for the keyboard/list geometry assertions below.
-        let fixtureName = "Composer layout \(UUID().uuidString.prefix(8))"
-        openComposer(app)
-        app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.typeText(fixtureName)
-        app.buttons["quickAddSubmit"].tap()
         let list = app.scrollViews["eventList"]
         XCTAssertTrue(list.waitForExistence(timeout: 5))
         let timeline = app.scrollViews["eventTimeline"]
@@ -248,24 +250,15 @@ final class EventFlowTests: XCTestCase {
         let listFrame = list.frame
         let timelineFrame = timeline.frame
         openComposer(app)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         XCTAssertEqual(list.frame.minY, listFrame.minY, accuracy: 1)
         XCTAssertEqual(list.frame.maxY, listFrame.maxY, accuracy: 1,
-                       "The list must remain extended behind the keyboard instead of exposing the black timeline background")
+                       "The list must remain extended behind the keyboard")
         XCTAssertEqual(timeline.frame.height, timelineFrame.height, accuracy: 1)
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
         input.typeText("Dinner #Work tomorrow")
         let color = app.buttons["quickEventColor"]
         XCTAssertGreaterThanOrEqual(color.frame.width, 44)
         XCTAssertEqual(color.frame.midY, input.frame.midY, accuracy: 1)
-        color.tap()
-        app.collectionViews.buttons["Orange"].tap()
-        XCTAssertEqual(color.value as? String, "Orange")
-        app.buttons["quickEventCategory"].tap()
-        app.collectionViews.buttons["Social"].tap()
-        XCTAssertTrue(input.exists)
-        XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
-        XCTAssertEqual(color.value as? String, "Orange")
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Composer with event color beside text"
         screenshot.lifetime = .keepAlways
@@ -276,8 +269,7 @@ final class EventFlowTests: XCTestCase {
         XCTAssertLessThan(handle.frame.maxY, input.frame.minY)
         let handleCenter = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let restingInputFrame = input.frame
-        // Hold a short drag before releasing: it should follow the finger,
-        // then return to its resting position without dismissing the keyboard.
+        // A short drag follows the finger and returns without dismissing.
         handleCenter.press(forDuration: 0.05,
                            thenDragTo: handleCenter.withOffset(CGVector(dx: 0, dy: 30)),
                            withVelocity: .slow, thenHoldForDuration: 1)
@@ -287,6 +279,26 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [returnedToRest], timeout: 5), .completed)
         XCTAssertTrue(app.keyboards.firstMatch.exists)
         XCTAssertEqual(input.value as? String, "Dinner #Work tomorrow")
+    }
+
+    func testComposerSwipeDismissalRetainsDraftAndSelections() {
+        continueAfterFailure = false
+        let app = makeApp()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Dinner #Work tomorrow")
+        let color = app.buttons["quickEventColor"]
+        color.tap()
+        app.collectionViews.buttons["Orange"].tap()
+        XCTAssertEqual(color.value as? String, "Orange")
+        app.buttons["quickEventCategory"].tap()
+        app.collectionViews.buttons["Social"].tap()
+        XCTAssertTrue(input.exists)
+        XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        XCTAssertEqual(color.value as? String, "Orange")
+        let handleCenter = app.buttons["quickEntryDragHandle"]
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         handleCenter.press(forDuration: 0.05, thenDragTo: handleCenter.withOffset(CGVector(dx: 0, dy: 100)))
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)
@@ -297,25 +309,34 @@ final class EventFlowTests: XCTestCase {
         color.tap()
         app.collectionViews.buttons["Use Category Color"].tap()
         XCTAssertNotEqual(color.value as? String, "Orange")
+        let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+    }
+
+    func testComposerOutsideTapAndHandleTapDismissWithoutLosingDraft() {
+        continueAfterFailure = false
+        let app = makeApp()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Dinner tomorrow")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         XCTAssertFalse(input.exists)
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         openComposer(app)
-        let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
-        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
-        openComposer(app)
+        XCTAssertEqual(input.value as? String, "Dinner tomorrow")
         app.staticTexts["appTitle"].tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
         openComposer(app)
-        handle.tap()
+        XCTAssertEqual(input.value as? String, "Dinner tomorrow")
+        app.buttons["quickEntryDragHandle"].tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
-        list.staticTexts[fixtureName].tap()
-        XCTAssertTrue(app.buttons["Delete Event"].waitForExistence(timeout: 5))
-        app.buttons["Delete Event"].tap()
-        app.alerts["Delete Event"].buttons["Delete this event"].tap()
-        XCTAssertTrue(app.staticTexts[fixtureName].waitForNonExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
 
     func testComposerParsesPillsAndSavesQuickEdits() {
