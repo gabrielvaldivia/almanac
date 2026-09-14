@@ -574,13 +574,12 @@ final class EventFlowTests: XCTestCase {
         let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
         XCTAssertTrue(input.waitForExistence(timeout: 5))
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
-        var previousFrame: CGRect?
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            let frame = input.frame
-            defer { previousFrame = frame }
-            return input.isHittable && frame == previousFrame
-        }, object: input)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        // A cold simulator can spend seconds on each accessibility query. Wait
+        // directly for the interaction we need instead of requiring identical
+        // frames from multiple snapshots while the keyboard is appearing.
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: input)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed,
+                       "The composer field must be tappable before typing")
         input.tap()
     }
 
