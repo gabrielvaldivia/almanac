@@ -144,11 +144,13 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
     var tint: Color
     var highlightedEventID: UUID?
     var scrollToTodayRequest: UUID?
+    var scrollToDateRequest: EventSheetScrollRequest?
     var animateScrolling: Bool
     var expanded: Bool
     var expansionProgress: CGFloat
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
+    var onInteractionBegan: () -> Void
     var onPositionChange: (CGFloat, Date) -> Void
 
     var animatableData: CGFloat {
@@ -156,19 +158,27 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
         set { expansionProgress = newValue }
     }
 
-    final class Coordinator { var lastScrollToTodayRequest: UUID? }
+    final class Coordinator {
+        var lastScrollToTodayRequest: UUID?
+        var lastScrollToDateRequest: UUID?
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> TimelineCanvasView { TimelineCanvasView() }
 
     func updateUIView(_ canvas: TimelineCanvasView, context: Context) {
         canvas.tintColor = UIColor(tint)
         canvas.timeline.onSelectEvent = onSelectEvent
+        canvas.timeline.onInteractionBegan = onInteractionBegan
         canvas.onPositionChange = onPositionChange
         canvas.timeline.onTodayVisibilityChange = onTodayVisibilityChange
         canvas.update(events: events, expanded: expanded, progress: expansionProgress, highlightedEventID: highlightedEventID)
         if let request = scrollToTodayRequest, context.coordinator.lastScrollToTodayRequest != request {
             context.coordinator.lastScrollToTodayRequest = request
             canvas.timeline.scrollToToday(animated: animateScrolling)
+        }
+        if let request = scrollToDateRequest, context.coordinator.lastScrollToDateRequest != request.id {
+            context.coordinator.lastScrollToDateRequest = request.id
+            canvas.timeline.scrollToDate(request.date, animated: request.animated && animateScrolling)
         }
     }
 }
@@ -205,6 +215,7 @@ final class TimelineCanvasView: UIView {
 
 final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     var onSelectEvent: ((Event) -> Void)?
+    var onInteractionBegan: (() -> Void)?
     var onTodayVisibilityChange: ((Bool) -> Void)?
     var onScrollPositionChange: ((CGFloat) -> Void)?
     var highlightedEventID: UUID? {
@@ -226,6 +237,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private var pinch: (width: CGFloat, day: CGFloat, focusedDay: CGFloat)?
     private var focusReferenceX: CGFloat = 0
     private var changingScale = false
+    private var scrollTargetDay: CGFloat?
     var pointsPerDay: CGFloat { scrollWindow.pointsPerDay }
     var zoomLevel: TimelineZoomLevel { TimelineAxisWeights(pointsPerDay: pointsPerDay).level }
     var focusedDayPosition: CGFloat { dayPosition + focusReferenceX / pointsPerDay }
@@ -242,6 +254,19 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             needsEventLayout = true
             setNeedsLayout()
         }
+    }
+
+    override var accessibilityValue: String? {
+        get {
+            // Describe the actual viewport, including during UIKit scroll
+            // animations between SwiftUI updates.
+            let calendar = Calendar.current
+            let days = scrollWindow.visibleDays(offset: contentOffset.x, width: bounds.width)
+            guard let first = calendar.date(byAdding: .day, value: days.lowerBound, to: anchor),
+                  let last = calendar.date(byAdding: .day, value: days.upperBound, to: anchor) else { return nil }
+            return "\(zoomLevel.rawValue) view, \(first.formatted(date: .abbreviated, time: .omitted)) – \(last.formatted(date: .abbreviated, time: .omitted))"
+        }
+        set { super.accessibilityValue = newValue }
     }
 
     var dayPosition: CGFloat {
@@ -318,24 +343,52 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
 
     func scrollToToday(animated: Bool) {
-        // Stop momentum before returning so a fling cannot move us away again.
-        setContentOffset(contentOffset, animated: false)
         focusReferenceX = 0
-        let targetIndex = todayDay - scrollWindow.firstDay
-        if (scrollWindow.edgeBuffer...(scrollWindow.canvasDayCount - scrollWindow.edgeBuffer)).contains(targetIndex) {
-            setContentOffset(CGPoint(x: CGFloat(targetIndex) * pointsPerDay, y: 0), animated: animated)
+        scroll(toFocusedDay: CGFloat(todayDay), animated: animated)
+    }
+
+    func scrollToDate(_ date: Date, animated: Bool) {
+        let calendar = Calendar.current
+        let day = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
+        scroll(toFocusedDay: CGFloat(day), animated: animated)
+    }
+
+    private func scroll(toFocusedDay day: CGFloat, animated: Bool) {
+        // Cancel existing momentum before following a new event. Keep both the
+        // zoom and the date's reference position established by the last pinch.
+        scrollTargetDay = nil
+        setContentOffset(contentOffset, animated: false)
+        scrollTargetDay = day
+        let leftDay = day - focusReferenceX / pointsPerDay
+        let targetIndex = leftDay - CGFloat(scrollWindow.firstDay)
+        if (CGFloat(scrollWindow.edgeBuffer)...CGFloat(scrollWindow.canvasDayCount - scrollWindow.edgeBuffer)).contains(targetIndex) {
+            let target = CGPoint(x: targetIndex * pointsPerDay, y: 0)
+            let animate = animated && abs(target.x - contentOffset.x) > 1
+            setContentOffset(target, animated: animate)
+            if !animate { finishProgrammaticScroll() }
         } else {
-            // Today may be outside the recycled canvas after a long scroll.
-            scrollWindow.firstDay = todayDay - scrollWindow.centerIndex
-            setContentOffset(CGPoint(x: scrollWindow.initialOffset, y: 0), animated: false)
+            // Rebase distant dates rather than animating beyond the recycled canvas.
+            scrollWindow.firstDay = Int(floor(leftDay)) - scrollWindow.centerIndex
+            setContentOffset(CGPoint(x: (leftDay - CGFloat(scrollWindow.firstDay)) * pointsPerDay, y: 0), animated: false)
+            finishProgrammaticScroll()
         }
         needsEventLayout = true
         setNeedsLayout()
     }
 
+    private func finishProgrammaticScroll() {
+        guard let day = scrollTargetDay else { return }
+        scrollTargetDay = nil
+        // UIKit rounds offsets to physical pixels. Keep an exact calendar focus
+        // so landing on the first of a month cannot report the previous month.
+        focusReferenceX = (day - dayPosition) * pointsPerDay
+        onScrollPositionChange?(focusedDayPosition)
+    }
 
     func beginZoom(at viewportX: CGFloat) {
         guard expanded else { return }
+        scrollTargetDay = nil
+        onInteractionBegan?()
         setContentOffset(contentOffset, animated: false)
         pinch = (pointsPerDay, dayPosition + viewportX / pointsPerDay, focusedDayPosition)
     }
@@ -422,6 +475,15 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         // Fractional pans still change how much room an edge label has.
         for view in dayViews.values { view.layoutLabels(in: bounds) }
         for view in periodViews.values { view.layoutLabels(in: bounds) }
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        scrollTargetDay = nil
+        onInteractionBegan?()
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        finishProgrammaticScroll()
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -529,11 +591,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             button.accessibilityHint = "Show event"
         }
 
-        if let first = calendar.date(byAdding: .day, value: visibleDays.lowerBound, to: anchor),
-           let last = calendar.date(byAdding: .day, value: visibleDays.upperBound, to: anchor) {
-            accessibilityValue = "\(weights.level.rawValue) view, \(first.formatted(date: .abbreviated, time: .omitted)) – \(last.formatted(date: .abbreviated, time: .omitted))"
-            accessibilityHint = expanded ? "Pinch to zoom between days, weeks, and months. Swipe to move through dates." : "Swipe to move through dates."
-        }
+        accessibilityHint = expanded ? "Pinch to zoom between days, weeks, and months. Swipe to move through dates." : "Swipe to move through dates."
         let showsToday = visibleDays.contains(todayDay)
         if reportedTodayVisibility != showsToday {
             reportedTodayVisibility = showsToday

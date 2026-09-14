@@ -39,7 +39,8 @@ struct ContentView: View {
     @State private var eventSheetSize: EventSheetSize = .large
     @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
-    @State private var lastTimelineSheetDate: Date?
+    @State private var timelineScrollRequest: EventSheetScrollRequest?
+    @State private var scrollSynchronization = EventScrollSynchronization()
     @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
     private var eventSheetDrag: EventSheetDrag?
     @State private var scrollToTodayRequest: UUID?
@@ -159,19 +160,19 @@ struct ContentView: View {
             ZStack(alignment: .bottom) {
                 EventTimelineView(
                     events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
-                    scrollToTodayRequest: scrollToTodayRequest, animateScrolling: !reduceMotion,
+                    scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
+                    animateScrolling: !reduceMotion,
                     expanded: eventSheetSize == .small, expansionProgress: progress,
                     onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
+                    onInteractionBegan: beginTimelineInteraction,
                     onPositionChange: { day, anchor in
                         let calendar = Calendar.current
                         guard let focusedDate = calendar.date(byAdding: .day, value: Int(floor(day)), to: anchor),
                               let month = calendar.dateInterval(of: .month, for: focusedDate)?.start else { return }
                         let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date))
-                        guard month != timelineMonth || (date != nil && date != lastTimelineSheetDate) else { return }
                         DispatchQueue.main.async {
-                            timelineMonth = month
-                            if let date, date != lastTimelineSheetDate {
-                                lastTimelineSheetDate = date
+                            if timelineMonth != month { timelineMonth = month }
+                            if let date, scrollSynchronization.timelineMoved(to: date) {
                                 eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
                             }
                         }
@@ -251,6 +252,7 @@ struct ContentView: View {
             handleOpenURL(url)
         }
         .onChange(of: selectedCategoryFilter) {
+            beginTimelineInteraction()
             dismissQuickEntry()
             highlightRequestID = nil
             highlightedEventID = nil
@@ -334,9 +336,11 @@ struct ContentView: View {
                     .accessibilityIdentifier("eventList")
                     .coordinateSpace(name: "eventList")
                     .scrollDismissesKeyboard(.interactively)
+                    .modifier(EventSheetScrollTracking(onInteraction: beginSheetInteraction))
                     .onPreferenceChange(EventSheetVisibleDaysKey.self) { visibleDays in
-                        if let day = visibleDays.filter({ $0.maxY > 1 }).min(by: { $0.minY < $1.minY }),
-                           day.date != eventListPosition { eventListPosition = day.date }
+                        guard let day = visibleDays.filter({ $0.maxY > 1 }).min(by: { $0.minY < $1.minY }) else { return }
+                        if day.date != eventListPosition { eventListPosition = day.date }
+                        synchronizeTimeline(to: day.date)
                     }
                     .onChange(of: eventSheetScrollRequest) { _, request in
                         guard let request else { return }
@@ -347,6 +351,7 @@ struct ContentView: View {
                     .onChange(of: days.map(\.date), initial: true) { _, dates in
                         guard !dates.contains(eventListPosition ?? .distantPast),
                               let date = EventListDay.initialDate(in: days) else { return }
+                        beginTimelineInteraction()
                         eventListPosition = date
                         proxy.scrollTo(date, anchor: .top)
                     }
@@ -355,7 +360,24 @@ struct ContentView: View {
         }
     }
 
+    private func beginTimelineInteraction() {
+        scrollSynchronization.begin(.timeline)
+        timelineScrollRequest = nil
+    }
+
+    private func beginSheetInteraction() {
+        guard scrollSynchronization.source != .sheet else { return }
+        scrollSynchronization.begin(.sheet)
+        if let date = eventListPosition { synchronizeTimeline(to: date) }
+    }
+
+    private func synchronizeTimeline(to date: Date) {
+        guard eventSheetDrag == nil, scrollSynchronization.sheetMoved(to: date) else { return }
+        timelineScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+    }
+
     private func setEventSheetSize(_ size: EventSheetSize) {
+        beginTimelineInteraction()
         withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) { eventSheetSize = size }
     }
 
@@ -397,6 +419,7 @@ struct ContentView: View {
     }
 
     private func scrollToToday() {
+        beginTimelineInteraction()
         dismissQuickEntry()
         highlightedEventID = nil
         highlightRequestID = nil
@@ -484,6 +507,7 @@ struct ContentView: View {
     }
 
     private func selectTimelineEvent(_ event: Event) {
+        beginTimelineInteraction()
         highlightedEventID = event.id
         highlightRequestID = UUID()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {

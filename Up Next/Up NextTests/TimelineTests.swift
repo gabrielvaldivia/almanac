@@ -216,6 +216,52 @@ final class TimelineTests: XCTestCase {
         XCTAssertNil(EventSheetSelection.nearestDate(to: 0, anchor: anchor, dates: [], calendar: calendar))
     }
 
+    func testScrollSynchronizationFollowsTheUserWithoutEchoingProgrammaticMoves() {
+        let first = anchor
+        let second = calendar.date(byAdding: .day, value: 40, to: first)!
+        var synchronization = EventScrollSynchronization()
+        XCTAssertTrue(synchronization.timelineMoved(to: first))
+        XCTAssertFalse(synchronization.sheetMoved(to: first), "Scrolling the sheet to a timeline date must not echo")
+        XCTAssertFalse(synchronization.timelineMoved(to: first), "Repeated geometry reports do not restart animations")
+
+        synchronization.begin(.sheet)
+        for date in [first, second, first] {
+            XCTAssertTrue(synchronization.sheetMoved(to: date))
+            XCTAssertFalse(synchronization.timelineMoved(to: date), "Following the sheet must not snap it back")
+            XCTAssertFalse(synchronization.sheetMoved(to: date))
+        }
+        synchronization.begin(.timeline)
+        XCTAssertTrue(synchronization.timelineMoved(to: second), "A new timeline drag takes control immediately")
+        XCTAssertFalse(synchronization.sheetMoved(to: first), "Old sheet geometry cannot interrupt that drag")
+        synchronization.begin(.sheet)
+        XCTAssertTrue(synchronization.sheetMoved(to: first), "Returning to the same event after panning still moves the timeline")
+    }
+
+    @MainActor
+    func testFollowingSheetDatesPreservesZoomAndCalendarFocusAcrossRecycledWindows() {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))
+        timeline.setExpanded(true)
+        timeline.layoutIfNeeded()
+        for level in TimelineZoomLevel.allCases {
+            timeline.beginZoom(at: 196)
+            timeline.changeZoom(scale: level.pointsPerDay / timeline.pointsPerDay, at: 196)
+            timeline.endZoom()
+            let referenceX = (timeline.focusedDayPosition - timeline.dayPosition) * timeline.pointsPerDay
+            var interactions = 0
+            timeline.onInteractionBegan = { interactions += 1 }
+            for offset in [1, 17, 90, 10_000, -10_000, 0] {
+                let date = Calendar.current.date(byAdding: .day, value: offset, to: timeline.anchor)!
+                timeline.scrollToDate(date.addingTimeInterval(12 * 60 * 60), animated: false)
+                timeline.layoutIfNeeded()
+                XCTAssertEqual(timeline.pointsPerDay, level.pointsPerDay)
+                XCTAssertEqual(timeline.focusedDayPosition, CGFloat(offset), accuracy: 0.000001)
+                XCTAssertEqual((timeline.focusedDayPosition - timeline.dayPosition) * timeline.pointsPerDay, referenceX, accuracy: 0.5)
+                XCTAssertLessThanOrEqual(timeline.contentSize.width, 181 * 44 + 44)
+            }
+            XCTAssertEqual(interactions, 0, "Following the sheet must not take ownership away from it")
+        }
+    }
+
     @MainActor
     func testTimelineReportsTheFocusedDayWhileZoomingAndReturningToToday() {
         let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))

@@ -54,3 +54,46 @@ enum EventSheetSelection {
         return dates[abs(offset(low) - day) < abs(offset(high) - day) ? low : high]
     }
 }
+
+/// Only the surface the user is controlling may move the other one. Programmatic
+/// scroll callbacks can still update the visible date, but cannot echo a request.
+struct EventScrollSynchronization {
+    enum Source { case timeline, sheet }
+    private(set) var source: Source = .timeline
+    private var sheetTarget: Date?
+    private var timelineTarget: Date?
+
+    mutating func begin(_ source: Source) {
+        self.source = source
+        sheetTarget = nil
+        timelineTarget = nil
+    }
+
+    mutating func timelineMoved(to date: Date) -> Bool {
+        guard source == .timeline, sheetTarget != date else { return false }
+        sheetTarget = date
+        return true
+    }
+
+    mutating func sheetMoved(to date: Date) -> Bool {
+        guard source == .sheet, timelineTarget != date else { return false }
+        timelineTarget = date
+        return true
+    }
+}
+
+struct EventSheetScrollTracking: ViewModifier {
+    var onInteraction: () -> Void
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18, *) {
+            content.onScrollPhaseChange { _, phase in
+                if phase == .interacting { onInteraction() }
+            }
+        } else {
+            content.simultaneousGesture(DragGesture(minimumDistance: 4).onChanged { value in
+                if abs(value.translation.height) > abs(value.translation.width) { onInteraction() }
+            })
+        }
+    }
+}
