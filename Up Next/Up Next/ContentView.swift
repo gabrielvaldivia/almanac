@@ -126,26 +126,26 @@ struct ContentView: View {
             if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
+                if let visibleDate = eventListPosition ?? EventListDay.initialDate(in: days) {
+                    Text(itemDateFormatter.string(from: visibleDate))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                        .background(Color(uiColor: .systemBackground))
+                        .accessibilityAddTraits(.isHeader)
+                }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(days) { day in
-                            VStack(alignment: .leading, spacing: 0) {
-                                if day.startsMonth {
-                                    Text(itemDateFormatter.string(from: day.date))
-                                        .font(.headline)
-                                        .padding(.horizontal)
-                                        .padding(.top, 10)
-                                }
-                                eventRowView(key: day.date.relativeDate(), events: day.events)
-                                    .padding(.horizontal)
-                                    .padding(.bottom, 10)
-                            }
-                            .id(day.date)
+                            eventRowView(key: day.date.relativeDate(), events: day.events)
+                                .padding(.horizontal)
+                                .padding(.bottom, 10)
+                                .id(day.date)
                         }
                         Spacer(minLength: 16)
                     }
                     .scrollTargetLayout()
-                    .padding(.top, 8)
                 }
                 .scrollPosition(id: $eventListPosition, anchor: .top)
                 .scrollDismissesKeyboard(.interactively)
@@ -173,8 +173,8 @@ struct ContentView: View {
             if !timelineShowsToday || isListAwayFromToday(in: days) {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: scrollToToday) {
-                        Text(Date().formatted(.dateTime.day()))
-                            .monospacedDigit()
+                        Image(systemName: "\(Calendar.current.component(.day, from: Date())).circle")
+                            .imageScale(.large)
                     }
                     .accessibilityLabel("Today")
                     .accessibilityHint("Return to today in the timeline and event list")
