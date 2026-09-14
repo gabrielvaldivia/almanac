@@ -72,8 +72,22 @@ final class EventFlowTests: XCTestCase {
         }
         timeline.pinch(withScale: 0.15, velocity: -1)
         assertScale("Weeks")
+        let weekDates = timeline.value as? String
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Large")
+        assertScale("Weeks")
+        XCTAssertEqual(timeline.value as? String, weekDates)
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
+        let monthDates = timeline.value as? String
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Large")
+        assertScale("Months")
+        XCTAssertEqual(timeline.value as? String, monthDates)
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 5, velocity: 2)
         assertScale("Weeks")
         timeline.pinch(withScale: 8, velocity: 2)

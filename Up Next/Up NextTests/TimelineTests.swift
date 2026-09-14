@@ -57,7 +57,7 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testPinchContinuouslyAnchorsTheDateUnderMovingFingersAndResetsForCompact() {
+    func testPinchContinuouslyAnchorsTheDateAndPreservesZoomAcrossSheetSizes() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 600))
         timeline.setExpanded(true)
         timeline.layoutIfNeeded()
@@ -75,12 +75,17 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001, "Pinch scale must stay continuous, without snapping to a preset")
         XCTAssertEqual(timeline.zoomLevel, .weeks)
         timeline.endZoom()
-        timeline.setExpanded(false)
-        XCTAssertEqual(timeline.pointsPerDay, 44)
-        XCTAssertEqual(timeline.dayPosition * 44, focusedDay * 44, accuracy: 0.5)
+        let leftDay = timeline.dayPosition
+        for expanded in [false, true, false] {
+            timeline.setExpanded(expanded)
+            timeline.layoutIfNeeded()
+            XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001)
+            XCTAssertEqual(timeline.dayPosition, leftDay, accuracy: 0.00001)
+            XCTAssertEqual(timeline.focusedDayPosition, focusedDay, accuracy: 0.00001)
+        }
         timeline.beginZoom(at: 180)
         timeline.changeZoom(scale: 0.1, at: 180)
-        XCTAssertEqual(timeline.pointsPerDay, 44, "Only the full-screen timeline should zoom")
+        XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001, "The large sheet retains the chosen zoom")
     }
 
     func testZoomPeriodsUseRealMonthLengthsAndCalendarWeeksAcrossDST() {

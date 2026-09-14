@@ -255,8 +255,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         zoomGesture.isEnabled = expanded
         if !expanded {
             pinch = nil
-            let day = focusedDayPosition
-            applyZoom(pointsPerDay: TimelineZoomLevel.days.pointsPerDay, anchorDay: day, viewportX: 0, focusedDay: day)
             contentOffset.y = 0
         }
         showsVerticalScrollIndicator = expanded
@@ -465,7 +463,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         }
         for key in Array(periodViews.keys) where !periodKeys.contains(key) { periodViews.removeValue(forKey: key)?.removeFromSuperview() }
         todayLine.backgroundColor = tintColor
-        todayLine.alpha = (1 - weights.days) * 0.25
+        todayLine.alpha = max(0, weights.months * 2 - 1) * 0.25
         todayLine.frame = CGRect(x: (CGFloat(todayDay - scrollWindow.firstDay) + 0.5) * pointsPerDay - 0.5,
                                  y: 44, width: 1, height: max(0, bounds.height - 44))
 

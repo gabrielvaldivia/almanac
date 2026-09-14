@@ -17,7 +17,8 @@ With the Small sheet, pinch to move continuously between linear days, weeks,
 and months. The date beneath the fingers stays anchored while labels crossfade.
 Calendar months retain their actual lengths, and nearby markers occupy separate
 lanes at smaller scales. The timeline header offers Show days, Show weeks, and
-Show months as VoiceOver actions. Enlarging the sheet restores day spacing.
+Show months as VoiceOver actions. Resizing the sheet preserves the zoom level
+and the visible dates.
 Dots move down as the sheet shrinks, staying between the days and the sheet.
 Calendar dividers become more visible as the timeline grows.
 
