@@ -210,7 +210,14 @@ final class EventFlowTests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
+        // A fresh install shows the empty state instead of a scrollable list.
+        // Own the row needed for the keyboard/list geometry assertions below.
+        let fixtureName = "Composer layout \(UUID().uuidString.prefix(8))"
+        openComposer(app)
+        app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch.typeText(fixtureName)
+        app.buttons["quickAddSubmit"].tap()
         let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
         let timeline = app.scrollViews["eventTimeline"]
         waitForTimelineLayout(timeline)
         let listFrame = list.frame
@@ -264,6 +271,11 @@ final class EventFlowTests: XCTestCase {
         openComposer(app)
         app.staticTexts["appTitle"].tap()
         XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        list.staticTexts[fixtureName].tap()
+        XCTAssertTrue(app.buttons["Delete Event"].waitForExistence(timeout: 5))
+        app.buttons["Delete Event"].tap()
+        app.alerts["Delete Event"].buttons["Delete this event"].tap()
+        XCTAssertTrue(app.staticTexts[fixtureName].waitForNonExistence(timeout: 5))
     }
 
     func testComposerParsesPillsAndSavesQuickEdits() {
