@@ -188,6 +188,8 @@ struct ContentView: View {
                 // Keep the list usable on crowded dates and with the keyboard
                 // open; overflowing event lanes can scroll inside the timeline.
                 .frame(height: min(timelineHeight, max(80, geometry.size.height * 0.5)))
+                .background(Color.black)
+                .environment(\.colorScheme, .dark)
 
                 Divider().accessibilityIdentifier("timelineListDivider")
                 eventList(days: days)
@@ -204,10 +206,14 @@ struct ContentView: View {
                     Text(error).font(.footnote)
                     NavigationLink("Data Recovery") { SettingsView() }
                 }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
+                    .environment(\.colorScheme, .dark)
             }
         }
         .navigationTitle(timelineTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.black, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 ViewThatFits(in: .horizontal) {
@@ -215,6 +221,7 @@ struct ContentView: View {
                     Text(compactTimelineTitle).fixedSize()
                 }
                     .font(.headline)
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
@@ -343,7 +350,7 @@ struct ContentView: View {
         NavigationLink(destination: SettingsView()) {
             Image(systemName: "gearshape.fill")
                 .accessibilityLabel("Settings")
-                .foregroundStyle(.tint)
+                .foregroundStyle(.white)
                 .imageScale(.large)
         }
         .simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
@@ -354,7 +361,7 @@ struct ContentView: View {
             Image(systemName: "calendar.day.timeline.left")
                 .imageScale(.large)
         }
-        .foregroundStyle(.tint)
+        .foregroundStyle(.white)
         .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")

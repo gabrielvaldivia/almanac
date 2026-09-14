@@ -221,6 +221,7 @@ struct EventTimelineView: UIViewRepresentable {
     func makeUIView(context: Context) -> TimelineCanvasView { TimelineCanvasView() }
 
     func updateUIView(_ canvas: TimelineCanvasView, context: Context) {
+        canvas.overrideUserInterfaceStyle = context.environment.colorScheme == .dark ? .dark : .light
         canvas.tintColor = UIColor(tint)
         canvas.timeline.onSelectEvent = onSelectEvent
         canvas.timeline.onInteractionBegan = onInteractionBegan
