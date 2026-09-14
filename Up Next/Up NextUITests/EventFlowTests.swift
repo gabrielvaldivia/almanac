@@ -134,6 +134,36 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(handle.value as? String, "Large")
     }
 
+    func testShortPinchesRespondAboveBothSheetSizesAndKeepTheMonthHeading() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let timeline = app.scrollViews["eventTimeline"]
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5))
+        let handle = app.buttons["eventSheetResizeHandle"]
+        for size in ["Large", "Small"] {
+            XCTAssertEqual(handle.value as? String, size)
+            for _ in 0..<3 {
+                timeline.pinch(withScale: 0.6, velocity: -2)
+                let zoomedOut = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Weeks view,'"), object: timeline)
+                XCTAssertEqual(XCTWaiter.wait(for: [zoomedOut], timeout: 5), .completed)
+                XCTAssertEqual(app.staticTexts["appTitle"].label, Date().formatted(.dateTime.month(.wide)))
+                let screenshot = XCTAttachment(screenshot: app.screenshot())
+                screenshot.name = "Close weekly zoom above the \(size.lowercased()) sheet"
+                screenshot.lifetime = .keepAlways
+                add(screenshot)
+                timeline.pinch(withScale: 2, velocity: 2)
+                let zoomedIn = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH 'Days view,'"), object: timeline)
+                XCTAssertEqual(XCTWaiter.wait(for: [zoomedIn], timeout: 5), .completed)
+            }
+            let beforeScroll = timeline.value as? String
+            timeline.swipeLeft()
+            XCTAssertNotEqual(timeline.value as? String, beforeScroll, "Single-finger scrolling must still work after pinching")
+            app.buttons["scrollToToday"].tap()
+            handle.tap()
+        }
+    }
+
     func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
         continueAfterFailure = false
         let app = XCUIApplication()

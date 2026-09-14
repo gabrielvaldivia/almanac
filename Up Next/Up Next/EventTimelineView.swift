@@ -98,11 +98,13 @@ struct TimelineAxisPeriod {
     }
 }
 
-/// Coarse views use the year; day view retains the focused month.
+/// Keep month context while roughly a month fits, even after ticks switch to weeks.
 enum TimelineHeading {
+    static func showsYear(visibleDayCount: CGFloat) -> Bool { visibleDayCount > 42 }
+
     static func text(first: Date, last: Date, today: Date = Date(), calendar: Calendar = .current,
-                     zoomLevel: TimelineZoomLevel = .days) -> String {
-        if zoomLevel != .days { return first.formatted(.dateTime.year()) }
+                     yearOnly: Bool = false) -> String {
+        if yearOnly { return first.formatted(.dateTime.year()) }
         let sameMonth = calendar.isDate(first, equalTo: last, toGranularity: .month)
         let sameYear = calendar.isDate(first, equalTo: last, toGranularity: .year)
         let currentYear = calendar.isDate(first, equalTo: today, toGranularity: .year)
@@ -153,7 +155,7 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
     var onInteractionBegan: () -> Void
-    var onPositionChange: (CGFloat, Date, TimelineZoomLevel) -> Void
+    var onPositionChange: (CGFloat, Date, CGFloat) -> Void
 
     var animatableData: CGFloat {
         get { expansionProgress }
@@ -187,15 +189,15 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
 
 final class TimelineCanvasView: UIView {
     let timeline = TimelineScrollView()
-    var onPositionChange: ((CGFloat, Date, TimelineZoomLevel) -> Void)?
+    var onPositionChange: ((CGFloat, Date, CGFloat) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         addSubview(timeline)
         timeline.receiveZoomGestures(in: self)
-        timeline.onScrollPositionChange = { [weak self] day in
+        timeline.onScrollPositionChange = { [weak self] _ in
             guard let self else { return }
-            self.onPositionChange?(day, self.timeline.anchor, self.timeline.zoomLevel)
+            self.reportPosition()
         }
     }
 
@@ -211,7 +213,13 @@ final class TimelineCanvasView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        let widthChanged = timeline.bounds.width != bounds.width
         if timeline.frame != bounds { timeline.frame = bounds }
+        if widthChanged { reportPosition() }
+    }
+
+    private func reportPosition() {
+        onPositionChange?(timeline.focusedDayPosition, timeline.anchor, timeline.bounds.width / timeline.pointsPerDay)
     }
 }
 
@@ -290,7 +298,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         self.expanded = expanded
         expansionProgress = expanded ? 1 : 0
         if !expanded {
-            pinch = nil
             contentOffset.y = 0
         }
         showsVerticalScrollIndicator = expanded
@@ -331,6 +338,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     func receiveZoomGestures(in view: UIView) {
         // Recognize pinches across the full timeline surface.
         view.addGestureRecognizer(zoomGesture)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // A one-finger pan can begin before the second finger lands. Let the
+        // pinch recognize anyway; beginZoom then cancels the pan's movement.
+        gestureRecognizer === zoomGesture && otherGestureRecognizer === panGestureRecognizer
     }
 
     private var todayDay: Int {
@@ -390,6 +404,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
 
     func beginZoom(at viewportX: CGFloat) {
         scrollTargetDay = nil
+        panGestureRecognizer.isEnabled = false
         onInteractionBegan?()
         setContentOffset(contentOffset, animated: false)
         pinch = (pointsPerDay, dayPosition + viewportX / pointsPerDay, focusedDayPosition)
@@ -400,7 +415,10 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         applyZoom(pointsPerDay: pinch.width * scale, anchorDay: pinch.day, viewportX: viewportX, focusedDay: pinch.focusedDay)
     }
 
-    func endZoom() { pinch = nil }
+    func endZoom() {
+        pinch = nil
+        panGestureRecognizer.isEnabled = true
+    }
 
     private func applyZoom(pointsPerDay width: CGFloat, anchorDay: CGFloat, viewportX: CGFloat, focusedDay: CGFloat) {
         let width = min(TimelineZoomLevel.days.pointsPerDay, max(TimelineZoomLevel.months.pointsPerDay, width))
@@ -435,9 +453,14 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
         let viewportX = gesture.location(in: self).x - contentOffset.x
         switch gesture.state {
-        case .began: beginZoom(at: viewportX)
+        case .began:
+            beginZoom(at: viewportX)
+            changeZoom(scale: gesture.scale, at: viewportX)
         case .changed: changeZoom(scale: gesture.scale, at: viewportX)
-        case .ended, .cancelled, .failed: endZoom()
+        case .ended:
+            changeZoom(scale: gesture.scale, at: viewportX)
+            endZoom()
+        case .cancelled, .failed: endZoom()
         default: break
         }
     }

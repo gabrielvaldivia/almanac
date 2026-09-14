@@ -119,9 +119,14 @@ final class TimelineTests: XCTestCase {
         let crossYear = TimelineHeading.text(first: first, last: nextYear, today: anchor, calendar: calendar)
         XCTAssertTrue(crossYear.contains("2026"))
         XCTAssertTrue(crossYear.contains("2027"))
-        for level in [TimelineZoomLevel.weeks, .months] {
-            XCTAssertEqual(TimelineHeading.text(first: first, last: last, zoomLevel: level), "2026")
-            XCTAssertEqual(TimelineHeading.text(first: nextYear, last: nextYear, zoomLevel: level), "2027")
+        for visibleDays: CGFloat in [14, 21, 31, 42] {
+            XCTAssertEqual(TimelineHeading.text(first: first, last: first, today: anchor, calendar: calendar,
+                                               yearOnly: TimelineHeading.showsYear(visibleDayCount: visibleDays)), "July")
+        }
+        for visibleDays: CGFloat in [43, 90, 270] {
+            let yearOnly = TimelineHeading.showsYear(visibleDayCount: visibleDays)
+            XCTAssertEqual(TimelineHeading.text(first: first, last: last, yearOnly: yearOnly), "2026")
+            XCTAssertEqual(TimelineHeading.text(first: nextYear, last: nextYear, yearOnly: yearOnly), "2027")
         }
         let months = TimelineAxisPeriod.make(level: .months, visibleDays: 0...150, anchor: first, calendar: calendar)
         XCTAssertTrue(months.allSatisfy { $0.subtitle.isEmpty && !$0.title.contains("2026") })
@@ -299,10 +304,12 @@ final class TimelineTests: XCTestCase {
         canvas.layoutIfNeeded()
         canvas.timeline.layoutIfNeeded()
         var reportedDay: CGFloat?
-        canvas.onPositionChange = { day, anchor, level in
+        var reportedVisibleDays: CGFloat?
+        canvas.onPositionChange = { day, anchor, visibleDays in
             reportedDay = day
+            reportedVisibleDays = visibleDays
             XCTAssertEqual(anchor, canvas.timeline.anchor)
-            XCTAssertEqual(level, canvas.timeline.zoomLevel)
+            XCTAssertEqual(visibleDays, canvas.timeline.bounds.width / canvas.timeline.pointsPerDay)
         }
         canvas.timeline.setDayPosition(60)
         XCTAssertEqual(reportedDay, 60)
@@ -315,6 +322,30 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(reportedDay!, 0, accuracy: 0.001)
         XCTAssertTrue(canvas.timeline.isTodayVisible)
         XCTAssertEqual(canvas.timeline.zoomLevel, .months)
+        canvas.frame.size.width = 600
+        canvas.layoutIfNeeded()
+        XCTAssertEqual(reportedVisibleDays!, 600 / canvas.timeline.pointsPerDay, accuracy: 0.001,
+                       "Resizing the viewport must update the heading's date span")
+    }
+
+    @MainActor
+    func testPinchCanTakeOverAnExistingPanAndRestoresScrollingAfterward() throws {
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 108))
+        canvas.layoutIfNeeded()
+        let timeline = canvas.timeline
+        let zoom = try XCTUnwrap(canvas.gestureRecognizers?.first { $0 is UIPinchGestureRecognizer })
+        XCTAssertTrue(timeline.gestureRecognizer(zoom, shouldRecognizeSimultaneouslyWith: timeline.panGestureRecognizer))
+        XCTAssertFalse(timeline.gestureRecognizer(zoom, shouldRecognizeSimultaneouslyWith: UITapGestureRecognizer()))
+        for expanded in [false, true] {
+            timeline.setExpanded(expanded)
+            timeline.beginZoom(at: 180)
+            XCTAssertFalse(timeline.panGestureRecognizer.isEnabled, "Scrolling cannot move dates under an active pinch")
+            timeline.changeZoom(scale: 0.6, at: 180)
+            timeline.setExpanded(!expanded)
+            timeline.changeZoom(scale: 0.8, at: 180)
+            timeline.endZoom()
+            XCTAssertTrue(timeline.panGestureRecognizer.isEnabled)
+        }
     }
 
     @MainActor
