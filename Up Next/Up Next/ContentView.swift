@@ -125,10 +125,8 @@ struct ContentView: View {
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
             } else {
-                if !timelineShowsToday || isListAwayFromToday(in: EventListDay.group(events: timelineEvents)) {
-                    todayButton
-                        .transition(.opacity)
-                }
+                filterMenu
+                    .transition(.opacity)
                 Spacer()
                 Button {
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
@@ -219,7 +217,9 @@ struct ContentView: View {
                 settingsButton
             }
             ToolbarItem(placement: .topBarTrailing) {
-                filterMenu.simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
+                if !timelineShowsToday || isListAwayFromToday(in: days) {
+                    todayButton
+                }
             }
         }
         .onAppear {
@@ -349,13 +349,9 @@ struct ContentView: View {
     private var todayButton: some View {
         Button(action: scrollToToday) {
             Image(systemName: "calendar")
-                .font(.system(size: 22, weight: .medium))
-                .frame(width: 56, height: 56)
-                .contentShape(Circle())
+                .imageScale(.large)
         }
-        .buttonStyle(.plain)
         .foregroundStyle(.tint)
-        .modifier(FloatingControlSurface())
         .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")
@@ -410,10 +406,12 @@ struct ContentView: View {
         } label: {
             Image(systemName: "line.horizontal.3.decrease")
                 .foregroundStyle(.tint)
-                .imageScale(.large)
-                .frame(width: 48, height: 48)
+                .font(.system(size: 22, weight: .medium))
+                .frame(width: 56, height: 56)
                 .contentShape(Circle())
         }
+        .buttonStyle(.plain)
+        .modifier(FloatingControlSurface())
         .accessibilityLabel("Filter events")
         .accessibilityValue(selectedCategoryFilter ?? "All Events")
         .accessibilityIdentifier("eventFilter")
