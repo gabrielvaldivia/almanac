@@ -320,7 +320,7 @@ struct ContentView: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(days) { day in
                                 eventRowView(key: day.date.relativeDate(), events: day.events)
-                                    .padding(.horizontal).padding(.bottom, 10)
+                                    .padding(.horizontal)
                                     .background {
                                         GeometryReader { geometry in
                                             let frame = geometry.frame(in: .named("eventList"))
@@ -328,6 +328,9 @@ struct ContentView: View {
                                                 value: [EventSheetVisibleDay(date: day.date, minY: frame.minY, maxY: frame.maxY)])
                                         }
                                     }
+                                    // The gap between days must not keep an offscreen
+                                    // event selected when the next card is visible.
+                                    .padding(.bottom, 10)
                                     .id(day.date)
                             }
                             Spacer(minLength: 100)

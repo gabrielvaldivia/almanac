@@ -44,13 +44,15 @@ final class EventFlowTests: XCTestCase {
         func assertTimelineStarts(on date: Date, file: StaticString = #filePath, line: UInt = #line) {
             let prefix = "Days view, \(date.formatted(date: .abbreviated, time: .omitted))"
             let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", prefix), object: timeline)
-            XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed, file: file, line: line)
+            XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed,
+                           "Actual timeline: \(timeline.value as? String ?? "missing")", file: file, line: line)
         }
         assertTimelineStarts(on: Date())
         XCTAssertNotEqual(timeline.value as? String, timelineAfterPan)
         XCTAssertTrue(list.staticTexts[names[0]].isHittable)
         screenshot("Scrolling the sheet returns the timeline to today's events")
         list.swipeUp()
+        screenshot("Events sheet after scrolling forward")
         assertTimelineStarts(on: Calendar.current.date(byAdding: .day, value: 3, to: Date())!)
         XCTAssertTrue(later.isHittable)
         screenshot("Scrolling the sheet advances the timeline to the next event date")
