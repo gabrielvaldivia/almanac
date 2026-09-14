@@ -206,6 +206,31 @@ class AppData: NSObject, ObservableObject {
         } catch { storageError = "Could not save events: \(error.localizedDescription)" }
     }
 
+    var reviewedBirthdayContactIDs: Set<String> {
+        Set(AppPreferences.shared.stringArray(forKey: "reviewedBirthdayContactIDs") ?? [])
+    }
+
+    @MainActor
+    func saveContactBirthdays(_ birthdays: [ContactBirthday], selectedIDs: Set<String>) throws {
+        if let message = storageError ?? categoryStorageError {
+            throw NSError(domain: "BirthdayImport", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        let category = categories.first { $0.name.localizedCaseInsensitiveCompare("Birthdays") == .orderedSame }
+        let updated = BirthdayImport.applying(birthdays, selectedIDs: selectedIDs, to: events,
+                                              category: category?.name ?? "Birthdays",
+                                              color: CodableColor(color: category?.color ?? .red))
+        // Commit before publishing, so a failed save leaves the review and existing events intact.
+        try eventStore.save(updated)
+        events = updated
+        if category == nil, !selectedIDs.isEmpty {
+            categories.append(("Birthdays", .red, .yearly, 1, "Years", .indefinitely, 1, Date()))
+        }
+        let reviewed = reviewedBirthdayContactIDs.union(birthdays.map(\.id))
+        AppPreferences.shared.set(Array(reviewed).sorted(), forKey: "reviewedBirthdayContactIDs")
+        WidgetCenter.shared.reloadAllTimelines()
+        scheduleDailyNotification()
+    }
+
     @Published var notificationStatus: String?
     private var notificationTask: Task<Void, Never>?
 

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSContactsUsageDescription</key>
+	<string>Almanac uses contact names and birthdays so you can choose which birthdays to add to your calendar.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key><array><string>com.almanac.reminders</string></array>
 	<key>UIBackgroundModes</key><array><string>fetch</string></array>
 	<key>CFBundleURLTypes</key>

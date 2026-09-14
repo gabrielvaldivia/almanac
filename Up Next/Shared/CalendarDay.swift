@@ -1,7 +1,7 @@
 import Foundation
 
 /// A floating Gregorian calendar date. Its identity does not change with the device time zone.
-struct CalendarDay: Codable, Equatable {
+struct CalendarDay: Codable, Equatable, Sendable {
     let year: Int
     let month: Int
     let day: Int

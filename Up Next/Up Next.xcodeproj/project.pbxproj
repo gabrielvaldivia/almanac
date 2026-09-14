@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		12736DCA7BCBF515938B0029 /* BirthdayImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */; };
+		28D6C15966EB1FB82A24018E /* ContactBirthdaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */; };
+		0E0ADBF48D0525C7D347094C /* BirthdayContactsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101B826C0CD77EC35C1BCF5 /* BirthdayContactsStore.swift */; };
+		3FCB41175B0FEC3ACC0D0CF7 /* ContactBirthday.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC06F50DFDF48DA502F94B8C /* ContactBirthday.swift */; };
+		A3FE25AE5589ABA7222E0A41 /* ContactBirthday.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC06F50DFDF48DA502F94B8C /* ContactBirthday.swift */; };
 		40109BFE2CBB696D00962D7C /* CategoryForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40109BFD2CBB696D00962D7C /* CategoryForm.swift */; };
 		40109BFF2CBB6CA800962D7C /* CategoryForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40109BFD2CBB696D00962D7C /* CategoryForm.swift */; };
 		4011A1522C3CE97D00F275DE /* EventForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4011A1512C3CE97D00F275DE /* EventForm.swift */; };
@@ -121,6 +126,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/BirthdayImportTests.swift"; sourceTree = SOURCE_ROOT; };
+		43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/ContactBirthdaysView.swift"; sourceTree = SOURCE_ROOT; };
+		A101B826C0CD77EC35C1BCF5 /* BirthdayContactsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/BirthdayContactsStore.swift"; sourceTree = SOURCE_ROOT; };
+		EC06F50DFDF48DA502F94B8C /* ContactBirthday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/ContactBirthday.swift"; sourceTree = SOURCE_ROOT; };
 		40109BFD2CBB696D00962D7C /* CategoryForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryForm.swift; sourceTree = "<group>"; };
 		4011A1512C3CE97D00F275DE /* EventForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventForm.swift; sourceTree = "<group>"; };
 		4038EA9D2C33832400E0CE8E /* EventLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventLoader.swift; sourceTree = "<group>"; };
@@ -263,6 +272,10 @@
 				A109BF600000000000000005 /* QuickEventTests.swift */,
 				A109BF600000000000000003 /* NewEventDraft.swift */,
 				A109BF600000000000000001 /* QuickEventParser.swift */,
+				54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */,
+				43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */,
+				A101B826C0CD77EC35C1BCF5 /* BirthdayContactsStore.swift */,
+				EC06F50DFDF48DA502F94B8C /* ContactBirthday.swift */,
 				AA4E2B1300420E0C57E87638 /* EventWindow.swift */,
 				9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */,
 				D779FBF97208130751AAF53A /* AppPreferences.swift */,
@@ -495,6 +508,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3FCB41175B0FEC3ACC0D0CF7 /* ContactBirthday.swift in Sources */,
 				50D2E8E2C2E8878372D99DD4 /* CategoryStorage.swift in Sources */,
 				725322D05AE2D1288128E6C3 /* EventDateText.swift in Sources */,
 				517DA08CD6454F1482740071 /* Models.swift in Sources */,
@@ -516,6 +530,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28D6C15966EB1FB82A24018E /* ContactBirthdaysView.swift in Sources */,
+				0E0ADBF48D0525C7D347094C /* BirthdayContactsStore.swift in Sources */,
+				A3FE25AE5589ABA7222E0A41 /* ContactBirthday.swift in Sources */,
 				CC9182531D1738A24CDA3558 /* CategoryStorage.swift in Sources */,
 				C5750AEAC09F93CEE7CEBD3A /* EventDateText.swift in Sources */,
 				BCF7D80A4425E9276FE64049 /* Models.swift in Sources */,
@@ -556,6 +573,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				12736DCA7BCBF515938B0029 /* BirthdayImportTests.swift in Sources */,
 				2E014AED8ADFBBA3DD78B04C /* SubscriptionTests.swift in Sources */,
 				0413DCA61A0BEC6798977FE7 /* NotificationSchedulerTests.swift in Sources */,
 				8C7DC69CE3A57680D6D442D0 /* CalendarDayTests.swift in Sources */,

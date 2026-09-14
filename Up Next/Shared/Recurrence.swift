@@ -11,6 +11,8 @@ struct RecurrenceRule: Codable, Equatable {
     var untilDay: CalendarDay?
     var count: Int
     var excludedIndices: [Int] = []
+    // Contact birthdays follow their source calendar, even if the device uses another calendar.
+    var calendarIdentifier: Calendar.Identifier?
 
     init(event: Event, end: RepeatUntilOption, calendar: Calendar = .current) {
         anchor = event.date
@@ -22,9 +24,10 @@ struct RecurrenceRule: Codable, Equatable {
         until = end == .onDate ? event.repeatUntil : nil
         untilDay = until.map { CalendarDay($0, calendar: calendar) }
         count = event.repeatUntilCount ?? 1
+        calendarIdentifier = event.recurrence?.calendarIdentifier
     }
 
-    enum CodingKeys: String, CodingKey { case anchor, anchorDay, frequency, interval, unit, end, until, untilDay, count, excludedIndices }
+    enum CodingKeys: String, CodingKey { case anchor, anchorDay, frequency, interval, unit, end, until, untilDay, count, excludedIndices, calendarIdentifier }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -41,6 +44,7 @@ struct RecurrenceRule: Codable, Equatable {
         until = untilDay?.date(in: calendar)
         count = try values.decode(Int.self, forKey: .count)
         excludedIndices = try values.decodeIfPresent([Int].self, forKey: .excludedIndices) ?? []
+        calendarIdentifier = try values.decodeIfPresent(Calendar.Identifier.self, forKey: .calendarIdentifier)
     }
 
     var component: Calendar.Component {
@@ -63,13 +67,21 @@ struct RecurrenceRule: Codable, Equatable {
         guard index >= 0, (1...1000).contains(interval) else { return nil }
         let (offset, overflow) = index.multipliedReportingOverflow(by: interval)
         guard !overflow else { return nil }
-        return calendar.date(byAdding: component, value: offset, to: anchor)
+        return resolvedCalendar(calendar).date(byAdding: component, value: offset, to: anchor)
+    }
+
+    func resolvedCalendar(_ calendar: Calendar) -> Calendar {
+        guard let calendarIdentifier else { return calendar }
+        var result = Calendar(identifier: calendarIdentifier)
+        result.timeZone = calendar.timeZone
+        return result
     }
 }
 
 enum Recurrence {
     static func generate(_ seed: Event, rule: RecurrenceRule, fromIndex: Int = 0,
                          now: Date = Date(), calendar: Calendar = .current) -> [Event] {
+        let calendar = rule.resolvedCalendar(calendar)
         guard rule.frequency != .never, (1...1000).contains(rule.interval),
               rule.end != .after || (1...10000).contains(rule.count) else { return [] }
         let horizon = calendar.date(byAdding: .year, value: 1, to: max(now, rule.anchor))!
@@ -95,6 +107,8 @@ enum Recurrence {
                 event.id = index == 0 ? seed.id : UUID()
                 event.date = date
                 event.endDate = seed.endDate == nil ? nil : calendar.date(byAdding: .day, value: duration, to: date)
+                event.calendarDay = CalendarDay(date, calendar: calendar)
+                event.calendarEndDay = event.endDate.map { CalendarDay($0, calendar: calendar) }
                 event.seriesID = seriesID
                 event.recurrence = rule
                 event.occurrenceIndex = index
@@ -161,6 +175,7 @@ enum Recurrence {
     static func updatingSeries(_ selected: Event, with replacement: Event, in events: [Event],
                                calendar: Calendar = .current) -> [Event] {
         guard let id = selected.seriesID, let oldRule = selected.recurrence else { return events }
+        let calendar = oldRule.resolvedCalendar(calendar)
         if replacement.repeatOption == .never {
             var single = replacement
             single.seriesID = nil; single.recurrence = nil; single.occurrenceIndex = nil

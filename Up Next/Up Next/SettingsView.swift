@@ -22,6 +22,7 @@ struct SettingsView: View {
     @State private var iconChangeSuccess: Bool?
     @State private var showingAppIconSheet = false
     @State private var showingCategoryManagementSheet = false
+    @State private var showingContactBirthdays = false
 
     var body: some View {
         Form {
@@ -47,6 +48,21 @@ struct SettingsView: View {
                         Text(status).font(.footnote).foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            Section("Contacts") {
+                Button {
+                    showingContactBirthdays = true
+                } label: {
+                    HStack {
+                        Text("Sync Birthdays")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .accessibilityIdentifier("syncContactBirthdays")
             }
 
             // Categories Section
@@ -205,6 +221,13 @@ struct SettingsView: View {
                 CategoriesView()
                     .environmentObject(appData)
             }
+        }
+        .sheet(isPresented: $showingContactBirthdays) {
+            NavigationStack {
+                ContactBirthdaysView()
+                    .environmentObject(appData)
+            }
+            .presentationDetents([.large])
         }
         .onAppear {
             appData.scheduleDailyNotification()

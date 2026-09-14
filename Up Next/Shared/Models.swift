@@ -24,6 +24,7 @@ struct Event: Identifiable, Codable, Equatable {
     var recurrence: RecurrenceRule?
     var occurrenceIndex: Int?
     var isRecurrenceException = false
+    var contactBirthday: ContactBirthday?
 
     // Initializer for Event
     init(
@@ -92,13 +93,14 @@ struct Event: Identifiable, Codable, Equatable {
         recurrence = try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrence)
         occurrenceIndex = try container.decodeIfPresent(Int.self, forKey: .occurrenceIndex)
         isRecurrenceException = try container.decodeIfPresent(Bool.self, forKey: .isRecurrenceException) ?? false
+        contactBirthday = try container.decodeIfPresent(ContactBirthday.self, forKey: .contactBirthday)
     }
 
     // Coding keys for encoding and decoding
     enum CodingKeys: String, CodingKey {
         case id, title, date, endDate, color, category, notificationsEnabled, repeatOption,
             repeatUntil, seriesID, customRepeatCount, repeatUnit, repeatUntilCount,
-            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException, calendarDay, calendarEndDay, calendarSchemaVersion
+            useCustomRepeatOptions, recurrence, occurrenceIndex, isRecurrenceException, calendarDay, calendarEndDay, calendarSchemaVersion, contactBirthday
     }
 
 }

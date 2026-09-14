@@ -1,6 +1,56 @@
 import XCTest
 
 final class EventFlowTests: XCTestCase {
+    func testBirthdayReviewSelectionSaveAndRepeatedSync() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments += ["--birthday-import-ui-test"]
+        app.launch()
+        app.buttons["Settings"].tap()
+        app.buttons["syncContactBirthdays"].tap()
+        let alex = app.switches["birthday-birthday-ui-alex"]
+        let sam = app.switches["birthday-birthday-ui-sam"]
+        XCTAssertTrue(alex.waitForExistence(timeout: 5))
+        if alex.value as? String != "1" { alex.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap() }
+        if sam.value as? String == "1" { sam.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap() }
+        let selectionUpdated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "1 of 2 selected"),
+                                                         object: app.staticTexts["birthdaySelectionCount"])
+        XCTAssertEqual(XCTWaiter.wait(for: [selectionUpdated], timeout: 3), .completed)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Birthday review with individual selection"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        app.buttons["saveContactBirthdays"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["Birthday Test Alex’s birthday"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Birthday Test Sam’s birthday"].exists)
+        app.buttons["Settings"].tap()
+        app.buttons["syncContactBirthdays"].tap()
+        XCTAssertTrue(alex.waitForExistence(timeout: 5))
+        XCTAssertEqual(alex.value as? String, "1")
+        XCTAssertEqual(sam.value as? String, "0")
+        sam.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        app.navigationBars["Contact Birthdays"].buttons["Cancel"].tap()
+        app.buttons["syncContactBirthdays"].tap()
+        XCTAssertTrue(sam.waitForExistence(timeout: 5))
+        XCTAssertEqual(sam.value as? String, "0", "Cancel must not apply selection changes")
+        app.buttons["saveContactBirthdays"].tap()
+
+        // Deselecting imported birthdays removes only the reviewed fixture events.
+        app.buttons["syncContactBirthdays"].tap()
+        XCTAssertTrue(alex.waitForExistence(timeout: 5))
+        app.buttons["Select All"].tap()
+        XCTAssertEqual(sam.value as? String, "1")
+        app.buttons["Deselect All"].tap()
+        XCTAssertEqual(alex.value as? String, "0")
+        app.buttons["saveContactBirthdays"].tap()
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["manualEventInput"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Birthday Test Alex’s birthday"].exists)
+    }
+
     func testCategoryRenamePersistsAndCanBeEditedAgain() {
         continueAfterFailure = false
         let app = XCUIApplication()
