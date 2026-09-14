@@ -171,14 +171,13 @@ struct ContentView: View {
                 settingsButton
             }
             if !timelineShowsToday || isListAwayFromToday(in: days) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: scrollToToday) {
-                        Image(systemName: "\(Calendar.current.component(.day, from: Date())).circle")
-                            .imageScale(.large)
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        todayButton
                     }
-                    .accessibilityLabel("Today")
-                    .accessibilityHint("Return to today in the timeline and event list")
-                    .accessibilityIdentifier("scrollToToday")
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) { todayButton }
                 }
             }
         }
@@ -216,6 +215,28 @@ struct ContentView: View {
                 .accessibilityLabel("Settings")
                 .foregroundStyle(.tint)
                 .imageScale(.large)
+        }
+    }
+
+    @ViewBuilder private var todayButton: some View {
+        let button = Button(action: scrollToToday) {
+            Text(Date().formatted(.dateTime.day()))
+                .font(.body)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Today")
+        .accessibilityHint("Return to today in the timeline and event list")
+        .accessibilityIdentifier("scrollToToday")
+
+        if #available(iOS 26, *) {
+            button.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            button.background(.regularMaterial, in: Circle())
         }
     }
 
