@@ -266,35 +266,38 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testWeekGridKeepsEvenSpacingAcrossMonthBoundariesAndZoomBlends() {
+    func testTimelineOnlyShowsTheHorizontalDividerAtEveryZoom() throws {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 800, height: 500))
         timeline.layoutIfNeeded()
-        for spacing: CGFloat in [29, 18, 6.6, 5.3, 4.6] {
+        for spacing: CGFloat in [44, 39, 29, 18, 6.6, 5.3, 4.6, 2.8, 44.0 / 30] {
             timeline.beginZoom(at: 400)
             timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 400)
             timeline.endZoom()
             timeline.setDayPosition(0.37)
             timeline.layoutIfNeeded()
             let lines = timeline.subviews.filter {
-                $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
-            }.map { $0.convert($0.bounds, to: timeline).minX }.sorted()
-            XCTAssertGreaterThan(lines.count, 2)
-            for (first, next) in zip(lines, lines.dropFirst()) {
-                XCTAssertEqual(next - first, spacing * 7, accuracy: 0.01)
+                $0.alpha > 0 && !$0.isHidden && $0.frame.width > 0 && $0.frame.width <= 1 && $0.frame.height > 1
             }
+            XCTAssertTrue(lines.isEmpty, "No vertical lines should appear at \(spacing) pt/day")
+            let header = try XCTUnwrap(timeline.subviews.first { $0.accessibilityIdentifier == "timelineAxis" })
+            let divider = try XCTUnwrap(header.subviews.first { $0.accessibilityIdentifier == "timelineAxisDivider" })
+            XCTAssertEqual(divider.frame.width, timeline.bounds.width, accuracy: 0.01)
+            XCTAssertGreaterThan(divider.alpha, 0)
         }
     }
 
     @MainActor
-    func testTimelineDotsStayInsideDividersAndAvoidEachOtherAtEveryZoom() throws {
+    func testTimelineDotsStayInsideDateSectionsAndAvoidEachOtherAtEveryZoom() throws {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 200))
         let calendar = Calendar.current
         let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 27)))
         let position = try XCTUnwrap(calendar.dateComponents([.day], from: timeline.anchor, to: start).day)
-        timeline.update(events: (-10...300).map {
+        let events = (-10...300).map {
             Event(title: "Day \($0)", date: calendar.date(byAdding: .day, value: $0, to: start)!,
                   color: CodableColor(color: $0.isMultiple(of: 2) ? .red : .blue))
-        })
+        }
+        timeline.update(events: events)
+        let datesByTitle = Dictionary(uniqueKeysWithValues: events.map { ($0.title, $0.date) })
         timeline.layoutIfNeeded()
         for spacing: CGFloat in [44, 39, 31, 26.4, 20, 10, 6.6, 4.6, 4.5, 3.6, 2.8, 44.0 / 30] {
             timeline.beginZoom(at: 0)
@@ -303,17 +306,19 @@ final class TimelineTests: XCTestCase {
             for offset: CGFloat in [0, 0.37, 6.8, 85.2] {
                 timeline.setDayPosition(CGFloat(position) + offset)
                 timeline.layoutIfNeeded()
-                let lines = timeline.subviews.filter {
-                    $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
-                }
                 let markers = timeline.subviews.compactMap { $0 as? UIButton }
                 XCTAssertFalse(markers.isEmpty)
-                XCTAssertFalse(lines.isEmpty)
                 for (index, marker) in markers.enumerated() {
-                    for line in lines {
-                        let gap = max(line.frame.minX - marker.frame.maxX, marker.frame.minX - line.frame.maxX)
-                        XCTAssertGreaterThanOrEqual(gap, 3.99, "Dots need four points of padding at \(spacing) pt/day")
-                    }
+                    let date = try XCTUnwrap(datesByTitle[marker.accessibilityLabel ?? ""])
+                    let component: Calendar.Component = timeline.zoomLevel == .days ? .day
+                        : (timeline.zoomLevel == .weeks ? .weekOfYear : .month)
+                    let interval = try XCTUnwrap(calendar.dateInterval(of: component, for: date))
+                    let startDay = calendar.dateComponents([.day], from: timeline.anchor, to: interval.start).day!
+                    let endDay = calendar.dateComponents([.day], from: timeline.anchor, to: interval.end).day!
+                    let sectionLeft = (CGFloat(startDay) - timeline.dayPosition) * timeline.pointsPerDay
+                    let sectionRight = (CGFloat(endDay) - timeline.dayPosition) * timeline.pointsPerDay
+                    XCTAssertGreaterThanOrEqual(marker.frame.minX - timeline.bounds.minX - sectionLeft, 3.99)
+                    XCTAssertGreaterThanOrEqual(sectionRight - (marker.frame.maxX - timeline.bounds.minX), 3.99)
                     for other in markers.dropFirst(index + 1) {
                         XCTAssertFalse(marker.frame.insetBy(dx: -0.9, dy: -0.9).intersects(other.frame),
                                        "Padding must not push neighboring dates into one another")
@@ -324,7 +329,7 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
-    func testDateHeaderStaysPinnedAndDividersMeetWhileEventsScrollAtEveryScale() throws {
+    func testDateHeaderAndHorizontalDividerStayPinnedWhileEventsScrollAtEveryScale() throws {
         for height: CGFloat in [108, 600] {
             let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
             container.backgroundColor = .systemBackground
@@ -371,12 +376,7 @@ final class TimelineTests: XCTestCase {
                     let dividerFrame = divider.convert(divider.bounds, to: timeline)
                     XCTAssertEqual(dividerFrame.minX, timeline.bounds.minX, accuracy: 0.01)
                     XCTAssertEqual(dividerFrame.maxX, timeline.bounds.maxX, accuracy: 0.01)
-                    let verticals = timeline.subviews.filter { $0.accessibilityIdentifier == "timelineGridDivider" && $0.alpha > 0 && $0.frame.width <= 1 }
-                    XCTAssertFalse(verticals.isEmpty)
-                    for line in verticals {
-                        XCTAssertEqual(line.frame.minY, dividerFrame.minY, accuracy: 0.01)
-                        XCTAssertEqual(line.frame.maxY, timeline.bounds.maxY, accuracy: 0.01)
-                    }
+                    XCTAssertEqual(dividerFrame.maxY, header.frame.maxY, accuracy: 0.01)
                     let hit = try XCTUnwrap(timeline.hitTest(CGPoint(x: timeline.bounds.midX,
                                                                    y: timeline.bounds.minY + header.bounds.height / 2), with: nil))
                     XCTAssertTrue(hit === header || hit.isDescendant(of: header), "Covered event controls must not receive header taps")
@@ -567,7 +567,7 @@ final class TimelineTests: XCTestCase {
                             let above = top - header.bounds.height
                             let below = timeline.bounds.height - bottom
                             XCTAssertEqual(above, below, accuracy: 1, "The marker group must be centered below the date header")
-                            XCTAssertEqual(above, 24, accuracy: 1)
+                            XCTAssertEqual(above, 16, accuracy: 1)
                         }
                     }
                     timeline.setDayPosition(500)
@@ -590,7 +590,7 @@ final class TimelineTests: XCTestCase {
         }
         let dayHeight = expectation(description: "Day header and three lanes reported")
         canvas.timeline.onHeightChange = { height in
-            XCTAssertEqual(height, 168, accuracy: 1)
+            XCTAssertEqual(height, 152, accuracy: 1)
             dayHeight.fulfill()
         }
         canvas.update(events: events, highlightedEventID: nil)
@@ -599,7 +599,7 @@ final class TimelineTests: XCTestCase {
         await fulfillment(of: [dayHeight], timeout: 1)
         let weekHeight = expectation(description: "Single-row week header and smaller dots reported")
         canvas.timeline.onHeightChange = { height in
-            XCTAssertLessThan(height, 168)
+            XCTAssertLessThan(height, 152)
             weekHeight.fulfill()
         }
         canvas.timeline.beginZoom(at: 0)

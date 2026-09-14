@@ -96,8 +96,7 @@ private struct TimelineMarkerGeometry {
         let start = max(placement.startDay, days.lowerBound)
         let end = min(placement.endDay, days.upperBound)
         let lower = section(containing: start).lowerBound + Self.padding
-        // Dividers occupy the trailing 0.75 points of each section.
-        let upper = section(containing: end).upperBound - Self.padding - 0.75
+        let upper = section(containing: end).upperBound - Self.padding
         let singleDay = placement.startDay == placement.endDay
         let inset = min(2, pointsPerDay / 4)
         let rawStart = CGFloat(start) * pointsPerDay + inset
@@ -281,7 +280,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var onScrollPositionChange: ((CGFloat) -> Void)?
     var onHeightChange: ((CGFloat) -> Void)?
     private(set) var preferredHeight: CGFloat = 100
-    private let eventVerticalPadding: CGFloat = 24
+    private let eventVerticalPadding: CGFloat = 16
     var highlightedEventID: UUID? {
         didSet {
             guard highlightedEventID != oldValue else { return }
@@ -545,10 +544,8 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         axisHeader.frame = CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: headerHeight)
         axisHeader.bounds = CGRect(x: bounds.minX, y: 0, width: bounds.width, height: headerHeight)
         axisDivider.frame = CGRect(x: bounds.minX, y: headerHeight - 0.75, width: bounds.width, height: 0.75)
-        let grid = CGRect(x: bounds.minX, y: bounds.minY + axisDivider.frame.minY,
-                          width: bounds.width, height: max(0, bounds.height - axisDivider.frame.minY))
-        for view in dayViews.values { view.layoutLabels(in: axisHeader.bounds, grid: grid) }
-        for view in periodViews.values { view.layoutLabels(in: axisHeader.bounds, grid: grid) }
+        for view in dayViews.values { view.layoutLabels(in: axisHeader.bounds) }
+        for view in periodViews.values { view.layoutLabels(in: axisHeader.bounds) }
         let eventViewport = CGRect(x: bounds.minX, y: bounds.minY + headerHeight,
                                    width: bounds.width, height: max(0, bounds.height - headerHeight))
         for button in eventButtons.values {
@@ -613,7 +610,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         }
         let markerTop = headerHeight + max(eventVerticalPadding, (bounds.height - headerHeight - markerHeight) / 2)
         // Only one hierarchy occupies the text rows. Keep labels visible even
-        // when a pinch stops exactly between scales; the grid remains continuous.
+        // when a pinch stops exactly between scales.
         let axisFont = TimelineAxisTypography.font
         let dayWidth = (1...31).map {
             (String($0) as NSString).size(withAttributes: [.font: axisFont]).width
@@ -640,7 +637,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         }
         for day in Array(dayViews.keys) where !needsDayViews || !bufferedDays.contains(day) {
             let view = dayViews.removeValue(forKey: day)
-            view?.divider.removeFromSuperview()
             view?.removeFromSuperview()
         }
         for day in bufferedDays where needsDayViews {
@@ -649,10 +645,8 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             if dayViews[day] == nil {
                 dayViews[day] = dayView
                 axisHeader.addSubview(dayView)
-                insertSubview(dayView.divider, at: 0)
             }
-            dayView.configure(date: date, labelAlpha: dayLabelAlpha, showsWeekday: showsWeekdays,
-                              dividerAlpha: max(0, weights.days * 2 - 1), axisHeight: axisHeight)
+            dayView.configure(date: date, labelAlpha: dayLabelAlpha, showsWeekday: showsWeekdays, axisHeight: axisHeight)
             dayView.frame = CGRect(x: CGFloat(day - scrollWindow.firstDay) * pointsPerDay,
                                    y: 0, width: pointsPerDay, height: headerHeight)
         }
@@ -670,7 +664,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 if periodViews[key] == nil {
                     periodViews[key] = view
                     axisHeader.addSubview(view)
-                    insertSubview(view.divider, at: 0)
                 }
                 let date = calendar.date(byAdding: .day, value: period.startDay, to: anchor) ?? anchor
                 let monthIndex = calendar.component(.year, from: date) * 12 + calendar.component(.month, from: date) - 1
@@ -682,18 +675,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                                containsToday: (period.startDay..<period.endDay).contains(todayDay),
                                labelAlpha: showLabel ? periodLabelAlpha : 0,
                                labelColumnWidth: level == .months ? 28 * pointsPerDay * CGFloat(monthStride)
-                                   : 7 * pointsPerDay * CGFloat(weekStride),
-                               // Once months take over, their sections replace
-                               // the week grid instead of cutting through it.
-                               dividerAlpha: level == .weeks ? (weights.level == .months ? 0 : weights.weeks)
-                                   : max(0, weights.months * 2 - 1))
+                                   : 7 * pointsPerDay * CGFloat(weekStride))
                 view.frame = CGRect(x: CGFloat(period.startDay - scrollWindow.firstDay) * pointsPerDay, y: 0,
                                     width: CGFloat(period.endDay - period.startDay) * pointsPerDay, height: headerHeight)
             }
         }
         for key in Array(periodViews.keys) where !periodKeys.contains(key) {
             let view = periodViews.removeValue(forKey: key)
-            view?.divider.removeFromSuperview()
             view?.removeFromSuperview()
         }
         let visibleIDs = Set(layout.placements.map { $0.event.id })
@@ -766,7 +754,6 @@ private final class TimelineEventButton: UIButton {
 private final class TimelineDayView: UIView {
     private let weekday = UILabel()
     private let number = UILabel()
-    let divider = UIView()
     private var isToday = false
     private var showsWeekday = true
     private var showsTodayHighlight = false
@@ -784,14 +771,11 @@ private final class TimelineDayView: UIView {
             addSubview(label)
         }
         number.clipsToBounds = true
-        divider.backgroundColor = .systemGray2
-        divider.accessibilityIdentifier = "timelineGridDivider"
-        divider.isUserInteractionEnabled = false
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(date: Date, labelAlpha: CGFloat, showsWeekday: Bool, dividerAlpha: CGFloat, axisHeight: CGFloat) {
+    func configure(date: Date, labelAlpha: CGFloat, showsWeekday: Bool, axisHeight: CGFloat) {
         weekday.text = date.formatted(.dateTime.weekday(.narrow))
         number.text = TimelineAxisDate.text(date, includesMonth: false)
         self.labelAlpha = labelAlpha
@@ -800,7 +784,6 @@ private final class TimelineDayView: UIView {
         isToday = Calendar.current.isDateInToday(date)
         updateTodayAppearance()
         accessibilityLabel = date.formatted(date: .complete, time: .omitted)
-        divider.alpha = dividerAlpha * 0.85
     }
 
     override func tintColorDidChange() {
@@ -813,7 +796,7 @@ private final class TimelineDayView: UIView {
         number.textColor = isToday ? (showsTodayHighlight ? .white : tintColor) : .label
     }
 
-    func layoutLabels(in viewport: CGRect, grid: CGRect) {
+    func layoutLabels(in viewport: CGRect) {
         let visible = frame.intersection(viewport).offsetBy(dx: -frame.minX, dy: 0)
         TimelineAxisTypography.place(weekday, in: visible, y: 0, height: TimelineAxisTypography.firstRowHeight,
                                      alpha: showsWeekday ? labelAlpha : 0, centeredAt: bounds.midX)
@@ -832,13 +815,11 @@ private final class TimelineDayView: UIView {
         number.layer.cornerRadius = showsTodayHighlight ? TimelineAxisTypography.secondRowHeight / 2 : 0
         updateTodayAppearance()
         accessibilityElementsHidden = weekday.isHidden && number.isHidden
-        divider.frame = CGRect(x: frame.maxX - 0.75, y: grid.minY, width: 0.75, height: grid.height)
     }
 }
 
 private final class TimelinePeriodView: UIView {
     private let label = UILabel()
-    let divider = UIView()
     private var level = TimelineZoomLevel.months
     private var labelColumnWidth: CGFloat = 0
     private var containsToday = false
@@ -853,15 +834,12 @@ private final class TimelinePeriodView: UIView {
         label.font = TimelineAxisTypography.font
         label.textAlignment = .center
         addSubview(label)
-        divider.backgroundColor = .systemGray2
-        divider.accessibilityIdentifier = "timelineGridDivider"
-        divider.isUserInteractionEnabled = false
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func configure(period: TimelineAxisPeriod, level: TimelineZoomLevel, containsToday: Bool,
-                   labelAlpha: CGFloat, labelColumnWidth: CGFloat, dividerAlpha: CGFloat) {
+                   labelAlpha: CGFloat, labelColumnWidth: CGFloat) {
         self.level = level
         self.labelColumnWidth = labelColumnWidth
         self.labelAlpha = labelAlpha
@@ -871,7 +849,6 @@ private final class TimelinePeriodView: UIView {
         self.containsToday = containsToday
         label.textColor = containsToday ? tintColor : .secondaryLabel
         accessibilityLabel = period.accessibilityLabel
-        divider.alpha = dividerAlpha * 0.85
     }
 
     override func tintColorDidChange() {
@@ -879,8 +856,8 @@ private final class TimelinePeriodView: UIView {
         label.textColor = containsToday ? tintColor : .secondaryLabel
     }
 
-    func layoutLabels(in viewport: CGRect, grid: CGRect) {
-        // Large text shows fewer dates or month names with more space, retaining the grid.
+    func layoutLabels(in viewport: CGRect) {
+        // Large text shows fewer dates or month names with more space.
         let labelWidth = max(frame.width, labelColumnWidth)
         let labelColumn = CGRect(x: frame.midX - labelWidth / 2, y: frame.minY, width: labelWidth, height: frame.height)
         let visible = labelColumn.intersection(viewport).offsetBy(dx: -frame.minX, dy: 0)
@@ -898,6 +875,5 @@ private final class TimelinePeriodView: UIView {
                                      height: labelHeight,
                                      alpha: labelAlpha)
         accessibilityElementsHidden = label.isHidden
-        divider.frame = CGRect(x: frame.maxX - 0.75, y: grid.minY, width: 0.75, height: grid.height)
     }
 }
