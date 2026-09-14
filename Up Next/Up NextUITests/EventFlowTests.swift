@@ -69,7 +69,7 @@ final class EventFlowTests: XCTestCase {
         }
     }
 
-    func testPinchZoomsTheTimelineAboveTheSmallEventSheet() {
+    func testPinchZoomsTheTimelineInBothEventSheetSizes() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
@@ -88,6 +88,8 @@ final class EventFlowTests: XCTestCase {
             XCTAssertEqual(app.staticTexts["eventSheetTitle"].label, "Up Next", file: file, line: line)
             XCTAssertTrue(app.staticTexts["eventSheetTitle"].isHittable, file: file, line: line)
             XCTAssertFalse(app.staticTexts["timelineScaleHeader"].exists, file: file, line: line)
+            XCTAssertEqual(monthTitle.label, scale == "Days" ? Date().formatted(.dateTime.month(.wide)) : Date().formatted(.dateTime.year()),
+                           file: file, line: line)
             let screenshot = XCTAttachment(screenshot: app.screenshot())
             screenshot.name = "Event sheet with linear \(scale.lowercased()) timeline"
             screenshot.lifetime = .keepAlways; add(screenshot)
@@ -99,6 +101,10 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(handle.value as? String, "Large")
         assertScale("Weeks")
         XCTAssertEqual(timeline.value as? String, weekDates)
+        timeline.pinch(withScale: 0.2, velocity: -1)
+        assertScale("Months")
+        timeline.pinch(withScale: 5, velocity: 2)
+        assertScale("Weeks")
         handle.tap()
         XCTAssertEqual(handle.value as? String, "Small")
         timeline.pinch(withScale: 0.7, velocity: -1)
@@ -120,12 +126,9 @@ final class EventFlowTests: XCTestCase {
         assertScale("Days")
         timeline.pinch(withScale: 0.15, velocity: -1)
         assertScale("Weeks")
-        let initialMonth = monthTitle.label
         timeline.swipeLeft()
-        let monthChanged = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", initialMonth), object: monthTitle)
-        XCTAssertEqual(XCTWaiter.wait(for: [monthChanged], timeout: 5), .completed)
         app.buttons["scrollToToday"].tap()
-        let todayMonth = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", Date().formatted(.dateTime.month(.wide))), object: monthTitle)
+        let todayMonth = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", Date().formatted(.dateTime.year())), object: monthTitle)
         XCTAssertEqual(XCTWaiter.wait(for: [todayMonth], timeout: 5), .completed)
         handle.tap()
         XCTAssertEqual(handle.value as? String, "Large")

@@ -38,6 +38,7 @@ struct ContentView: View {
     @State private var timelineShowsToday = true
     @State private var eventSheetSize: EventSheetSize = .large
     @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
+    @State private var timelineZoomLevel = TimelineZoomLevel.days
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
     @State private var timelineScrollRequest: EventSheetScrollRequest?
     @State private var scrollSynchronization = EventScrollSynchronization()
@@ -71,11 +72,12 @@ struct ContentView: View {
     }()
 
     private var timelineTitle: String {
-        TimelineHeading.text(first: timelineMonth, last: timelineMonth)
+        TimelineHeading.text(first: timelineMonth, last: timelineMonth, zoomLevel: timelineZoomLevel)
     }
 
     private var compactTimelineTitle: String {
-        Calendar.current.isDate(timelineMonth, equalTo: Date(), toGranularity: .year)
+        if timelineZoomLevel != .days { return timelineTitle }
+        return Calendar.current.isDate(timelineMonth, equalTo: Date(), toGranularity: .year)
             ? timelineMonth.formatted(.dateTime.month(.abbreviated))
             : timelineMonth.formatted(.dateTime.month(.abbreviated).year())
     }
@@ -165,13 +167,14 @@ struct ContentView: View {
                     expanded: eventSheetSize == .small, expansionProgress: progress,
                     onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
                     onInteractionBegan: beginTimelineInteraction,
-                    onPositionChange: { day, anchor in
+                    onPositionChange: { day, anchor, zoomLevel in
                         let calendar = Calendar.current
                         guard let focusedDate = calendar.date(byAdding: .day, value: Int(floor(day)), to: anchor),
                               let month = calendar.dateInterval(of: .month, for: focusedDate)?.start else { return }
                         let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date))
                         DispatchQueue.main.async {
                             if timelineMonth != month { timelineMonth = month }
+                            if timelineZoomLevel != zoomLevel { timelineZoomLevel = zoomLevel }
                             if let date, scrollSynchronization.timelineMoved(to: date) {
                                 eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
                             }

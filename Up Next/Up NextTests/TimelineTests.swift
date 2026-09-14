@@ -85,7 +85,12 @@ final class TimelineTests: XCTestCase {
         }
         timeline.beginZoom(at: 180)
         timeline.changeZoom(scale: 0.1, at: 180)
-        XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001, "The large sheet retains the chosen zoom")
+        timeline.endZoom()
+        XCTAssertEqual(timeline.zoomLevel, .months, "The timeline can zoom out above the large sheet")
+        timeline.beginZoom(at: 180)
+        timeline.changeZoom(scale: 30, at: 180)
+        timeline.endZoom()
+        XCTAssertEqual(timeline.zoomLevel, .days, "The timeline can zoom back in above the large sheet")
     }
 
     func testZoomPeriodsUseRealMonthLengthsAndCalendarWeeksAcrossDST() {
@@ -114,6 +119,10 @@ final class TimelineTests: XCTestCase {
         let crossYear = TimelineHeading.text(first: first, last: nextYear, today: anchor, calendar: calendar)
         XCTAssertTrue(crossYear.contains("2026"))
         XCTAssertTrue(crossYear.contains("2027"))
+        for level in [TimelineZoomLevel.weeks, .months] {
+            XCTAssertEqual(TimelineHeading.text(first: first, last: last, zoomLevel: level), "2026")
+            XCTAssertEqual(TimelineHeading.text(first: nextYear, last: nextYear, zoomLevel: level), "2027")
+        }
         let months = TimelineAxisPeriod.make(level: .months, visibleDays: 0...150, anchor: first, calendar: calendar)
         XCTAssertTrue(months.allSatisfy { $0.subtitle.isEmpty && !$0.title.contains("2026") })
         XCTAssertTrue(months.allSatisfy { $0.accessibilityLabel.contains("2026") })
@@ -155,6 +164,27 @@ final class TimelineTests: XCTestCase {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @MainActor
+    func testWeekGridKeepsEvenSpacingAcrossMonthBoundariesAndZoomBlends() {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 800, height: 500))
+        timeline.setExpanded(true)
+        timeline.layoutIfNeeded()
+        for spacing: CGFloat in [29, 18, 6.6, 5.3, 4.6] {
+            timeline.beginZoom(at: 400)
+            timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 400)
+            timeline.endZoom()
+            timeline.setDayPosition(0.37)
+            timeline.layoutIfNeeded()
+            let lines = timeline.subviews.flatMap(\.subviews).filter {
+                $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden
+            }.map { $0.convert($0.bounds, to: timeline).minX }.sorted()
+            XCTAssertGreaterThan(lines.count, 2)
+            for (first, next) in zip(lines, lines.dropFirst()) {
+                XCTAssertEqual(next - first, spacing * 7, accuracy: 0.01)
             }
         }
     }
@@ -269,9 +299,10 @@ final class TimelineTests: XCTestCase {
         canvas.layoutIfNeeded()
         canvas.timeline.layoutIfNeeded()
         var reportedDay: CGFloat?
-        canvas.onPositionChange = { day, anchor in
+        canvas.onPositionChange = { day, anchor, level in
             reportedDay = day
             XCTAssertEqual(anchor, canvas.timeline.anchor)
+            XCTAssertEqual(level, canvas.timeline.zoomLevel)
         }
         canvas.timeline.setDayPosition(60)
         XCTAssertEqual(reportedDay, 60)

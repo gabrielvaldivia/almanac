@@ -98,9 +98,11 @@ struct TimelineAxisPeriod {
     }
 }
 
-/// The current year is implicit. Keep it only when needed to distinguish other years.
+/// Coarse views use the year; day view retains the focused month.
 enum TimelineHeading {
-    static func text(first: Date, last: Date, today: Date = Date(), calendar: Calendar = .current) -> String {
+    static func text(first: Date, last: Date, today: Date = Date(), calendar: Calendar = .current,
+                     zoomLevel: TimelineZoomLevel = .days) -> String {
+        if zoomLevel != .days { return first.formatted(.dateTime.year()) }
         let sameMonth = calendar.isDate(first, equalTo: last, toGranularity: .month)
         let sameYear = calendar.isDate(first, equalTo: last, toGranularity: .year)
         let currentYear = calendar.isDate(first, equalTo: today, toGranularity: .year)
@@ -151,7 +153,7 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
     var onTodayVisibilityChange: (Bool) -> Void
     var onSelectEvent: (Event) -> Void
     var onInteractionBegan: () -> Void
-    var onPositionChange: (CGFloat, Date) -> Void
+    var onPositionChange: (CGFloat, Date, TimelineZoomLevel) -> Void
 
     var animatableData: CGFloat {
         get { expansionProgress }
@@ -185,7 +187,7 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
 
 final class TimelineCanvasView: UIView {
     let timeline = TimelineScrollView()
-    var onPositionChange: ((CGFloat, Date) -> Void)?
+    var onPositionChange: ((CGFloat, Date, TimelineZoomLevel) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -193,7 +195,7 @@ final class TimelineCanvasView: UIView {
         timeline.receiveZoomGestures(in: self)
         timeline.onScrollPositionChange = { [weak self] day in
             guard let self else { return }
-            self.onPositionChange?(day, self.timeline.anchor)
+            self.onPositionChange?(day, self.timeline.anchor, self.timeline.zoomLevel)
         }
     }
 
@@ -287,7 +289,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         guard self.expanded != expanded else { return }
         self.expanded = expanded
         expansionProgress = expanded ? 1 : 0
-        zoomGesture.isEnabled = expanded
         if !expanded {
             pinch = nil
             contentOffset.y = 0
@@ -314,7 +315,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         panGestureRecognizer.maximumNumberOfTouches = 1
         zoomGesture.addTarget(self, action: #selector(pinched(_:)))
         zoomGesture.delegate = self
-        zoomGesture.isEnabled = false
         addGestureRecognizer(zoomGesture)
         todayLine.backgroundColor = tintColor
         todayLine.isUserInteractionEnabled = false
@@ -389,7 +389,6 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
 
     func beginZoom(at viewportX: CGFloat) {
-        guard expanded else { return }
         scrollTargetDay = nil
         onInteractionBegan?()
         setContentOffset(contentOffset, animated: false)
@@ -424,7 +423,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     var zoomAccessibilityActions: [UIAccessibilityCustomAction] {
         TimelineZoomLevel.allCases.map { level in
             UIAccessibilityCustomAction(name: "Show \(level.rawValue.lowercased())") { [weak self] _ in
-                guard let self, self.expanded else { return false }
+                guard let self else { return false }
                 self.beginZoom(at: self.bounds.width / 2)
                 self.changeZoom(scale: level.pointsPerDay / self.pointsPerDay, at: self.bounds.width / 2)
                 self.endZoom()
@@ -533,7 +532,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 addSubview(dayView)
             }
             dayView.configure(date: date, labelAlpha: dayLabelAlpha,
-                              dividerAlpha: weights.days * expansionProgress, axisHeight: axisHeight)
+                              dividerAlpha: max(0, weights.days * 2 - 1) * expansionProgress, axisHeight: axisHeight)
             dayView.frame = CGRect(x: CGFloat(day - scrollWindow.firstDay) * pointsPerDay,
                                    y: 0, width: pointsPerDay, height: expansionProgress > 0 ? contentSize.height : axisHeight)
         }
@@ -556,7 +555,8 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                                containsToday: (period.startDay..<period.endDay).contains(todayDay),
                                labelAlpha: showLabel ? periodLabelAlpha : 0,
                                labelColumnWidth: level == .months ? 28 * pointsPerDay * CGFloat(monthStride) : 0,
-                               dividerAlpha: level == .weeks ? weights.weeks : weights.months, axisHeight: axisHeight)
+                               dividerAlpha: level == .weeks ? weights.weeks : max(0, weights.months * 2 - 1),
+                               axisHeight: axisHeight)
                 view.frame = CGRect(x: CGFloat(period.startDay - scrollWindow.firstDay) * pointsPerDay, y: 0,
                                     width: CGFloat(period.endDay - period.startDay) * pointsPerDay, height: contentSize.height)
             }
@@ -597,7 +597,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             button.accessibilityHint = "Show event"
         }
 
-        accessibilityHint = expanded ? "Pinch to zoom between days, weeks, and months. Swipe to move through dates." : "Swipe to move through dates."
+        accessibilityHint = "Pinch to zoom between days, weeks, and months. Swipe to move through dates."
         let showsToday = visibleDays.contains(todayDay)
         if reportedTodayVisibility != showsToday {
             reportedTodayVisibility = showsToday
