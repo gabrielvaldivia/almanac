@@ -89,20 +89,39 @@ final class EventFlowTests: XCTestCase {
                    thenDragTo: timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.75)),
                    withVelocity: .slow, thenHoldForDuration: 0.2)
         let later = list.staticTexts[names[2]].firstMatch
-        let revealed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: later)
+        let first = list.staticTexts[names[0]].firstMatch
+        let revealed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            later.isHittable && !first.isHittable
+        }, object: list)
         XCTAssertEqual(XCTWaiter.wait(for: [revealed], timeout: 5), .completed,
                        "The list must follow the timeline: \(timeline.value as? String ?? "missing")")
         screenshot("Timeline pan scrolls the plain event list")
         let timelineAfterPan = timeline.value as? String
-        list.swipeDown()
+        // XCTest's default swipe is a 0.2-second flick. On a busy CI simulator
+        // it can complete without moving the list. Use a sustained drag, then
+        // verify the list's position before asserting the timeline follows it.
+        func dragList(from start: CGFloat, to end: CGFloat) {
+            list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: start))
+                .press(forDuration: 0.1,
+                       thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: end)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        dragList(from: 0.15, to: 0.85)
+        let firstRevealed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: first)
+        XCTAssertEqual(XCTWaiter.wait(for: [firstRevealed], timeout: 5), .completed,
+                       "Dragging the list back must reveal today's events")
         let todayPrefix = "Days view, \(Date().formatted(date: .abbreviated, time: .omitted))"
         let returned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", todayPrefix), object: timeline)
-        XCTAssertEqual(XCTWaiter.wait(for: [returned], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [returned], timeout: 5), .completed,
+                       "Timeline must follow the list back to today: \(timeline.value as? String ?? "missing")")
         XCTAssertNotEqual(timeline.value as? String, timelineAfterPan)
-        XCTAssertTrue(list.staticTexts[names[0]].isHittable)
-        list.swipeUp()
+        dragList(from: 0.85, to: 0.15)
+        let firstHidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == false"), object: first)
+        XCTAssertEqual(XCTWaiter.wait(for: [firstHidden], timeout: 5), .completed,
+                       "Dragging the list forward must move today's events offscreen")
         let advanced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (value BEGINSWITH %@)", todayPrefix), object: timeline)
-        XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed,
+                       "Timeline must follow the list forward: \(timeline.value as? String ?? "missing")")
         screenshot("List scrolling advances the timeline")
         if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
     }
