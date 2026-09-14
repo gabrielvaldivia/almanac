@@ -521,7 +521,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     private func render(visibleDays: ClosedRange<Int>) {
         let calendar = Calendar.current
         let weights = TimelineAxisWeights(pointsPerDay: pointsPerDay)
-        let markerSize = max(6, 24 * sqrt(pointsPerDay / TimelineScrollWindow.dayWidth))
+        let markerSize = max(6, 20 * sqrt(pointsPerDay / TimelineScrollWindow.dayWidth))
         let markerPitch = markerSize + 4
         let minimumDaySpan = max(1, (markerSize + 2) / pointsPerDay)
         let buffer = max(1, Int(ceil(minimumDaySpan / 2)))
