@@ -339,7 +339,7 @@ struct ContentView: View {
 
     private var todayButton: some View {
         Button(action: scrollToToday) {
-            Image(systemName: "calendar")
+            Image(systemName: "calendar.day.timeline.left")
                 .imageScale(.large)
         }
         .foregroundStyle(.tint)
