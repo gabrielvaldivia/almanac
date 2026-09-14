@@ -78,13 +78,22 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            mainContent
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    quickEntryControl
+            ZStack(alignment: .bottom) {
+                mainContent
+                    .ignoresSafeArea(.container, edges: .bottom)
+                if showingQuickEntry {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: dismissQuickEntry)
+                        .accessibilityLabel("Dismiss event entry")
+                        .accessibilityIdentifier("dismissQuickEntry")
+                        .accessibilityAddTraits(.isButton)
+                }
+                quickEntryControl
                     .disabled(appData.storageError != nil)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                }
+            }
         }
         .sheet(isPresented: $showAddEventSheet) {
             addEventSheet
@@ -103,7 +112,8 @@ struct ContentView: View {
                 QuickAddEventField(
                     text: $quickEventInput, isFocused: $isQuickEntryFocused,
                     overrides: $quickEventOverrides, draft: quickEventDraft,
-                    categories: simplifiedCategories, onSubmit: submitQuickEntry, onEdit: openEventDetails
+                    categories: simplifiedCategories, onSubmit: submitQuickEntry, onEdit: openEventDetails,
+                    onDismiss: dismissQuickEntry
                 )
                 .modifier(FloatingControlSurface())
                 .matchedGeometryEffect(id: "composer", in: composerTransition, anchor: .bottomTrailing)
@@ -169,10 +179,13 @@ struct ContentView: View {
                                         .padding(.bottom, 10)
                                         .id(day.date)
                                 }
-                                Spacer(minLength: 16)
+                                // Content scrolls behind the floating composer; this
+                                // inset lets the last event clear it when scrolled.
+                                Spacer(minLength: 100)
                             }
                             .scrollTargetLayout()
                         }
+                        .accessibilityIdentifier("eventList")
                         .scrollPosition(id: $eventListPosition, anchor: .top)
                         .coordinateSpace(name: "eventList")
                         .scrollDismissesKeyboard(.interactively)
@@ -348,6 +361,11 @@ struct ContentView: View {
         isQuickEntryFocused = false
         quickEventInput = ""
         quickEventOverrides = QuickEventOverrides()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
+    }
+
+    private func dismissQuickEntry() {
+        isQuickEntryFocused = false
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = false }
     }
 

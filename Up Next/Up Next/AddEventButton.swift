@@ -8,6 +8,7 @@ struct QuickAddEventField: View {
     var categories: [(name: String, color: Color)]
     var onSubmit: () -> Void
     var onEdit: () -> Void
+    var onDismiss: () -> Void
 
     @State private var dateDraft: QuickScheduleEditorDraft?
     @State private var repeatDraft: QuickScheduleEditorDraft?
@@ -44,16 +45,23 @@ struct QuickAddEventField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TextField("Add an event, like Dune 12/18", text: $text, axis: .vertical)
-                .lineLimit(1...4)
-                .textInputAutocapitalization(.sentences)
-                .focused($isFocused)
-                .accessibilityLabel("Quick event entry")
-                .accessibilityHint("Type an event. The date, category and repeat buttons update as you type.")
-                .accessibilityIdentifier("quickEventInput")
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Circle()
+                    .fill(draft.categoryOptions.selectedColor.color)
+                    .frame(width: 10, height: 10)
+                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+                    .accessibilityHidden(true)
+                TextField("Add an event, like Dune 12/18", text: $text, axis: .vertical)
+                    .lineLimit(1...4)
+                    .textInputAutocapitalization(.sentences)
+                    .focused($isFocused)
+                    .accessibilityLabel("Quick event entry")
+                    .accessibilityHint("Type an event. The date, category and repeat buttons update as you type.")
+                    .accessibilityIdentifier("quickEventInput")
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
             HStack(spacing: 4) {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -93,6 +101,15 @@ struct QuickAddEventField: View {
             }
         }
         .padding(8)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    if value.translation.height > 30 && value.translation.height > abs(value.translation.width) {
+                        onDismiss()
+                    }
+                }
+        )
+        .accessibilityAction(named: "Collapse event entry", onDismiss)
         .sheet(item: $dateDraft) { draft in
             QuickDateEditor(options: draft.options) { date, endDate in
                 overrides.date = date

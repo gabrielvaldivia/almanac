@@ -32,18 +32,22 @@ struct TimelineLayout {
 
     }
 
-    static func make(indexedEvents: [TimelineEventPlacement], visibleDays: ClosedRange<Int>) -> TimelineLayout {
+    static func make(indexedEvents: [TimelineEventPlacement], visibleDays: ClosedRange<Int>,
+                     minimumDaySpan: CGFloat = 1) -> TimelineLayout {
         let candidates = indexedEvents.filter { $0.startDay <= visibleDays.upperBound && $0.endDay >= visibleDays.lowerBound }
         // Reuse the first free lane. Counting earlier overlapping events can
         // leave gaps for chains of events that don't all overlap one another.
-        var laneEnds: [Int] = []
+        var laneEnds: [CGFloat] = []
         let placements = candidates.map { candidate in
             var placement = candidate
-            let lane = laneEnds.firstIndex { $0 < placement.startDay } ?? laneEnds.count
+            let center = CGFloat(placement.startDay + placement.endDay + 1) / 2
+            let start = min(CGFloat(placement.startDay), center - minimumDaySpan / 2)
+            let end = max(CGFloat(placement.endDay + 1), center + minimumDaySpan / 2)
+            let lane = laneEnds.firstIndex { $0 <= start } ?? laneEnds.count
             if lane == laneEnds.count {
-                laneEnds.append(placement.endDay)
+                laneEnds.append(end)
             } else {
-                laneEnds[lane] = placement.endDay
+                laneEnds[lane] = end
             }
             placement.lane = lane
             return placement

@@ -38,6 +38,120 @@ final class TimelineTests: XCTestCase {
         }
     }
 
+    func testRecyclingAtEveryZoomKeepsTheCalendarPositionAndCanvasBounded() {
+        for level in TimelineZoomLevel.allCases {
+            for direction: CGFloat in [-1, 1] {
+                var window = TimelineScrollWindow(pointsPerDay: level.pointsPerDay)
+                var offset = window.initialOffset + 13.5
+                for _ in 0..<100 {
+                    offset += direction * 3000
+                    let day = CGFloat(window.firstDay) + offset / window.pointsPerDay
+                    offset = window.recenter(offset: offset)
+                    XCTAssertEqual(CGFloat(window.firstDay) + offset / window.pointsPerDay, day, accuracy: 0.000001)
+                    XCTAssertGreaterThan(offset, 0)
+                    XCTAssertLessThan(offset + 393, window.contentWidth)
+                    XCTAssertLessThanOrEqual(window.contentWidth, 181 * 44 + 44)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testPinchContinuouslyAnchorsTheDateUnderMovingFingersAndResetsForCompact() {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 600))
+        timeline.setExpanded(true)
+        timeline.layoutIfNeeded()
+        timeline.setDayPosition(20.25)
+        let cardDay = timeline.cardDayPosition
+        let anchorDay = timeline.dayPosition + 180 / timeline.pointsPerDay
+        timeline.beginZoom(at: 180)
+        for scale: CGFloat in [0.7, 0.4, 0.15, 0.06, 0.01] {
+            timeline.changeZoom(scale: scale, at: 200)
+            XCTAssertEqual((timeline.dayPosition - anchorDay) * timeline.pointsPerDay + 200, 0, accuracy: 0.5)
+            XCTAssertEqual(timeline.cardDayPosition, cardDay, accuracy: 0.00001)
+        }
+        XCTAssertEqual(timeline.pointsPerDay, TimelineZoomLevel.months.pointsPerDay)
+        timeline.changeZoom(scale: 0.15, at: 200)
+        XCTAssertEqual(timeline.pointsPerDay, 6.6, accuracy: 0.00001, "Pinch scale must stay continuous, without snapping to a preset")
+        XCTAssertEqual(timeline.zoomLevel, .weeks)
+        timeline.endZoom()
+        timeline.setExpanded(false)
+        XCTAssertEqual(timeline.pointsPerDay, 44)
+        XCTAssertEqual(timeline.dayPosition * 44, cardDay * 44, accuracy: 0.5)
+        timeline.beginZoom(at: 180)
+        timeline.changeZoom(scale: 0.1, at: 180)
+        XCTAssertEqual(timeline.pointsPerDay, 44, "Only the full-screen timeline should zoom")
+    }
+
+    @MainActor
+    func testZoomKeepsCardsSynchronizedAndTodayRetainsTheScale() {
+        let container = TimelineContainerView(frame: CGRect(x: 0, y: 0, width: 393, height: 650))
+        let events = [0, 14, 60].map { day in
+            Event(title: "Day \(day)", date: Calendar.current.date(byAdding: .day, value: day, to: container.timeline.anchor)!,
+                  color: CodableColor(color: .blue))
+        }
+        container.update(events: events, expanded: true)
+        func layoutTree(_ view: UIView) { view.layoutIfNeeded(); view.subviews.forEach(layoutTree) }
+        layoutTree(container)
+        container.timeline.beginZoom(at: 196)
+        container.timeline.changeZoom(scale: 1.0 / 30, at: 196)
+        container.timeline.endZoom()
+        layoutTree(container)
+        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.5)
+        container.cards.scrollViewWillBeginDragging(container.cards)
+        container.cards.contentOffset.x = container.cards.bounds.width * 2
+        layoutTree(container)
+        XCTAssertEqual(container.timeline.cardDayPosition * container.timeline.pointsPerDay,
+                       60 * container.timeline.pointsPerDay, accuracy: 0.5)
+        XCTAssertEqual(container.timeline.zoomLevel, .months)
+        container.timeline.scrollToToday(animated: false)
+        layoutTree(container)
+        XCTAssertTrue(container.timeline.isTodayVisible)
+        XCTAssertEqual(container.timeline.zoomLevel, .months)
+        XCTAssertEqual(container.cards.contentOffset.x, 0, accuracy: 0.5)
+    }
+
+    func testZoomPeriodsUseRealMonthLengthsAndCalendarWeeksAcrossDST() {
+        for year in [2024, 2026] {
+            let february = calendar.date(from: DateComponents(year: year, month: 2, day: 1))!
+            let periods = TimelineAxisPeriod.make(level: .months, visibleDays: 0...70, anchor: february, calendar: calendar)
+            XCTAssertEqual(periods.map { $0.endDay - $0.startDay }, [year == 2024 ? 29 : 28, 31, 30])
+            XCTAssertEqual(periods[0].startDay, 0)
+            XCTAssertEqual(periods[1].startDay, periods[0].endDay)
+        }
+        var mondayCalendar = calendar
+        mondayCalendar.firstWeekday = 2
+        let weeks = TimelineAxisPeriod.make(level: .weeks, visibleDays: 0...20, anchor: anchor, calendar: mondayCalendar)
+        XCTAssertEqual(weeks.first?.startDay, -5)
+        XCTAssertTrue(weeks.allSatisfy { $0.endDay - $0.startDay == 7 })
+        for (first, second) in zip(weeks, weeks.dropFirst()) { XCTAssertEqual(first.endDay, second.startDay) }
+    }
+
+    @MainActor
+    func testMonthZoomSeparatesNearbyMarkersAndOnlyBuildsVisibleViews() {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 600))
+        let events = (0..<1000).map { day in
+            Event(title: "Day \(day)", date: Calendar.current.date(byAdding: .day, value: day, to: timeline.anchor)!,
+                  color: CodableColor(color: .blue))
+        }
+        timeline.update(events: events)
+        timeline.setExpanded(true)
+        timeline.layoutIfNeeded()
+        timeline.beginZoom(at: 196)
+        timeline.changeZoom(scale: 1.0 / 30, at: 196)
+        timeline.endZoom()
+        for day: CGFloat in [0, 400, 800, 0] {
+            timeline.setDayPosition(day)
+            timeline.layoutIfNeeded()
+            let markers = timeline.subviews.compactMap { $0 as? UIButton }
+            XCTAssertLessThan(markers.count, 280)
+            XCTAssertLessThan(timeline.subviews.count, 300)
+            for (index, marker) in markers.enumerated() {
+                for other in markers.dropFirst(index + 1) { XCTAssertFalse(marker.frame.intersects(other.frame)) }
+            }
+        }
+    }
+
     func testViewportIncludesPartiallyVisibleDays() {
         let window = TimelineScrollWindow()
         XCTAssertEqual(window.visibleDays(offset: window.initialOffset, width: 88), 0...1)

@@ -86,6 +86,88 @@ final class EventFlowTests: XCTestCase {
         }
     }
 
+    func testPinchZoomsThroughWeeksAndMonthsAndKeepsCardsSynchronized() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let prefix = "Zoom \(UUID().uuidString.prefix(6))"
+        let names = ["\(prefix) Today", "\(prefix) Later"]
+        for (index, name) in names.enumerated() {
+            openComposer(app)
+            let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+            input.typeText("\(name) \(index == 0 ? "today" : "in 60 days")")
+            app.buttons["quickAddSubmit"].tap()
+        }
+        let handle = app.buttons["timelineResizeHandle"]
+        handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
+        XCTAssertEqual(handle.value as? String, "Full timeline")
+        let timeline = app.scrollViews["eventTimeline"]
+        let cards = app.scrollViews["timelineEventCards"]
+        func assertScale(_ scale: String, file: StaticString = #filePath, line: UInt = #line) {
+            let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "\(scale) view,"), object: timeline)
+            XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 5), .completed, file: file, line: line)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Linear timeline at \(scale.lowercased()) scale"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        timeline.pinch(withScale: 0.15, velocity: -1)
+        assertScale("Weeks")
+        XCTAssertEqual(cards.value as? String, "Page 1 of 2")
+        timeline.pinch(withScale: 0.2, velocity: -1)
+        assertScale("Months")
+        XCTAssertEqual(cards.value as? String, "Page 1 of 2")
+        let dates = timeline.value as? String
+        cards.swipeLeft()
+        XCTAssertEqual(cards.value as? String, "Page 2 of 2")
+        XCTAssertNotEqual(timeline.value as? String, dates)
+        XCTAssertTrue((timeline.value as? String)?.hasPrefix("Months view,") == true)
+        timeline.pinch(withScale: 5, velocity: 2)
+        assertScale("Weeks")
+        timeline.pinch(withScale: 8, velocity: 2)
+        assertScale("Days")
+        handle.tap()
+        XCTAssertEqual(handle.value as? String, "Compact")
+        if app.buttons["scrollToToday"].exists { app.buttons["scrollToToday"].tap() }
+        for name in names {
+            let title = app.staticTexts[name].firstMatch
+            if !title.isHittable { app.swipeUp() }
+            XCTAssertTrue(title.waitForExistence(timeout: 5))
+            title.tap()
+            app.buttons["Delete Event"].tap()
+            app.alerts["Delete Event"].buttons["Delete this event"].tap()
+        }
+    }
+
+    func testComposerCollapsesOnSwipeAndOutsideTapAndRetainsItsDraft() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Dinner #Work tomorrow")
+        app.buttons["quickEventCategory"].tap()
+        app.collectionViews.buttons["Social"].tap()
+        XCTAssertTrue(input.exists)
+        XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Composer with event color beside text"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let fieldCenter = input.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        fieldCenter.press(forDuration: 0.05, thenDragTo: fieldCenter.withOffset(CGVector(dx: 0, dy: 120)))
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
+        openComposer(app)
+        XCTAssertEqual(input.value as? String, "Dinner #Work tomorrow")
+        XCTAssertEqual(app.buttons["quickEventCategory"].value as? String, "Social")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+        XCTAssertTrue(app.buttons["quickAddButton"].waitForExistence(timeout: 5))
+        XCTAssertFalse(input.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+    }
+
     func testComposerParsesPillsAndKeepsQuickEditsInManualForm() {
         continueAfterFailure = false
         let app = XCUIApplication()

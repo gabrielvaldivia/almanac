@@ -45,9 +45,14 @@ final class TimelineContainerView: UIView {
         super.init(frame: frame)
         addSubview(timeline)
         addSubview(cards)
+        timeline.receiveZoomGestures(in: self)
+        cards.panGestureRecognizer.maximumNumberOfTouches = 1
         monthLabel.font = .preferredFont(forTextStyle: .headline)
         monthLabel.adjustsFontForContentSizeCategory = true
         monthLabel.accessibilityTraits = .header
+        monthLabel.accessibilityIdentifier = "timelineScaleHeader"
+        monthLabel.accessibilityCustomActions = timeline.zoomAccessibilityActions
+        monthLabel.accessibilityHint = "Use Actions to show days, weeks, or months."
         addSubview(monthLabel)
         emptyLabel.text = "No events to show"
         emptyLabel.font = .preferredFont(forTextStyle: .body)
@@ -65,7 +70,7 @@ final class TimelineContainerView: UIView {
         cards.onDayPositionChange = { [weak self] day in
             guard let self, self.expanded, !self.synchronizing else { return }
             self.synchronizing = true
-            self.timeline.setDayPosition(day)
+            self.timeline.setCardDayPosition(day)
             self.updateMonth()
             self.synchronizing = false
         }
@@ -114,7 +119,7 @@ final class TimelineContainerView: UIView {
         timeline.bottomOverlayHeight = expanded ? cardHeight : 0
         if expanded, needsInitialCardSync || lastLayoutBounds != bounds {
             synchronizing = true
-            cards.setDayPosition(timeline.dayPosition, animated: false)
+            cards.setDayPosition(timeline.cardDayPosition, animated: false)
             synchronizing = false
         }
         needsInitialCardSync = false
@@ -124,7 +129,15 @@ final class TimelineContainerView: UIView {
     private func updateMonth() {
         let calendar = Calendar.current
         if let date = calendar.date(byAdding: .day, value: Int(floor(timeline.dayPosition)), to: timeline.anchor) {
-            monthLabel.text = date.formatted(.dateTime.month(.wide).year())
+            let lastDay = Int(ceil(timeline.dayPosition + timeline.bounds.width / timeline.pointsPerDay)) - 1
+            let last = calendar.date(byAdding: .day, value: lastDay, to: timeline.anchor) ?? date
+            if timeline.zoomLevel == .days || calendar.isDate(date, equalTo: last, toGranularity: .month) {
+                monthLabel.text = date.formatted(.dateTime.month(.wide).year())
+            } else if calendar.isDate(date, equalTo: last, toGranularity: .year) {
+                monthLabel.text = "\(date.formatted(.dateTime.month(.abbreviated))) – \(last.formatted(.dateTime.month(.abbreviated).year()))"
+            } else {
+                monthLabel.text = "\(date.formatted(.dateTime.month(.abbreviated).year())) – \(last.formatted(.dateTime.month(.abbreviated).year()))"
+            }
         }
     }
 }
