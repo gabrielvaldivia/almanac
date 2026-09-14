@@ -12,8 +12,12 @@ Start with small, low-risk fixes that remove a freeze or unintended edits (F17, 
 
 ### 1. F17 — Large-series edit performance
 
-Replaced one full-array scan per occurrence with an ID lookup built once. The existing update semantics and ordering are unchanged. Added a maximum-size series test covering IDs, dates, occurrence indices, exception flags, and an unrelated interleaved event. All 18 targeted Release tests passed. The 10,000-occurrence edit measured 33 ms versus 4.35 s in the audit (simulator measurements). The signed device build passed. Push/install/launch are verified separately in this change's tool results before the next fix starts.
+Replaced one full-array scan per occurrence with an ID lookup built once. The existing update semantics and ordering are unchanged. Added a maximum-size series test covering IDs, dates, occurrence indices, exception flags, and an unrelated interleaved event. All 18 targeted Release tests passed. The 10,000-occurrence edit measured 33 ms versus 4.35 s in the audit (simulator measurements). The signed device build passed. Pushed as `9722e14` and installed on the phone. Automatic launch was blocked by the phone being locked.
+
+### 2. F15 — Canceling category creation
+
+The full editor now keeps its category selection until a new category is actually saved. A UI regression verifies Cancel → Save → relaunch retains Work; the existing category-creation flow also passed. Signed phone build passed.
 
 ## Remaining
 
-F01–F16 and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F01–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

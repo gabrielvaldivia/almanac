@@ -18,15 +18,17 @@ final class EventFlowTests: XCTestCase {
         return app
     }
 
-    private func seedEvents(_ events: [(String, Int)], in app: XCUIApplication) throws {
+    private func seedEvents(_ events: [(String, Int)], category: String? = nil, in app: XCUIApplication) throws {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let formatter = ISO8601DateFormatter()
         let fixtures: [[String: Any]] = events.map { name, offset in
-            ["id": UUID().uuidString, "title": name,
+            var fixture: [String: Any] = ["id": UUID().uuidString, "title": name,
              "date": formatter.string(from: calendar.date(byAdding: .day, value: offset, to: today)!),
              "color": ["red": 0.0, "green": 0.5, "blue": 1.0, "opacity": 1.0],
              "notificationsEnabled": false, "calendarSchemaVersion": 1]
+            if let category { fixture["category"] = category }
+            return fixture
         }
         app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"] = String(
             decoding: try JSONSerialization.data(withJSONObject: fixtures), as: UTF8.self)
@@ -990,5 +992,25 @@ final class EventFlowTests: XCTestCase {
         app.buttons["Delete Event"].tap()
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
         XCTAssertTrue(app.staticTexts[renamed].waitForNonExistence(timeout: 5))
+    }
+
+    func testCancelingNewCategoryPreservesTheFullEditorsExistingSelection() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        let title = "Category cancellation"
+        try seedEvents([(title, 0)], category: "Work", in: app)
+        app.launch()
+        let row = app.scrollViews["eventList"].staticTexts[title]
+        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        app.buttons["Work"].tap()
+        app.buttons["Add Category"].tap()
+        XCTAssertTrue(app.navigationBars["Add Category"].waitForExistence(timeout: 5))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["Work"].waitForExistence(timeout: 5))
+        app.navigationBars["Edit Event"].buttons["Save"].tap()
+        app.terminate(); app.launch()
+        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        XCTAssertTrue(app.buttons["Work"].waitForExistence(timeout: 5), "Canceling category creation must not remove Work when the event is saved")
     }
 }

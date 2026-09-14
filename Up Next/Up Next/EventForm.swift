@@ -233,7 +233,6 @@ struct CategoryAndColorSection: View {
                     }
                     Button(action: {
                         showingAddCategorySheet = true
-                        categoryOptions.selectedCategory = nil
                     }) {
                         HStack {
                             Text("Add Category")
