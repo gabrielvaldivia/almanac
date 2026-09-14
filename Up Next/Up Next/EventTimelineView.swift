@@ -175,25 +175,14 @@ struct EventTimelineView: UIViewRepresentable, Animatable {
 
 final class TimelineCanvasView: UIView {
     let timeline = TimelineScrollView()
-    private let monthLabel = UILabel()
-    private var progress: CGFloat = 0
     var onPositionChange: ((CGFloat, Date) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         addSubview(timeline)
         timeline.receiveZoomGestures(in: self)
-        monthLabel.font = .preferredFont(forTextStyle: .headline)
-        monthLabel.adjustsFontForContentSizeCategory = true
-        monthLabel.numberOfLines = 0
-        monthLabel.accessibilityTraits = .header
-        monthLabel.accessibilityIdentifier = "timelineScaleHeader"
-        monthLabel.accessibilityCustomActions = timeline.zoomAccessibilityActions
-        monthLabel.accessibilityHint = "Use Actions to show days, weeks, or months."
-        addSubview(monthLabel)
         timeline.onScrollPositionChange = { [weak self] day in
             guard let self else { return }
-            self.updateMonth()
             self.onPositionChange?(day, self.timeline.anchor)
         }
     }
@@ -201,9 +190,6 @@ final class TimelineCanvasView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func update(events: [Event], expanded: Bool, progress: CGFloat, highlightedEventID: UUID?) {
-        self.progress = progress
-        monthLabel.isHidden = progress == 0
-        monthLabel.alpha = progress
         timeline.setExpanded(expanded)
         timeline.expansionProgress = progress
         timeline.update(events: events)
@@ -213,25 +199,7 @@ final class TimelineCanvasView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        updateMonth()
-        let labelWidth = max(0, bounds.width - 32)
-        let header = (ceil(monthLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude)).height) + 12) * progress
-        monthLabel.frame = CGRect(x: 16, y: 0, width: labelWidth, height: header)
-        timeline.frame = CGRect(x: 0, y: header, width: bounds.width, height: max(0, bounds.height - header))
-        updateMonth()
-    }
-
-    private func updateMonth() {
-        let calendar = Calendar.current
-        guard let first = calendar.date(byAdding: .day, value: Int(floor(timeline.dayPosition)), to: timeline.anchor) else { return }
-        let lastDay = Int(ceil(timeline.dayPosition + timeline.bounds.width / timeline.pointsPerDay)) - 1
-        let last = calendar.date(byAdding: .day, value: lastDay, to: timeline.anchor) ?? first
-        let text = TimelineHeading.text(first: first, last: last, calendar: calendar)
-        if monthLabel.text != text {
-            monthLabel.text = text
-            setNeedsLayout()
-        }
-        monthLabel.accessibilityLabel = "\(first.formatted(.dateTime.month(.wide).year())) – \(last.formatted(.dateTime.month(.wide).year()))"
+        timeline.frame = bounds
     }
 }
 
@@ -315,6 +283,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         scrollsToTop = false
         backgroundColor = .clear
         accessibilityIdentifier = "eventTimeline"
+        accessibilityCustomActions = zoomAccessibilityActions
         contentSize = CGSize(width: scrollWindow.contentWidth, height: 1)
         contentOffset.x = scrollWindow.initialOffset
         panGestureRecognizer.maximumNumberOfTouches = 1
@@ -335,7 +304,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func receiveZoomGestures(in view: UIView) {
-        // Recognize pinches across the month heading and the calendar axis.
+        // Recognize pinches across the full timeline surface.
         view.addGestureRecognizer(zoomGesture)
     }
 

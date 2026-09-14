@@ -37,7 +37,7 @@ struct ContentView: View {
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
     @State private var eventSheetSize: EventSheetSize = .large
-    @ScaledMetric(relativeTo: .headline) private var sheetMonthHeadingHeight: CGFloat = 31
+    @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
     @State private var lastTimelineSheetDate: Date?
     @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
@@ -69,8 +69,14 @@ struct ContentView: View {
         return formatter
     }()
 
-    private func sheetMonthHeading(for date: Date) -> String {
-        TimelineHeading.text(first: date, last: date)
+    private var timelineTitle: String {
+        TimelineHeading.text(first: timelineMonth, last: timelineMonth)
+    }
+
+    private var compactTimelineTitle: String {
+        Calendar.current.isDate(timelineMonth, equalTo: Date(), toGranularity: .year)
+            ? timelineMonth.formatted(.dateTime.month(.abbreviated))
+            : timelineMonth.formatted(.dateTime.month(.abbreviated).year())
     }
 
     private var simplifiedCategories: [(name: String, color: Color)] {
@@ -157,11 +163,17 @@ struct ContentView: View {
                     expanded: eventSheetSize == .small, expansionProgress: progress,
                     onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
                     onPositionChange: { day, anchor in
-                        guard let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date)),
-                              date != lastTimelineSheetDate else { return }
+                        let calendar = Calendar.current
+                        guard let focusedDate = calendar.date(byAdding: .day, value: Int(floor(day)), to: anchor),
+                              let month = calendar.dateInterval(of: .month, for: focusedDate)?.start else { return }
+                        let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date))
+                        guard month != timelineMonth || (date != nil && date != lastTimelineSheetDate) else { return }
                         DispatchQueue.main.async {
-                            lastTimelineSheetDate = date
-                            eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+                            timelineMonth = month
+                            if let date, date != lastTimelineSheetDate {
+                                lastTimelineSheetDate = date
+                                eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+                            }
                         }
                     }
                 )
@@ -170,7 +182,7 @@ struct ContentView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(Color(uiColor: .systemBackground))
 
-                eventSheet(days: days, heights: heights, expansionProgress: progress)
+                eventSheet(days: days, heights: heights)
                     .frame(height: sheetHeight, alignment: .top)
                     .background(Color(uiColor: .secondarySystemBackground))
                     .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
@@ -192,11 +204,16 @@ struct ContentView: View {
                 }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
             }
         }
-        .navigationTitle("Almanac")
+        .navigationTitle(timelineTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Almanac").font(.headline)
+                ViewThatFits(in: .horizontal) {
+                    Text(timelineTitle).fixedSize()
+                    Text(compactTimelineTitle).fixedSize()
+                }
+                    .font(.headline)
+                    .lineLimit(1)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: dismissQuickEntry)
@@ -254,7 +271,7 @@ struct ContentView: View {
         }
     }
 
-    private func eventSheet(days: [EventListDay], heights: EventSheetHeights, expansionProgress: CGFloat) -> some View {
+    private func eventSheet(days: [EventListDay], heights: EventSheetHeights) -> some View {
         VStack(spacing: 0) {
             Button { setEventSheetSize(eventSheetSize == .large ? .small : .large) } label: {
                 Capsule().fill(.tertiary).frame(width: 28, height: 4)
@@ -285,19 +302,17 @@ struct ContentView: View {
                     }
             )
 
+            Text("Up Next")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal).padding(.bottom, 10)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("eventSheetTitle")
+
             if days.isEmpty {
                 emptyStateView(selectedCategoryFilter: selectedCategoryFilter)
             } else {
-                Text(sheetMonthHeading(for: eventListPosition ?? EventListDay.initialDate(in: days) ?? Date()))
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal).padding(.bottom, 10)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(height: sheetMonthHeadingHeight * (1 - expansionProgress), alignment: .top)
-                    .clipped()
-                    .opacity(1 - expansionProgress)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityHidden(expansionProgress == 1)
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
