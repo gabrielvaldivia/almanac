@@ -141,6 +141,63 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(parse("Dinner in 3 days")?.date, date(2026, 9, 16))
     }
 
+    func testThisAndNextWeekdayUseTheSpecifiedCalendarWeek() {
+        for firstWeekday in [1, 2] {
+            var calendar = calendar
+            calendar.firstWeekday = firstWeekday
+            // The same Monday belongs to Sep 13–19 or Sep 14–20, depending
+            // on the user's first weekday. Check every day within both weeks.
+            let weekStart = firstWeekday == 1 ? 13 : 14
+            let weekdayNames = firstWeekday == 1
+                ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+                : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            for currentDay in weekStart..<(weekStart + 7) {
+                for (index, weekday) in weekdayNames.enumerated() {
+                    for (prefix, targetDay) in [("this", weekStart + index), ("next", weekStart + index + 7),
+                                                ("this next", weekStart + index + 7)] {
+                        let input = "Dinner \(prefix) \(weekday)"
+                        XCTAssertEqual(QuickEventParser.parse(input, now: date(2026, 9, currentDay, hour: 14), calendar: calendar),
+                                       ParsedEventInput(title: "Dinner", date: date(2026, 9, targetDay)), input)
+                    }
+                }
+            }
+        }
+    }
+
+    func testRequestedNextFridayPhraseUpdatesTheComposerAndSavedDate() {
+        let now = date(2026, 9, 14, hour: 9)
+        let title = "Brian and Jeff upstate"
+        let data = AppData()
+        for phrase in ["next friday", "this next Friday", "NEXT FRI"] {
+            let draft = QuickEventOverrides().resolve("\(title) \(phrase)", category: nil, appData: data,
+                                                      now: now, calendar: calendar)
+            XCTAssertEqual(draft.title, title)
+            XCTAssertEqual(draft.dateOptions.date, date(2026, 9, 25))
+            XCTAssertFalse(draft.requiresScheduleReview)
+            let saved = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,
+                                              category: draft.categoryOptions, calendar: calendar)
+            XCTAssertEqual(saved.first?.date, date(2026, 9, 25))
+        }
+        XCTAssertEqual(parse("\(title) this Friday", now: now), ParsedEventInput(title: title, date: date(2026, 9, 18)))
+        XCTAssertEqual(parse("\(title) Friday", now: now), ParsedEventInput(title: title, date: date(2026, 9, 18)))
+    }
+
+    func testQualifiedWeekdaysAndRangesCrossMonthYearAndDaylightSavingBoundaries() {
+        XCTAssertEqual(parse("Dinner next Friday", now: date(2026, 12, 30))?.date, date(2027, 1, 8))
+        XCTAssertEqual(parse("Dinner this Friday", now: date(2026, 12, 30))?.date, date(2027, 1, 1))
+        XCTAssertEqual(parse("Dinner next Friday", now: date(2026, 3, 4))?.date, date(2026, 3, 13))
+        XCTAssertEqual(parse("Dinner next Friday", now: date(2026, 10, 28))?.date, date(2026, 11, 6))
+        let now = date(2026, 9, 14)
+        for phrase in ["next Friday to Monday", "from this next Friday through Monday"] {
+            XCTAssertEqual(parse("Trip \(phrase)", now: now),
+                           ParsedEventInput(title: "Trip", date: date(2026, 9, 25), endDate: date(2026, 9, 28)))
+        }
+        XCTAssertEqual(parse("Trip this Friday to next Friday", now: now),
+                       ParsedEventInput(title: "Trip", date: date(2026, 9, 18), endDate: date(2026, 9, 25)))
+        XCTAssertNil(parse("Trip next Friday to this Friday", now: now), "Explicit weeks must not silently roll forward")
+        XCTAssertNil(parse("Trip this Friday to", now: now))
+    }
+
     func testTomorrowAcrossDaylightSavingAndNewYear() {
         XCTAssertEqual(parse("Dinner tomorrow", now: date(2026, 3, 8, hour: 1))?.date, date(2026, 3, 9))
         XCTAssertEqual(parse("Dinner tomorrow", now: date(2026, 12, 31, hour: 23))?.date, date(2027, 1, 1))

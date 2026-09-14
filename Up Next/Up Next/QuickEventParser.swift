@@ -37,7 +37,7 @@ enum QuickEventParser {
 
     // Match the complete range before considering a trailing single date. Once a
     // range has started, incomplete/invalid endpoints must never become one day.
-    private static let rangeStartPattern = #"(?:^|\s)(?:from\s+)?((?:next\s+)?(?:sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)|today|tomorrow|tonight|in\s+\d{1,3}\s+(?:days?|weeks?)|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}(?:/(?:\d{4}|\d{2}))?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:,?\s+\d{4})?)\s*(?:(?:to|through|until)\b|[–—-])\s*([\s\S]*)$"#
+    private static let rangeStartPattern = #"(?:^|\s)(?:from\s+)?((?:(?:this\s+next|next|this)\s+)?(?:sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)|today|tomorrow|tonight|in\s+\d{1,3}\s+(?:days?|weeks?)|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}(?:/(?:\d{4}|\d{2}))?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:,?\s+\d{4})?)\s*(?:(?:to|through|until)\b|[–—-])\s*([\s\S]*)$"#
 
     static func containsDateRange(_ text: String) -> Bool { match(rangeStartPattern, in: text) != nil }
 
@@ -57,8 +57,9 @@ enum QuickEventParser {
                            year: calendar.component(.year, from: start), today: start, calendar: calendar)
         } else {
             // An omitted year/weekday belongs after the start (Dec 30–Jan 2).
-            // Relative dates like "tomorrow" still refer to the user's today.
-            let relative = match(#"^(?:today|tomorrow|tonight|in\s+)"#, in: endPhrase) != nil
+            // Explicit relative dates/weeks still refer to the user's today;
+            // only bare weekdays inherit the start date's forward context.
+            let relative = match(#"^(?:today|tomorrow|tonight|in\s+|(?:this|next)\s+)"#, in: endPhrase) != nil
             end = datePhrase(endPhrase, now: relative ? now : start, calendar: calendar)
         }
         guard let end, end >= start else { return nil }
@@ -88,11 +89,18 @@ enum QuickEventParser {
             let days = count * (match.groups[1].lowercased().hasPrefix("week") ? 7 : 1)
             return result(match, date: calendar.date(byAdding: .day, value: days, to: today))
         }
-        if let match = match(#"(?:^|\s)(?:next\s+)?(sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)$"#, in: text) {
-            let weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-            guard let index = weekdays.firstIndex(of: String(match.groups[0].lowercased().prefix(3))) else { return nil }
+        if let match = match(#"(?:^|\s)(?:(this\s+next|next|this)\s+)?(sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)$"#, in: text) {
+            guard let index = weekdays.firstIndex(of: String(match.groups[1].lowercased().prefix(3))) else { return nil }
+            let modifier = match.groups[0].lowercased()
+            if !modifier.isEmpty {
+                // "This" and "next" name calendar weeks, even when the
+                // requested weekday has already passed in the current week.
+                guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start else { return nil }
+                let offset = (index + 1 - calendar.firstWeekday + 7) % 7 + (modifier.hasSuffix("next") ? 7 : 0)
+                return result(match, date: calendar.date(byAdding: .day, value: offset, to: weekStart))
+            }
             let offset = (index + 1 - calendar.component(.weekday, from: today) + 7) % 7
-            // A weekday means the next such day, including next week if today matches.
+            // An unqualified weekday keeps meaning its next occurrence.
             return result(match, date: calendar.date(byAdding: .day, value: offset == 0 ? 7 : offset, to: today))
         }
         if let match = match(#"(?:^|\s)(\d{1,2})/(\d{1,2})(?:/(\d{4}|\d{2}))?$"#, in: text) {
