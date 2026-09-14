@@ -4,7 +4,7 @@ import UIKit
 final class EventFlowTests: XCTestCase {
     func testAutomaticTimelineAndPlainListStaySynchronizedWithoutSheetResizing() {
         continueAfterFailure = false
-        executionTimeAllowance = 240 // Create and remove enough rows to scroll the full-height list.
+        executionTimeAllowance = 480 // Cold CI runners must create and remove 12 rows through the UI.
         let app = XCUIApplication()
         app.launch()
         let prefix = "Timeline \(UUID().uuidString.prefix(6))"
@@ -16,7 +16,17 @@ final class EventFlowTests: XCTestCase {
         for (name, offset) in zip(names, offsets) {
             openComposer(app)
             let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
-            input.typeText("\(name) \(offset == 0 ? "today" : "in \(offset) days")")
+            let text = "\(name) \(offset == 0 ? "today" : "in \(offset) days")"
+            // Let the empty composer's first text update settle before sending
+            // the rest of the fixture. A cold CI keyboard previously accepted
+            // only "T", and the test submitted that incomplete value unnoticed.
+            let firstCharacter = String(text.prefix(1))
+            input.typeText(firstCharacter)
+            let started = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", firstCharacter), object: input)
+            XCTAssertEqual(XCTWaiter.wait(for: [started], timeout: 5), .completed)
+            input.typeText(String(text.dropFirst()))
+            let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", text), object: input)
+            XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 5), .completed, "The complete fixture must be entered before submitting")
             app.buttons["quickAddSubmit"].tap()
         }
         let list = app.scrollViews["eventList"]
