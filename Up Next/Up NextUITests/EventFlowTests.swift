@@ -85,11 +85,11 @@ final class EventFlowTests: XCTestCase {
         XCTAssertFalse(app.buttons["eventSheetResizeHandle"].exists)
         let timeline = app.scrollViews["eventTimeline"]
         waitForTimelineLayout(timeline)
-        func assertScale(_ scale: String, file: StaticString = #filePath, line: UInt = #line) {
+        func assertScale(_ scale: String, yearHeading: Bool = true, file: StaticString = #filePath, line: UInt = #line) {
             let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "\(scale) view,"), object: timeline)
             XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 5), .completed, file: file, line: line)
             XCTAssertFalse(app.staticTexts["eventSheetTitle"].exists, file: file, line: line)
-            XCTAssertEqual(monthTitle.label, scale == "Days" ? Date().formatted(.dateTime.month(.wide)) : Date().formatted(.dateTime.year()),
+            XCTAssertEqual(monthTitle.label, scale == "Days" || !yearHeading ? Date().formatted(.dateTime.month(.wide)) : Date().formatted(.dateTime.year()),
                            file: file, line: line)
             waitForTimelineLayout(timeline)
             let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -101,7 +101,8 @@ final class EventFlowTests: XCTestCase {
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
         timeline.pinch(withScale: 5, velocity: 2)
-        assertScale("Weeks")
+        // This intermediate weekly view fits fewer than eight weeks.
+        assertScale("Weeks", yearHeading: false)
         timeline.pinch(withScale: 8, velocity: 2)
         assertScale("Days")
         timeline.pinch(withScale: 0.15, velocity: -1)

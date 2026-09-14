@@ -140,11 +140,11 @@ final class TimelineTests: XCTestCase {
         let crossYear = TimelineHeading.text(first: first, last: nextYear, today: anchor, calendar: calendar)
         XCTAssertTrue(crossYear.contains("2026"))
         XCTAssertTrue(crossYear.contains("2027"))
-        for visibleDays: CGFloat in [14, 21, 31, 42] {
+        for visibleDays: CGFloat in [14, 21, 31, 42, 43, 49, 56] {
             XCTAssertEqual(TimelineHeading.text(first: first, last: first, today: anchor, calendar: calendar,
                                                yearOnly: TimelineHeading.showsYear(visibleDayCount: visibleDays)), "July")
         }
-        for visibleDays: CGFloat in [43, 90, 270] {
+        for visibleDays: CGFloat in [57, 90, 270] {
             let yearOnly = TimelineHeading.showsYear(visibleDayCount: visibleDays)
             XCTAssertEqual(TimelineHeading.text(first: first, last: last, yearOnly: yearOnly), "2026")
             XCTAssertEqual(TimelineHeading.text(first: nextYear, last: nextYear, yearOnly: yearOnly), "2027")

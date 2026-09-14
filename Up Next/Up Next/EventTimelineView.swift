@@ -155,9 +155,9 @@ struct TimelineAxisPeriod {
     }
 }
 
-/// Keep month context while roughly a month fits, even after ticks switch to weeks.
+/// Keep month context through weekly ranges; reserve years for wider overviews.
 enum TimelineHeading {
-    static func showsYear(visibleDayCount: CGFloat) -> Bool { visibleDayCount > 42 }
+    static func showsYear(visibleDayCount: CGFloat) -> Bool { visibleDayCount > 56 }
 
     static func text(first: Date, last: Date, today: Date = Date(), calendar: Calendar = .current,
                      yearOnly: Bool = false) -> String {
