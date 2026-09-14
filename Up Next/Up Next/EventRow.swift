@@ -23,6 +23,10 @@ struct EventRow: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appData: AppData
 
+    static func backgroundShape(for eventStyle: String) -> RoundedRectangle {
+        RoundedRectangle(cornerRadius: eventStyle == "bubbly" ? 24 : 8)
+    }
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "E, MMM d"
@@ -77,7 +81,7 @@ struct EventRow: View {
                 ? Color.clear
                 : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
         )
-        .cornerRadius(appData.eventStyle == "bubbly" ? 24 : 8)
+        .clipShape(Self.backgroundShape(for: appData.eventStyle))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

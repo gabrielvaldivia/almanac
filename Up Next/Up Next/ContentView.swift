@@ -459,11 +459,11 @@ struct ContentView: View {
                         categories: simplifiedCategories
                     )
                     .background {
-                        RoundedRectangle(cornerRadius: 8)
+                        EventRow.backgroundShape(for: appData.eventStyle)
                             .fill(event.color.color.opacity(highlightedEventID == event.id ? 0.18 : 0))
                     }
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8)
+                        EventRow.backgroundShape(for: appData.eventStyle)
                             .strokeBorder(event.color.color, lineWidth: 2)
                             .opacity(highlightedEventID == event.id ? 1 : 0)
                             .allowsHitTesting(false)
