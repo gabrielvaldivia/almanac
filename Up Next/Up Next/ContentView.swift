@@ -217,7 +217,7 @@ struct ContentView: View {
                 settingsButton
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if !timelineShowsToday || isListAwayFromToday(in: days) {
+                if !timelineShowsToday {
                     todayButton
                 }
             }
@@ -346,11 +346,6 @@ struct ContentView: View {
         .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")
-    }
-
-    private func isListAwayFromToday(in days: [EventListDay]) -> Bool {
-        guard let eventListPosition, let todayPosition = EventListDay.initialDate(in: days) else { return false }
-        return eventListPosition != todayPosition
     }
 
     private func scrollToToday() {
