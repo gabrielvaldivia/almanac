@@ -9,8 +9,8 @@ VoiceOver users can choose either size from the handle's Actions.
 Horizontal timeline scrolling moves the sheet to the nearest event day. Both
 sizes retain the same vertical list and scroll position, including same-day
 stacks. Tap an event row to edit it; tapping its timeline marker highlights and
-reveals that row with haptic feedback. The month and relative day labels remain
-sticky. Visible-row tracking never issues a scroll command, avoiding feedback
+reveals that row with haptic feedback. The month heading stays sticky in the Large sheet and fades out, collapsing its
+space as the sheet is pulled down. Relative day labels remain sticky in both sizes. Visible-row tracking never issues a scroll command, avoiding feedback
 and flicker while the sheet resizes.
 
 With the Small sheet, pinch to move continuously between linear days, weeks,

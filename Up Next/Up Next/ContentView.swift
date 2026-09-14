@@ -37,6 +37,7 @@ struct ContentView: View {
     @State private var eventListPosition: Date?
     @State private var timelineShowsToday = true
     @State private var eventSheetSize: EventSheetSize = .large
+    @ScaledMetric(relativeTo: .headline) private var sheetMonthHeadingHeight: CGFloat = 31
     @State private var eventSheetScrollRequest: EventSheetScrollRequest?
     @State private var lastTimelineSheetDate: Date?
     @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
@@ -171,7 +172,7 @@ struct ContentView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .background(Color(uiColor: .systemBackground))
 
-                eventSheet(days: days, heights: heights)
+                eventSheet(days: days, heights: heights, expansionProgress: progress)
                     .frame(height: sheetHeight, alignment: .top)
                     .background(Color(uiColor: .secondarySystemBackground))
                     .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
@@ -255,7 +256,7 @@ struct ContentView: View {
         }
     }
 
-    private func eventSheet(days: [EventListDay], heights: EventSheetHeights) -> some View {
+    private func eventSheet(days: [EventListDay], heights: EventSheetHeights, expansionProgress: CGFloat) -> some View {
         VStack(spacing: 0) {
             Button { setEventSheetSize(eventSheetSize == .large ? .small : .large) } label: {
                 Capsule().fill(.tertiary).frame(width: 28, height: 4)
@@ -293,7 +294,12 @@ struct ContentView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal).padding(.bottom, 10)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(height: sheetMonthHeadingHeight * (1 - expansionProgress), alignment: .top)
+                    .clipped()
+                    .opacity(1 - expansionProgress)
                     .accessibilityAddTraits(.isHeader)
+                    .accessibilityHidden(expansionProgress == 1)
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
