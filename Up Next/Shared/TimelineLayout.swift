@@ -52,6 +52,6 @@ struct TimelineLayout {
     }
 
     static func height(for laneCount: Int) -> CGFloat {
-        48 + CGFloat(laneCount) * 28 + 8
+        48 + CGFloat(laneCount) * 28
     }
 }

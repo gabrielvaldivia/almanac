@@ -54,8 +54,8 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(quiet.laneCount, 1)
         XCTAssertEqual(quiet.placements.first?.lane, 0)
         XCTAssertEqual(empty.laneCount, 0)
-        XCTAssertEqual(TimelineLayout.height(for: crowded.laneCount), 140)
-        XCTAssertEqual(TimelineLayout.height(for: empty.laneCount), 56)
+        XCTAssertEqual(TimelineLayout.height(for: crowded.laneCount), 132)
+        XCTAssertEqual(TimelineLayout.height(for: empty.laneCount), 48)
     }
 
     func testOverlappingChainsReuseLanesWithoutCollisions() {

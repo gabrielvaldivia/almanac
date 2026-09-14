@@ -37,6 +37,12 @@ struct EventTimelineView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var laneCount = 0
     @State private var isCollapsed = false
+    @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.3, dampingFraction: 0.9)))
+    private var handleDrag: TimelineHandleDrag?
+
+    private let topPadding: CGFloat = 4
+    private var expandedHeight: CGFloat { TimelineLayout.height(for: laneCount) + topPadding }
+    private var visibleHeight: CGFloat { handleDrag?.height ?? (isCollapsed ? 0 : expandedHeight) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,12 +56,12 @@ struct EventTimelineView: View {
                 onLaneCountChange: { laneCount = $0 },
                 onCollapse: setCollapsed
             )
-            .frame(height: isCollapsed ? 0 : TimelineLayout.height(for: laneCount))
-            .padding(.top, isCollapsed ? 0 : 16)
+            .frame(height: (handleDrag?.expandedHeight ?? expandedHeight) - topPadding)
+            .padding(.top, topPadding)
+            .frame(height: visibleHeight, alignment: .top)
             .clipped()
-            .opacity(isCollapsed ? 0 : 1)
-            .allowsHitTesting(!isCollapsed)
-            .accessibilityHidden(isCollapsed)
+            .allowsHitTesting(!isCollapsed && handleDrag == nil)
+            .accessibilityHidden(isCollapsed && handleDrag == nil)
 
             Button {
                 setCollapsed(!isCollapsed)
@@ -69,26 +75,53 @@ struct EventTimelineView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isCollapsed ? "Show timeline" : "Hide timeline")
-            .accessibilityHint(isCollapsed ? "Swipe down to reveal the timeline" : "Swipe up to hide the timeline")
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 20).onEnded { value in
-                    guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                    setCollapsed(value.translation.height < 0)
-                }
-            )
+            .accessibilityHint(isCollapsed ? "Tap or drag down to reveal the timeline" : "Tap or drag up to hide the timeline")
+            .accessibilityIdentifier("timelineResizeHandle")
+            .highPriorityGesture(handleGesture)
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: laneCount)
+        .transaction { transaction in
+            // Resizing tracks the finger directly. Only release/tap transitions animate.
+            if handleDrag != nil || reduceMotion { transaction.animation = nil }
+        }
         .onChange(of: scrollToTodayRequest) {
             setCollapsed(false)
         }
     }
 
+    private var handleGesture: some Gesture {
+        // Global coordinates keep translation stable as the handle itself moves.
+        DragGesture(minimumDistance: 4, coordinateSpace: .global)
+            .updating($handleDrag) { value, state, transaction in
+                if state == nil {
+                    guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                    state = TimelineHandleDrag(expandedHeight: expandedHeight,
+                                               startHeight: isCollapsed ? 0 : expandedHeight)
+                }
+                state?.translation = value.translation.height
+                transaction.animation = nil
+            }
+            .onEnded { value in
+                guard let handleDrag else { return }
+                let projectedHeight = handleDrag.startHeight + value.predictedEndTranslation.height
+                setCollapsed(projectedHeight < handleDrag.expandedHeight / 2)
+            }
+    }
+
     private func setCollapsed(_ collapsed: Bool) {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9)) {
             isCollapsed = collapsed
         }
     }
+}
+
+private struct TimelineHandleDrag {
+    let expandedHeight: CGFloat
+    let startHeight: CGFloat
+    var translation: CGFloat = 0
+
+    var height: CGFloat { min(expandedHeight, max(0, startHeight + translation)) }
 }
 
 private struct TimelineScroller: UIViewRepresentable {
