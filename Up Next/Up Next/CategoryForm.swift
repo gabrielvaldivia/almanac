@@ -126,7 +126,9 @@ struct CategoryForm: View {
                 }
             }
             .padding()
-            .background(Color(UIColor.systemGroupedBackground))
+            .background {
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            }
 
             .navigationTitle(isEditing ? "Edit Category" : "Add Category")
             .navigationBarTitleDisplayMode(.inline)
@@ -156,7 +158,7 @@ struct CategoryForm: View {
                 }
             }
         }
-        .background(Color(UIColor.secondarySystemBackground))
+        .presentationBackground(Color(uiColor: .systemGroupedBackground))
         .tint(categoryColor)
 
         .sheet(isPresented: $showColorPickerSheet) {
