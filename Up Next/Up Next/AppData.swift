@@ -296,13 +296,17 @@ class AppData: NSObject, ObservableObject {
     }
 
     // Function to update events when a category is edited
-    func updateEventsForCategoryChange(oldName: String, newName: String, newColor: Color) {
+    func updateEventsForCategoryChange(oldName: String, newName: String, oldColor: Color, newColor: Color) {
         if defaultCategory == oldName { defaultCategory = newName }
+        let previousColor = CodableColor(color: oldColor)
+        let updatedColor = CodableColor(color: newColor)
         var eventsUpdated = false
         for i in 0..<events.count {
             if events[i].category == oldName {
                 events[i].category = newName
-                events[i].color = CodableColor(color: newColor)
+                if previousColor != updatedColor && events[i].color == previousColor {
+                    events[i].color = updatedColor
+                }
                 eventsUpdated = true
             }
         }

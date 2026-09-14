@@ -86,7 +86,7 @@ struct CategoriesView: View {
                             appData.categories[index] = updatedCategory
                             appData.updateEventsForCategoryChange(
                                 oldName: category.name, newName: updatedCategory.name,
-                                newColor: updatedCategory.color)
+                                oldColor: category.color, newColor: updatedCategory.color)
                         }
                         categoryToEdit = nil  // Reset categoryToEdit after saving
                     }

@@ -2,6 +2,44 @@ import XCTest
 @testable import Up_Next
 
 final class StorageTests: XCTestCase {
+    @MainActor
+    private func withIsolatedAppData(_ body: (AppData) throws -> Void) async throws {
+        let defaults = AppPreferences.shared
+        let domain = AppPreferences.uiTestSuiteName ?? "group.UpNextIdentifier"
+        let original = defaults.persistentDomain(forName: domain)
+        defer {
+            if let original { defaults.setPersistentDomain(original, forName: domain) }
+            else { defaults.removePersistentDomain(forName: domain) }
+        }
+        defaults.removePersistentDomain(forName: domain)
+        let data = AppData()
+        let result = Result { try body(data) }
+        await data.waitForNotifications()
+        try result.get()
+    }
+
+    @MainActor
+    func testCategoryMetadataAndColorEditsPreserveEventOverrides() async throws {
+        try await withIsolatedAppData { data in
+            let today = Calendar.current.startOfDay(for: Date())
+            let inherited = Event(title: "Inherited", date: today, color: CodableColor(color: .blue), category: "Work")
+            let overridden = Event(title: "Override", date: today, color: CodableColor(color: .orange), category: "Work")
+            let unrelated = Event(title: "Other", date: today, color: CodableColor(color: .blue), category: "Social")
+            data.events = [inherited, overridden, unrelated]
+            data.defaultCategory = "Work"
+            data.updateEventsForCategoryChange(oldName: "Work", newName: "Work", oldColor: .blue, newColor: .blue)
+            XCTAssertEqual(data.events, [inherited, overridden, unrelated], "Saving unchanged metadata must preserve all event values")
+            data.updateEventsForCategoryChange(oldName: "Work", newName: "Career", oldColor: .blue, newColor: .blue)
+            XCTAssertEqual(data.defaultCategory, "Career")
+            XCTAssertEqual(data.events.map(\.color), [inherited.color, overridden.color, unrelated.color])
+            XCTAssertEqual(data.events.map(\.category), ["Career", "Career", "Social"])
+            data.updateEventsForCategoryChange(oldName: "Career", newName: "Career", oldColor: .blue, newColor: .green)
+            XCTAssertEqual(data.events.map(\.color), [CodableColor(color: .green), overridden.color, unrelated.color])
+            XCTAssertEqual(data.events.map(\.id), [inherited.id, overridden.id, unrelated.id])
+            XCTAssertEqual(try EventStore().load(), data.events, "The preserved overrides must also survive persistence")
+        }
+    }
+
     func testCategoryCodecMigratesNumericDatesAndPreservesUnreadablePayloads() throws {
         let name = "test.categories.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!

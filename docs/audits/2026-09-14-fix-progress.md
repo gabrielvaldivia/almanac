@@ -16,8 +16,12 @@ Replaced one full-array scan per occurrence with an ID lookup built once. The ex
 
 ### 2. F15 — Canceling category creation
 
-The full editor now keeps its category selection until a new category is actually saved. A UI regression verifies Cancel → Save → relaunch retains Work; the existing category-creation flow also passed. Signed phone build passed.
+The full editor now keeps its category selection until a new category is actually saved. A UI regression verifies Cancel → Save → relaunch retains Work; the existing category-creation flow also passed. Signed phone build passed. Pushed as `a920341` and installed on the phone.
+
+### 3. F10 — Category saves preserve color overrides
+
+Category metadata saves and renames retain event colors. Changing a category color updates events matching its previous color while preserving different event colors. A storage regression covers no-op saves, renames, recoloring, unrelated events, defaults, IDs, and persistence. All 110 unit tests and the category rename UI test passed; signed phone build passed.
 
 ## Remaining
 
-F01–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F01–F09, F11–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
