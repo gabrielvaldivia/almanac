@@ -359,7 +359,12 @@ final class TimelineTests: XCTestCase {
                     XCTAssertEqual(viewportFrame(header).width, timeline.bounds.width, accuracy: 0.01)
                     for (label, original) in zip(labels, originalFrames) {
                         XCTAssertFalse(label.isHidden)
-                        XCTAssertEqual(viewportFrame(label), original, "Date labels must stay fixed during vertical scrolling")
+                        let frame = viewportFrame(label)
+                        XCTAssertEqual(frame.minX, original.minX, accuracy: 0.01)
+                        XCTAssertEqual(frame.minY, original.minY, accuracy: 0.01,
+                                       "Date labels must stay fixed during vertical scrolling")
+                        XCTAssertEqual(frame.width, original.width, accuracy: 0.01)
+                        XCTAssertEqual(frame.height, original.height, accuracy: 0.01)
                     }
                     XCTAssertEqual(viewportFrame(marker).minY, markerTop - offset, accuracy: 0.01,
                                    "Events must still scroll underneath the pinned header")
@@ -545,6 +550,13 @@ final class TimelineTests: XCTestCase {
                         timeline.layoutIfNeeded()
                         guard let header = timeline.subviews.first(where: { $0.accessibilityIdentifier == "timelineAxis" }) else {
                             XCTFail("Missing timeline date header"); return
+                        }
+                        if level != .days {
+                            for label in visibleAxisLabels(in: timeline) {
+                                let frame = header.convert(label.bounds, from: label)
+                                XCTAssertEqual(frame.midY, header.bounds.midY, accuracy: 1,
+                                               "Single-row week and month labels need equal top/bottom padding")
+                            }
                         }
                         let markers = timeline.subviews.compactMap { $0 as? UIButton }
                         XCTAssertEqual(markers.count, count)

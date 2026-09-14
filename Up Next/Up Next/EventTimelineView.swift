@@ -599,7 +599,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         // The date header and all visible event lanes determine the timeline's
         // natural height. Give the marker group identical top/bottom padding.
         axisHeight = TimelineAxisTypography.height -
-            (TimelineAxisTypography.firstRowHeight + 4) * weights.weeks
+            (TimelineAxisTypography.firstRowHeight + 4) * (weights.weeks + weights.months)
         let headerHeight = axisHeight + 8
         let height = ceil(headerHeight + markerHeight + 2 * eventVerticalPadding)
         if preferredHeight != height {
@@ -686,8 +686,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                                // Once months take over, their sections replace
                                // the week grid instead of cutting through it.
                                dividerAlpha: level == .weeks ? (weights.level == .months ? 0 : weights.weeks)
-                                   : max(0, weights.months * 2 - 1),
-                               axisHeight: axisHeight)
+                                   : max(0, weights.months * 2 - 1))
                 view.frame = CGRect(x: CGFloat(period.startDay - scrollWindow.firstDay) * pointsPerDay, y: 0,
                                     width: CGFloat(period.endDay - period.startDay) * pointsPerDay, height: headerHeight)
             }
@@ -817,7 +816,9 @@ private final class TimelineDayView: UIView {
         let visible = frame.intersection(viewport).offsetBy(dx: -frame.minX, dy: 0)
         TimelineAxisTypography.place(weekday, in: visible, y: 0, height: TimelineAxisTypography.firstRowHeight,
                                      alpha: showsWeekday ? labelAlpha : 0, centeredAt: bounds.midX)
-        TimelineAxisTypography.place(number, in: visible, y: axisHeight - TimelineAxisTypography.secondRowHeight,
+        let numberY = showsWeekday ? axisHeight - TimelineAxisTypography.secondRowHeight
+            : (bounds.height - TimelineAxisTypography.secondRowHeight) / 2
+        TimelineAxisTypography.place(number, in: visible, y: numberY,
                                      height: TimelineAxisTypography.secondRowHeight, alpha: labelAlpha, centeredAt: bounds.midX,
                                      horizontalPadding: 2)
         let highlightWidth = max(TimelineAxisTypography.secondRowHeight, ceil(number.intrinsicContentSize.width) + 4)
@@ -841,7 +842,6 @@ private final class TimelinePeriodView: UIView {
     private var labelColumnWidth: CGFloat = 0
     private var containsToday = false
     private var labelAlpha: CGFloat = 1
-    private var axisHeight: CGFloat = TimelineAxisTypography.height
     private var rangeText = ""
     private var compactText = ""
 
@@ -859,11 +859,10 @@ private final class TimelinePeriodView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func configure(period: TimelineAxisPeriod, level: TimelineZoomLevel, containsToday: Bool,
-                   labelAlpha: CGFloat, labelColumnWidth: CGFloat, dividerAlpha: CGFloat, axisHeight: CGFloat) {
+                   labelAlpha: CGFloat, labelColumnWidth: CGFloat, dividerAlpha: CGFloat) {
         self.level = level
         self.labelColumnWidth = labelColumnWidth
         self.labelAlpha = labelAlpha
-        self.axisHeight = axisHeight
         label.text = level == .months ? period.title : period.subtitle
         rangeText = period.subtitle
         compactText = period.compactSubtitle
@@ -891,9 +890,10 @@ private final class TimelinePeriodView: UIView {
             // for boundary weeks. Fall back to the numeric start date before text crowds.
             label.text = bounds.width >= ceil(rangeWidth) + 16 ? rangeText : compactText
         }
+        let labelHeight = level == .months ? TimelineAxisTypography.firstRowHeight : TimelineAxisTypography.secondRowHeight
         TimelineAxisTypography.place(label, in: visible,
-                                     y: level == .months ? 0 : axisHeight - TimelineAxisTypography.secondRowHeight,
-                                     height: level == .months ? TimelineAxisTypography.firstRowHeight : TimelineAxisTypography.secondRowHeight,
+                                     y: (bounds.height - labelHeight) / 2,
+                                     height: labelHeight,
                                      alpha: labelAlpha)
         accessibilityElementsHidden = label.isHidden
         divider.frame = CGRect(x: frame.maxX - 0.75, y: grid.minY, width: 0.75, height: grid.height)

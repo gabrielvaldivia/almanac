@@ -100,7 +100,9 @@ final class EventFlowTests: XCTestCase {
         assertScale("Weeks")
         timeline.pinch(withScale: 0.2, velocity: -1)
         assertScale("Months")
-        timeline.pinch(withScale: 5, velocity: 2)
+        // Land clearly inside the month-heading range, allowing for the native
+        // pinch recognizer's scale variation as the timeline changes height.
+        timeline.pinch(withScale: 6.5, velocity: 2)
         // This intermediate weekly view fits fewer than eight weeks.
         assertScale("Weeks", yearHeading: false)
         timeline.pinch(withScale: 8, velocity: 2)
