@@ -421,8 +421,8 @@ final class EventFlowTests: XCTestCase {
         }
         openDates()
         let endpoints = app.segmentedControls["calendarEndpoint"]
-        XCTAssertTrue(endpoints.buttons["Start"].isSelected)
-        XCTAssertTrue(endpoints.buttons["+ End"].exists)
+        XCTAssertFalse(endpoints.exists)
+        XCTAssertTrue(app.buttons["calendarAddEndDate"].isHittable)
         XCTAssertFalse(app.buttons["calendarRemoveEndDate"].exists)
         let calendar = Calendar.current
         let month = calendar.dateInterval(of: .month, for: Date())!.start
@@ -437,19 +437,38 @@ final class EventFlowTests: XCTestCase {
         }
         let lastDay = calendar.range(of: .day, in: .month, for: sixWeekMonth)!.count
         XCTAssertTrue(app.buttons["calendarDay-\(lastDay)"].isHittable, "A six-week month should fit without scrolling")
+        let addEnd = app.buttons["calendarAddEndDate"]
+        XCTAssertTrue(addEnd.isHittable)
+        XCTAssertGreaterThanOrEqual(addEnd.frame.minY, app.buttons["calendarDay-\(lastDay)"].frame.maxY)
         screenshot("Inline calendar with all six weeks visible")
-        for _ in 0..<monthsBack { app.buttons["Next month"].tap() }
+        addEnd.tap()
+        // Adding the segment must leave all six calendar rows and the action visible.
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
+        let endMonth = calendar.dateInterval(of: .month, for: tomorrow)!.start
+        let monthsToSixWeekMonth = calendar.dateComponents([.month], from: sixWeekMonth, to: endMonth).month!
+        for _ in 0..<monthsToSixWeekMonth { app.buttons["Previous month"].tap() }
+        XCTAssertTrue(app.buttons["calendarDay-\(lastDay)"].isHittable)
+        XCTAssertTrue(app.buttons["calendarRemoveEndDate"].isHittable)
+        screenshot("Six-week calendar with range controls and remove action")
+        app.buttons["calendarRemoveEndDate"].tap()
+        // Removing the end returns to the start date's month.
         app.buttons["calendarDay-28"].tap()
         screenshot("Inline calendar with single date")
-        endpoints.buttons["+ End"].tap()
+        app.buttons["calendarAddEndDate"].tap()
         XCTAssertTrue(endpoints.buttons["End"].isSelected)
-        app.buttons["Next month"].tap()
+        XCTAssertFalse(app.buttons["calendarAddEndDate"].exists)
+        let defaultEnd = calendar.date(byAdding: .day, value: 28, to: month)!
+        let defaultEndDay = calendar.component(.day, from: defaultEnd)
+        XCTAssertEqual(app.buttons["calendarDay-\(defaultEndDay)"].value as? String, "End date")
+        if calendar.isDate(defaultEnd, equalTo: month, toGranularity: .month) { app.buttons["Next month"].tap() }
         app.buttons["calendarDay-3"].tap()
         XCTAssertTrue(app.buttons["calendarDay-1"].isSelected)
         XCTAssertTrue(app.buttons["calendarDay-2"].isSelected)
         XCTAssertTrue(app.buttons["calendarDay-3"].isSelected)
         XCTAssertFalse(app.buttons["calendarDay-4"].isSelected)
         screenshot("Inline calendar with range continuing into next month")
+        XCTAssertGreaterThanOrEqual(app.buttons["calendarRemoveEndDate"].frame.minY,
+                                   app.buttons["calendarDay-28"].frame.maxY)
         XCTAssertTrue(endpoints.buttons["End"].isSelected, "Choosing a day keeps the current segment selected")
         endpoints.buttons["Start"].tap()
         XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
@@ -462,12 +481,13 @@ final class EventFlowTests: XCTestCase {
         openDates()
         XCTAssertTrue(app.buttons["calendarRemoveEndDate"].exists)
         app.buttons["calendarRemoveEndDate"].tap()
-        XCTAssertTrue(endpoints.buttons["+ End"].exists)
-        XCTAssertTrue(endpoints.buttons["Start"].isSelected)
+        XCTAssertFalse(endpoints.exists)
+        XCTAssertTrue(app.buttons["calendarAddEndDate"].isHittable)
         XCTAssertFalse(app.buttons["calendarRemoveEndDate"].exists)
         XCTAssertTrue(app.buttons["calendarDay-28"].isSelected)
-        endpoints.buttons["+ End"].tap()
-        app.buttons["Next month"].tap()
+        app.buttons["calendarAddEndDate"].tap()
+        XCTAssertEqual(app.buttons["calendarDay-\(defaultEndDay)"].value as? String, "End date")
+        if calendar.isDate(defaultEnd, equalTo: month, toGranularity: .month) { app.buttons["Next month"].tap() }
         app.buttons["calendarDay-3"].tap()
         app.navigationBars["Dates"].buttons["Done"].tap()
         app.buttons["quickAddSubmit"].tap()

@@ -17,7 +17,7 @@ struct CalendarDateSelection {
     }
 
     mutating func setRangeEnabled(_ enabled: Bool) {
-        end = enabled ? (end ?? start) : nil
+        end = enabled ? (end ?? calendar.date(byAdding: .day, value: 1, to: start) ?? start) : nil
         endpoint = enabled ? .end : .start
     }
 
@@ -71,8 +71,11 @@ struct QuickDateEditor: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    endpointControl
+                    if selection.end != nil {
+                        endpointControl
+                    }
                     calendar
+                    rangeButton
                 }
                 .padding(20)
             }
@@ -86,49 +89,44 @@ struct QuickDateEditor: View {
                 }
             }
         }
-        .presentationDetents([.height(560), .large])
+        .presentationDetents([.height(selection.end == nil ? 560 : 620), .large])
         .presentationDragIndicator(.visible)
     }
 
     private var endpointControl: some View {
-        HStack(spacing: 4) {
-            Picker("Editing date", selection: Binding(
-                get: { selection.endpoint },
-                set: { endpoint in
-                    if endpoint == .end && selection.end == nil {
-                        selection.setRangeEnabled(true)
-                    }
-                    selection.endpoint = endpoint
-                    showMonth(containing: endpoint == .start ? selection.start : selection.end ?? selection.start)
-                }
-            )) {
-                Text("Start").tag(CalendarDateSelection.Endpoint.start)
-                Text(selection.end == nil ? "+ End" : "End").tag(CalendarDateSelection.Endpoint.end)
+        Picker("Editing date", selection: Binding(
+            get: { selection.endpoint },
+            set: { endpoint in
+                selection.endpoint = endpoint
+                showMonth(containing: endpoint == .start ? selection.start : selection.end ?? selection.start)
             }
-            .pickerStyle(.segmented)
-            .accessibilityValue((selection.endpoint == .start ? selection.start : selection.end ?? selection.start)
-                .formatted(date: .complete, time: .omitted))
-            .accessibilityHint("Choose which date to edit in the calendar. Add End enables a date range.")
-            .accessibilityIdentifier("calendarEndpoint")
-
-            if selection.end != nil {
-                Button {
-                    selection.setRangeEnabled(false)
-                    showMonth(containing: selection.start)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Remove end date")
-                .accessibilityHint("Keep only the start date.")
-                .accessibilityIdentifier("calendarRemoveEndDate")
-            }
+        )) {
+            Text("Start").tag(CalendarDateSelection.Endpoint.start)
+            Text("End").tag(CalendarDateSelection.Endpoint.end)
         }
+        .pickerStyle(.segmented)
         .frame(minHeight: 44)
+        .accessibilityValue((selection.endpoint == .start ? selection.start : selection.end ?? selection.start)
+            .formatted(date: .complete, time: .omitted))
+        .accessibilityHint("Choose which date to edit in the calendar.")
+        .accessibilityIdentifier("calendarEndpoint")
+    }
+
+    private var rangeButton: some View {
+        let hasEndDate = selection.end != nil
+        return Button {
+            selection.setRangeEnabled(!hasEndDate)
+            showMonth(containing: selection.end ?? selection.start)
+        } label: {
+            Text(hasEndDate ? "Remove end date" : "Add end date")
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.blue)
+        .accessibilityHint(hasEndDate ? "Keep only the start date." : "Add the following day and choose an end date.")
+        .accessibilityIdentifier(hasEndDate ? "calendarRemoveEndDate" : "calendarAddEndDate")
     }
 
     private var calendar: some View {

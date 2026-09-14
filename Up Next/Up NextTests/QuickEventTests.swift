@@ -22,6 +22,8 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(selection.start, date(2026, 9, 18))
         XCTAssertNil(selection.end)
         selection.setRangeEnabled(true)
+        XCTAssertEqual(selection.end, date(2026, 9, 19))
+        XCTAssertEqual(selection.endpoint, .end)
         selection.select(date(2026, 9, 21, hour: 15))
         XCTAssertEqual(selection.start, date(2026, 9, 18))
         XCTAssertEqual(selection.end, date(2026, 9, 21))
@@ -31,6 +33,26 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(selection.start, date(2026, 9, 18))
         XCTAssertNil(selection.end)
         XCTAssertFalse(selection.contains(date(2026, 9, 20)))
+        XCTAssertEqual(selection.endpoint, .start)
+        selection.select(date(2026, 9, 30))
+        selection.setRangeEnabled(true)
+        XCTAssertEqual(selection.end, date(2026, 10, 1), "Re-adding uses the day after the current start")
+    }
+
+    func testCalendarDefaultEndUsesTheNextCalendarDayAcrossBoundaries() {
+        for (start, expectedEnd) in [
+            (date(2026, 3, 8), date(2026, 3, 9)),
+            (date(2026, 11, 1), date(2026, 11, 2)),
+            (date(2026, 12, 31), date(2027, 1, 1)),
+            (date(2024, 2, 28), date(2024, 2, 29)),
+            (date(2024, 2, 29), date(2024, 3, 1))
+        ] {
+            var selection = CalendarDateSelection(start: start, end: nil, calendar: calendar)
+            selection.setRangeEnabled(true)
+            XCTAssertEqual(selection.end, expectedEnd)
+            XCTAssertEqual(selection.start, start)
+            XCTAssertEqual(selection.endpoint, .end)
+        }
     }
 
     func testCalendarKeepsRangesOrderedWhenEitherEndpointMoves() {
