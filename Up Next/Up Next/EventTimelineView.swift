@@ -65,8 +65,48 @@ struct TimelineAxisWeights {
 }
 
 enum TimelineAxisDate {
-    static func text(_ date: Date, calendar: Calendar = .current) -> String {
-        "\(calendar.component(.month, from: date))/\(calendar.component(.day, from: date))"
+    static func text(_ date: Date, includesMonth: Bool = true, calendar: Calendar = .current) -> String {
+        let day = "\(calendar.component(.day, from: date))"
+        return includesMonth ? "\(calendar.component(.month, from: date))/\(day)" : day
+    }
+}
+
+/// Keep marker edges inside their calendar section. Coordinates are relative
+/// to the anchor, so padding is stable while panning and recycling the canvas.
+private struct TimelineMarkerGeometry {
+    static let padding: CGFloat = 4
+    let anchor: Date
+    let calendar: Calendar
+    let level: TimelineZoomLevel
+    let pointsPerDay: CGFloat
+    let markerSize: CGFloat
+
+    private func section(containing day: Int) -> ClosedRange<CGFloat> {
+        let date = calendar.date(byAdding: .day, value: day, to: anchor) ?? anchor
+        let component: Calendar.Component = level == .days ? .day : (level == .weeks ? .weekOfYear : .month)
+        guard let interval = calendar.dateInterval(of: component, for: date) else {
+            return CGFloat(day) * pointsPerDay...CGFloat(day + 1) * pointsPerDay
+        }
+        let start = calendar.dateComponents([.day], from: anchor, to: interval.start).day ?? day
+        let end = calendar.dateComponents([.day], from: anchor, to: interval.end).day ?? day + 1
+        return CGFloat(start) * pointsPerDay...CGFloat(end) * pointsPerDay
+    }
+
+    func horizontalRange(for placement: TimelineEventPlacement, clippedTo days: ClosedRange<Int>) -> ClosedRange<CGFloat> {
+        let start = max(placement.startDay, days.lowerBound)
+        let end = min(placement.endDay, days.upperBound)
+        let lower = section(containing: start).lowerBound + Self.padding
+        // Dividers occupy the trailing 0.75 points of each section.
+        let upper = section(containing: end).upperBound - Self.padding - 0.75
+        let singleDay = placement.startDay == placement.endDay
+        let inset = min(2, pointsPerDay / 4)
+        let rawStart = CGFloat(start) * pointsPerDay + inset
+        let rawEnd = CGFloat(end + 1) * pointsPerDay - inset
+        let width = singleDay ? markerSize : max(markerSize, min(rawEnd, upper) - max(rawStart, lower))
+        let preferredCenter = singleDay ? (CGFloat(start) + 0.5) * pointsPerDay
+            : (max(rawStart, lower) + min(rawEnd, upper)) / 2
+        let center = min(max(preferredCenter, lower + width / 2), upper - width / 2)
+        return (center - width / 2)...(center + width / 2)
     }
 }
 
@@ -544,12 +584,22 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         let weights = TimelineAxisWeights(pointsPerDay: pointsPerDay)
         let markerSize = max(6, 20 * sqrt(pointsPerDay / TimelineScrollWindow.dayWidth))
         let markerPitch = markerSize + 4
-        let minimumDaySpan = max(1, (markerSize + 2) / pointsPerDay)
-        let buffer = max(1, Int(ceil(minimumDaySpan / 2)))
+        let geometry = TimelineMarkerGeometry(anchor: anchor, calendar: calendar, level: weights.level,
+                                              pointsPerDay: pointsPerDay, markerSize: markerSize)
+        let buffer = max(1, Int(ceil((markerSize + 2 * TimelineMarkerGeometry.padding + 1) / pointsPerDay)))
         let bufferedDays = (visibleDays.lowerBound - buffer)...(visibleDays.upperBound + buffer)
-        let layout = TimelineLayout.make(indexedEvents: indexedEvents,
-                                         visibleDays: minimumDaySpan > 1 ? bufferedDays : visibleDays,
-                                         minimumDaySpan: minimumDaySpan)
+        let candidates = indexedEvents.filter { $0.startDay <= bufferedDays.upperBound && $0.endDay >= bufferedDays.lowerBound }
+        let markerRanges = Dictionary(uniqueKeysWithValues: candidates.map {
+            ($0.event.id, geometry.horizontalRange(for: $0, clippedTo: bufferedDays))
+        })
+        // Include entire edge days so fractional pans reveal their markers
+        // without waiting for the next calendar day to trigger a render.
+        let visibleRange = (CGFloat(visibleDays.lowerBound) * pointsPerDay)...(CGFloat(visibleDays.upperBound + 1) * pointsPerDay)
+        let visibleEvents = candidates.filter { markerRanges[$0.event.id]?.overlaps(visibleRange) == true }
+        let layout = TimelineLayout.make(indexedEvents: visibleEvents, visibleDays: bufferedDays, horizontalRange: {
+            let range = markerRanges[$0.event.id]!
+            return (range.lowerBound - 1)...(range.upperBound + 1)
+        })
         let markerHeight = max(0, CGFloat(layout.laneCount) * markerPitch - 4)
         // The date header and all visible event lanes determine the timeline's
         // natural height. Give the marker group identical top/bottom padding.
@@ -570,12 +620,15 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         // Only one hierarchy occupies the text rows. Keep labels visible even
         // when a pinch stops exactly between scales; the grid remains continuous.
         let axisFont = TimelineAxisTypography.font
-        let dateWidth = bufferedDays.compactMap {
+        let dayWidth = (1...31).map {
+            (String($0) as NSString).size(withAttributes: [.font: axisFont]).width
+        }.max() ?? 0
+        let compactWeekWidth = bufferedDays.compactMap {
             calendar.date(byAdding: .day, value: $0, to: anchor)
         }.map {
             (TimelineAxisDate.text($0, calendar: calendar) as NSString).size(withAttributes: [.font: axisFont]).width
         }.max() ?? 0
-        let showsDayLabels = pointsPerDay >= ceil(dateWidth) + 4
+        let showsDayLabels = pointsPerDay >= ceil(dayWidth) + 4
         let weekdayWidth = (DateFormatter().shortWeekdaySymbols ?? []).map {
             ($0 as NSString).size(withAttributes: [.font: axisFont]).width
         }.max() ?? 0
@@ -613,7 +666,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             ($0 as NSString).size(withAttributes: [.font: TimelineAxisTypography.font]).width
         }.max() ?? 0
         let monthStride = max(1, Int(ceil((monthNameWidth + 8) / (28 * pointsPerDay))))
-        let weekStride = max(1, Int(ceil((ceil(dateWidth) + 8) / (7 * pointsPerDay))))
+        let weekStride = max(1, Int(ceil((ceil(compactWeekWidth) + 8) / (7 * pointsPerDay))))
         for level in [TimelineZoomLevel.weeks, .months] where (!showsDayLabels || weights.days < 1) && (level == .months || weights.months < 1) {
             for period in TimelineAxisPeriod.make(level: level, visibleDays: bufferedDays, anchor: anchor) {
                 let key = "\(level.rawValue)-\(period.startDay)"
@@ -635,7 +688,10 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                                labelAlpha: showLabel ? periodLabelAlpha : 0,
                                labelColumnWidth: level == .months ? 28 * pointsPerDay * CGFloat(monthStride)
                                    : 7 * pointsPerDay * CGFloat(weekStride),
-                               dividerAlpha: level == .weeks ? weights.weeks : max(0, weights.months * 2 - 1),
+                               // Once months take over, their sections replace
+                               // the week grid instead of cutting through it.
+                               dividerAlpha: level == .weeks ? (weights.level == .months ? 0 : weights.weeks)
+                                   : max(0, weights.months * 2 - 1),
                                axisHeight: axisHeight)
                 view.frame = CGRect(x: CGFloat(period.startDay - scrollWindow.firstDay) * pointsPerDay, y: 0,
                                     width: CGFloat(period.endDay - period.startDay) * pointsPerDay, height: headerHeight)
@@ -663,19 +719,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
                 button.addTarget(self, action: #selector(selectedEvent(_:)), for: .touchUpInside)
                 addSubview(button)
             }
-            let start = max(placement.startDay, bufferedDays.lowerBound)
-            let end = min(placement.endDay, bufferedDays.upperBound)
-            let isSingleDay = placement.startDay == placement.endDay
-            let x = CGFloat(start - scrollWindow.firstDay) * pointsPerDay
-            let width = CGFloat(end - start + 1) * pointsPerDay
-            let inset = min(2, pointsPerDay / 4)
-            let markerWidth = isSingleDay ? markerSize : max(markerSize, width - inset * 2)
+            guard let range = markerRanges[placement.event.id] else { continue }
             button.placement = placement
             button.isSelected = placement.event.id == highlightedEventID
             button.layer.cornerRadius = markerSize / 2
-            button.frame = CGRect(x: x + (isSingleDay ? (pointsPerDay - markerSize) / 2 : (width - markerWidth) / 2),
+            button.frame = CGRect(x: range.lowerBound - CGFloat(scrollWindow.firstDay) * pointsPerDay,
                                   y: markerTop + CGFloat(placement.lane) * markerPitch,
-                                  width: markerWidth, height: markerSize)
+                                  width: range.upperBound - range.lowerBound, height: markerSize)
             button.accessibilityLabel = placement.event.title
             button.accessibilityValue = placement.event.date.formatted(date: .abbreviated, time: .omitted)
             button.accessibilityHint = "Show event"
@@ -753,7 +803,7 @@ private final class TimelineDayView: UIView {
 
     func configure(date: Date, labelAlpha: CGFloat, showsWeekday: Bool, dividerAlpha: CGFloat, axisHeight: CGFloat) {
         weekday.text = date.formatted(.dateTime.weekday(.abbreviated))
-        number.text = TimelineAxisDate.text(date)
+        number.text = TimelineAxisDate.text(date, includesMonth: false)
         self.labelAlpha = labelAlpha
         self.showsWeekday = showsWeekday
         self.axisHeight = axisHeight

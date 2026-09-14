@@ -33,7 +33,8 @@ struct TimelineLayout {
     }
 
     static func make(indexedEvents: [TimelineEventPlacement], visibleDays: ClosedRange<Int>,
-                     minimumDaySpan: CGFloat = 1) -> TimelineLayout {
+                     minimumDaySpan: CGFloat = 1,
+                     horizontalRange: ((TimelineEventPlacement) -> ClosedRange<CGFloat>)? = nil) -> TimelineLayout {
         let candidates = indexedEvents.filter { $0.startDay <= visibleDays.upperBound && $0.endDay >= visibleDays.lowerBound }
         // Reuse the first free lane. Counting earlier overlapping events can
         // leave gaps for chains of events that don't all overlap one another.
@@ -41,8 +42,11 @@ struct TimelineLayout {
         let placements = candidates.map { candidate in
             var placement = candidate
             let center = CGFloat(placement.startDay + placement.endDay + 1) / 2
-            let start = min(CGFloat(placement.startDay), center - minimumDaySpan / 2)
-            let end = max(CGFloat(placement.endDay + 1), center + minimumDaySpan / 2)
+            // A zoomed timeline can inset dots from period boundaries. Allocate
+            // lanes using their displayed bounds so those insets cannot collide.
+            let projectedRange = horizontalRange?(placement)
+            let start = projectedRange?.lowerBound ?? min(CGFloat(placement.startDay), center - minimumDaySpan / 2)
+            let end = projectedRange?.upperBound ?? max(CGFloat(placement.endDay + 1), center + minimumDaySpan / 2)
             let lane = laneEnds.firstIndex { $0 <= start } ?? laneEnds.count
             if lane == laneEnds.count {
                 laneEnds.append(end)

@@ -188,20 +188,22 @@ final class TimelineTests: XCTestCase {
             let date = calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 23, minute: 30))!
             XCTAssertEqual(TimelineAxisDate.text(date, calendar: calendar), expected,
                            "The axis must use the local date even after midnight in UTC")
+            XCTAssertEqual(TimelineAxisDate.text(date, includesMonth: false, calendar: calendar), String(day),
+                           "Individual days omit the month, including beneath weekday labels")
         }
     }
 
     @MainActor
-    func testTimelineKeepsEveryMonthAndDayUntilDatesWouldOverlapAtDifferentHeights() {
+    func testTimelineKeepsEveryDayNumberUntilDatesWouldOverlapAtDifferentHeights() {
         for height: CGFloat in [100, 600] {
             let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: height))
             timeline.layoutIfNeeded()
-            for spacing: CGFloat in [44, 40, 26.4, 18] {
+            for spacing: CGFloat in [44, 40, 26.4, 22, 20, 10] {
                 timeline.beginZoom(at: 196)
                 timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 196)
                 timeline.endZoom()
-                // Include September's short dates and the wider December dates,
-                // scrolling across both month and year boundaries.
+                // Keep individual dates even across month/year boundaries, then
+                // switch to weekly ticks only when day numbers no longer fit.
                 for month in [9, 12] {
                     let calendar = Calendar.current
                     let start = calendar.date(from: DateComponents(year: 2026, month: month, day: 28))!
@@ -210,16 +212,17 @@ final class TimelineTests: XCTestCase {
                     timeline.layoutIfNeeded()
                     let labels = visibleAxisLabels(in: timeline)
                     XCTAssertFalse(labels.isEmpty)
-                    if spacing >= 40 {
+                    if spacing >= 20 {
                         for day in 0..<Int(floor(timeline.bounds.width / spacing)) {
                             let date = calendar.date(byAdding: .day, value: day, to: start)!
-                            let expected = "\(calendar.component(.month, from: date))/\(calendar.component(.day, from: date))"
+                            let expected = "\(calendar.component(.day, from: date))"
                             XCTAssertTrue(labels.contains { $0.text == expected },
-                                          "Every fully visible day must include its month: \(expected)")
+                                          "Every fully visible day must show its number: \(expected) at \(spacing) pt/day")
                         }
+                        XCTAssertFalse(labels.contains { $0.text?.contains("/") == true || $0.text?.contains("–") == true })
                     } else {
-                        XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true },
-                                      "Use weekly ranges once individual month/day labels would overlap")
+                        XCTAssertTrue(labels.allSatisfy { $0.text?.contains("–") == true || $0.text?.contains("/") == true },
+                                      "Use weekly dates once individual day numbers would overlap")
                     }
                 }
             }
@@ -278,6 +281,44 @@ final class TimelineTests: XCTestCase {
             XCTAssertGreaterThan(lines.count, 2)
             for (first, next) in zip(lines, lines.dropFirst()) {
                 XCTAssertEqual(next - first, spacing * 7, accuracy: 0.01)
+            }
+        }
+    }
+
+    @MainActor
+    func testTimelineDotsStayInsideDividersAndAvoidEachOtherAtEveryZoom() throws {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 200))
+        let calendar = Calendar.current
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 27)))
+        let position = try XCTUnwrap(calendar.dateComponents([.day], from: timeline.anchor, to: start).day)
+        timeline.update(events: (-10...300).map {
+            Event(title: "Day \($0)", date: calendar.date(byAdding: .day, value: $0, to: start)!,
+                  color: CodableColor(color: $0.isMultiple(of: 2) ? .red : .blue))
+        })
+        timeline.layoutIfNeeded()
+        for spacing: CGFloat in [44, 39, 31, 26.4, 20, 10, 6.6, 4.6, 4.5, 3.6, 2.8, 44.0 / 30] {
+            timeline.beginZoom(at: 0)
+            timeline.changeZoom(scale: spacing / timeline.pointsPerDay, at: 0)
+            timeline.endZoom()
+            for offset: CGFloat in [0, 0.37, 6.8, 85.2] {
+                timeline.setDayPosition(CGFloat(position) + offset)
+                timeline.layoutIfNeeded()
+                let lines = timeline.subviews.filter {
+                    $0.backgroundColor == .separator && $0.alpha > 0 && !$0.isHidden && $0.frame.width <= 1
+                }
+                let markers = timeline.subviews.compactMap { $0 as? UIButton }
+                XCTAssertFalse(markers.isEmpty)
+                XCTAssertFalse(lines.isEmpty)
+                for (index, marker) in markers.enumerated() {
+                    for line in lines {
+                        let gap = max(line.frame.minX - marker.frame.maxX, marker.frame.minX - line.frame.maxX)
+                        XCTAssertGreaterThanOrEqual(gap, 3.99, "Dots need four points of padding at \(spacing) pt/day")
+                    }
+                    for other in markers.dropFirst(index + 1) {
+                        XCTAssertFalse(marker.frame.insetBy(dx: -0.9, dy: -0.9).intersects(other.frame),
+                                       "Padding must not push neighboring dates into one another")
+                    }
+                }
             }
         }
     }
