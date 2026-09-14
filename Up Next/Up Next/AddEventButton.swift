@@ -12,6 +12,8 @@ struct QuickAddEventField: View {
 
     @State private var dateDraft: QuickScheduleEditorDraft?
     @State private var repeatDraft: QuickScheduleEditorDraft?
+    @State private var showingNewCategory = false
+    @EnvironmentObject private var appData: AppData
     @Environment(\.colorScheme) private var colorScheme
 
     private var dateLabel: String {
@@ -130,6 +132,13 @@ struct QuickAddEventField: View {
                 repeatDraft = nil
             }
         }
+        .sheet(isPresented: $showingNewCategory, onDismiss: { isFocused = true }) {
+            CategoryForm(showingSheet: $showingNewCategory) { category in
+                appData.categories.append(category)
+                overrides.categoryName = category.name
+            }
+            .environmentObject(appData)
+        }
     }
 
     private func pill(_ title: String, icon: String, isSelected: Bool) -> some View {
@@ -240,6 +249,12 @@ struct QuickAddEventField: View {
                 Divider()
                 Button("Use Text or Default") { overrides.categoryName = nil }
             }
+            Divider()
+            Button("New category") {
+                isFocused = false
+                showingNewCategory = true
+            }
+            .disabled(appData.categoryStorageError != nil)
         } label: { pill(draft.categoryOptions.selectedCategory ?? "None", icon: "tag", isSelected: draft.hasCategorySelection) }
         .buttonStyle(.plain)
         .accessibilityLabel("Category")

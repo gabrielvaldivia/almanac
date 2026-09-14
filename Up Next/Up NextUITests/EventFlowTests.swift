@@ -323,6 +323,76 @@ final class EventFlowTests: XCTestCase {
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
     }
 
+    func testComposerCreatesAndSelectsACategoryWithoutLosingTheDraft() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        openComposer(app)
+        let suffix = String(UUID().uuidString.prefix(6))
+        let eventTitle = "Category event \(suffix)"
+        let categoryName = "Reading \(suffix)"
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        let category = app.buttons["quickEventCategory"]
+        input.typeText("\(eventTitle) today")
+        let previousCategory = category.value as? String
+        category.tap()
+        XCTAssertEqual(app.collectionViews.buttons.allElementsBoundByIndex.last?.label, "New category")
+        let menuScreenshot = XCTAttachment(screenshot: app.screenshot())
+        menuScreenshot.name = "New category at the bottom of the composer menu"
+        menuScreenshot.lifetime = .keepAlways
+        add(menuScreenshot)
+        app.collectionViews.buttons["New category"].tap()
+        let field = app.textFields["Category Name"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let save = app.navigationBars["Add Category"].buttons["Save"]
+        XCTAssertFalse(save.isEnabled)
+        field.tap(); field.typeText("Work")
+        XCTAssertFalse(save.isEnabled, "Existing category names must remain protected")
+        app.navigationBars["Add Category"].buttons["Cancel"].tap()
+        XCTAssertEqual(input.value as? String, "\(eventTitle) today")
+        XCTAssertEqual(category.value as? String, previousCategory)
+
+        category.tap()
+        app.collectionViews.buttons["New category"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertFalse(save.isEnabled, "A canceled category must not leave a name in the next form")
+        field.tap(); field.typeText(categoryName)
+        app.buttons["Color"].tap()
+        app.buttons["Green"].tap()
+        save.tap()
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        XCTAssertEqual(input.value as? String, "\(eventTitle) today")
+        XCTAssertEqual(category.value as? String, categoryName)
+        XCTAssertTrue(category.isSelected)
+        XCTAssertEqual(app.buttons["quickEventColor"].value as? String, "Green")
+        let selectedScreenshot = XCTAttachment(screenshot: app.screenshot())
+        selectedScreenshot.name = "New category selected in the unchanged event draft"
+        selectedScreenshot.lifetime = .keepAlways
+        add(selectedScreenshot)
+        app.buttons["quickAddSubmit"].tap()
+        XCTAssertTrue(app.staticTexts[eventTitle].waitForExistence(timeout: 5))
+
+        app.terminate(); app.launch()
+        let title = app.staticTexts[eventTitle].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        title.tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[categoryName].exists)
+        app.buttons["Delete Event"].tap()
+        app.alerts["Delete Event"].buttons["Delete this event"].tap()
+        openComposer(app)
+        category.tap()
+        XCTAssertTrue(app.collectionViews.buttons[categoryName].exists)
+        app.collectionViews.buttons[categoryName].tap()
+        XCTAssertEqual(app.buttons["quickEventColor"].value as? String, "Green")
+        app.staticTexts["appTitle"].tap()
+        app.buttons["Settings"].tap()
+        app.buttons["Manage Categories"].tap()
+        app.buttons[categoryName].swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(app.buttons[categoryName].waitForNonExistence(timeout: 5))
+    }
+
     func testComposerAutomaticallySelectsBirthdayCategoryAndRespectsManualChoice() {
         continueAfterFailure = false
         let app = XCUIApplication()
