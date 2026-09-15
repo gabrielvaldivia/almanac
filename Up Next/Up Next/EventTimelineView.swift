@@ -298,7 +298,9 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
     private let selectionFeedback = UISelectionFeedbackGenerator()
 
-    let anchor = Calendar.current.startOfDay(for: Date())
+    private(set) var anchor = Calendar.current.startOfDay(for: Date())
+    private var indexedCalendar = Calendar.current
+    private var indexedToday = CalendarDay(Date())
     private var scrollWindow = TimelineScrollWindow()
     private var events: [Event] = []
     private var indexedEvents: [TimelineEventPlacement] = []
@@ -401,11 +403,13 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
 
     func scrollToToday(animated: Bool) {
+        update(events: events)
         focusReferenceX = 0
         scroll(toFocusedDay: CGFloat(todayDay), animated: animated)
     }
 
     func scrollToDate(_ date: Date, animated: Bool) {
+        update(events: events)
         let calendar = Calendar.current
         let day = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
         scroll(toFocusedDay: CGFloat(day), animated: animated)
@@ -510,11 +514,21 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
     }
 
     func update(events: [Event]) {
+        let calendar = Calendar.current
+        let today = CalendarDay(Date(), calendar: calendar)
+        let calendarChanged = indexedCalendar != calendar
         let unchanged = self.events.count == events.count && zip(self.events, events).allSatisfy { old, new in
             old.id == new.id && old.date == new.date && old.endDate == new.endDate &&
             old.title == new.title && old.color.color == new.color.color
         }
-        guard !unchanged else { return }
+        guard !unchanged || calendarChanged || indexedToday != today else { return }
+        if calendarChanged {
+            // Retain the anchor's civil date and scroll offsets when its local
+            // midnight changes. Reindex even if the event array is unchanged.
+            anchor = CalendarDay(anchor, calendar: indexedCalendar).date(in: calendar) ?? calendar.startOfDay(for: anchor)
+            indexedCalendar = calendar
+        }
+        indexedToday = today
         self.events = events
         indexedEvents = TimelineLayout.index(events: events, anchor: anchor)
         needsEventLayout = true

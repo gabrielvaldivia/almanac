@@ -41,6 +41,42 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(dot.isSelected)
     }
 
+    @MainActor
+    func testTimeZoneChangesPreserveVisibleDatesAndKeepTodayCorrect() throws {
+        let originalZone = NSTimeZone.default
+        defer { NSTimeZone.default = originalZone }
+        NSTimeZone.default = TimeZone(identifier: "America/New_York")!
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 200))
+        let anchorDay = CalendarDay(timeline.anchor)
+        let originalEvent = Event(title: "Travel event", date: Calendar.current.date(byAdding: .day, value: 3, to: timeline.anchor)!, color: CodableColor(color: .blue))
+        timeline.update(events: [originalEvent]); timeline.layoutIfNeeded()
+        timeline.setDayPosition(0.25); timeline.layoutIfNeeded()
+        let originalPosition = timeline.dayPosition
+        let originalButtonFrame = try XCTUnwrap(timeline.subviews.compactMap { $0 as? UIButton }.first).frame
+        for zone in ["America/Los_Angeles", "Asia/Tokyo", "Pacific/Kiritimati", "Pacific/Pago_Pago"] {
+            NSTimeZone.default = TimeZone(identifier: zone)!
+            var event = originalEvent
+            event.date = try XCTUnwrap(originalEvent.calendarDay?.date())
+            timeline.update(events: [event]); timeline.layoutIfNeeded()
+            XCTAssertEqual(CalendarDay(timeline.anchor), anchorDay, zone)
+            XCTAssertEqual(timeline.dayPosition, originalPosition, accuracy: 0.0001, zone)
+            let frame = try XCTUnwrap(timeline.subviews.compactMap { $0 as? UIButton }.first).frame
+            XCTAssertEqual(frame.minX, originalButtonFrame.minX, accuracy: 0.5, zone)
+        }
+        // Also exercise the unchanged-array cache and direct Today action.
+        timeline.update(events: [])
+        NSTimeZone.default = TimeZone(identifier: "America/Los_Angeles")!
+        timeline.update(events: [])
+        timeline.scrollToToday(animated: false); timeline.layoutIfNeeded()
+        let focused = Calendar.current.date(byAdding: .day, value: Int(timeline.focusedDayPosition), to: timeline.anchor)!
+        XCTAssertEqual(focused, Calendar.current.startOfDay(for: Date()))
+        XCTAssertTrue(timeline.isTodayVisible)
+        NSTimeZone.default = TimeZone(identifier: "Asia/Tokyo")!
+        timeline.scrollToToday(animated: false)
+        XCTAssertEqual(Calendar.current.date(byAdding: .day, value: Int(timeline.focusedDayPosition), to: timeline.anchor),
+                       Calendar.current.startOfDay(for: Date()))
+    }
+
     func testRecyclingPreservesDatesAndFractionalPositionInBothDirections() {
         for direction: CGFloat in [-1, 1] {
             var window = TimelineScrollWindow()
