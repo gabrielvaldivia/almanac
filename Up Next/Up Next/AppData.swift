@@ -98,14 +98,6 @@ class AppData: NSObject, ObservableObject {
         return "\(product.displayPrice) / \(period.value == 1 ? unit : "\(period.value) \(unit)s")"
     }
 
-    // Computed property for default category color
-    var defaultCategoryColor: Color {
-        if let category = categories.first(where: { $0.name == defaultCategory }) {
-            return category.color
-        }
-        return .blue
-    }
-
     // Initializer for AppData
     override init() {
         super.init()
@@ -343,20 +335,6 @@ class AppData: NSObject, ObservableObject {
 
     func waitForNotifications() async { await notificationTask?.value }
 
-    // Function to add a new event
-    func addEvent(_ event: Event) {
-        events.append(event)
-        saveEvents()
-    }
-
-    // Function to edit an existing event
-    func editEvent(_ event: Event) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events[index] = event
-            saveEvents()
-        }
-    }
-
     var canEditExistingCategories: Bool { storageError == nil && categoryStorageError == nil }
 
     @discardableResult
@@ -545,8 +523,6 @@ extension AppData: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if response.actionIdentifier == "VIEW_ACTION" {
-        }
         completionHandler()
     }
 }

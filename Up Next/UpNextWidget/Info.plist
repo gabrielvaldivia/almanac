@@ -11,14 +11,5 @@
 	</dict>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.6</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.108676165289-ofoumldqk4np020qsac1mqp339n6dok0</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

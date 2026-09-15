@@ -9,19 +9,7 @@
 	<key>CFBundleURLTypes</key>
 	<array>
         <dict><key>CFBundleURLName</key><string>Almanac</string><key>CFBundleURLSchemes</key><array><string>upnext</string></array></dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>com.googleusercontent.apps.108676165289-ofoumldqk4np020qsac1mqp339n6dok0</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.108676165289-ofoumldqk4np020qsac1mqp339n6dok0</string>
-			</array>
-		</dict>
 	</array>
-	<key>GIDClientID</key>
-	<string>108676165289-ofoumldqk4np020qsac1mqp339n6dok0.apps.googleusercontent.com</string>
 	<key>CFBundleDisplayName</key>
 	<string>Almanac</string>
 	<key>CFBundleIdentifier</key>

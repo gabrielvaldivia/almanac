@@ -752,7 +752,7 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(window.visibleDays(offset: window.initialOffset - 1, width: 88), -1...1)
     }
 
-    func testHeightOnlyIncludesOverlapsInViewAndShrinksToEmpty() {
+    func testLaneCountOnlyIncludesOverlapsInViewAndShrinksToEmpty() {
         let events = [event("A", start: 0, end: 2), event("B", start: 1, end: 3),
                       event("C", start: 2, end: 4), event("Distant", start: 500)]
         let crowded = TimelineLayout.make(events: events, visibleDays: 0...2, anchor: anchor, calendar: calendar)
@@ -762,8 +762,6 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(quiet.laneCount, 1)
         XCTAssertEqual(quiet.placements.first?.lane, 0)
         XCTAssertEqual(empty.laneCount, 0)
-        XCTAssertEqual(TimelineLayout.height(for: crowded.laneCount), 132)
-        XCTAssertEqual(TimelineLayout.height(for: empty.laneCount), 48)
     }
 
     func testOverlappingChainsReuseLanesWithoutCollisions() {

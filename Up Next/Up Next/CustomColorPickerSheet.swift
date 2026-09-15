@@ -65,11 +65,6 @@ struct CustomColorPickerSheet: View {
         }?.name ?? "Custom"
     }
 
-    var contrastColor: Color {
-        let brightness = (selectedColor.red * 299 + selectedColor.green * 587 + selectedColor.blue * 114) / 1000
-        return brightness > 0.7 ? .black : .white
-    }
-
     var body: some View {
         NavigationView {
             VStack {

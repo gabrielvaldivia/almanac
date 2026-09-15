@@ -6,11 +6,8 @@
 //
 
 import Foundation
-import PassKit
-import StoreKit
 import SwiftUI
 import UIKit
-import WidgetKit
 
 struct SettingsView: View {
     @EnvironmentObject var appData: AppData
@@ -19,7 +16,6 @@ struct SettingsView: View {
     @Environment(\.openURL) var openURL
     @State private var selectedAppIcon =
         UserDefaults.standard.string(forKey: "selectedAppIcon") ?? "Default"
-    @State private var iconChangeSuccess: Bool?
     @State private var showingAppIconSheet = false
     @State private var showingCategoryManagementSheet = false
     @State private var showingContactBirthdays = false
@@ -253,8 +249,6 @@ struct SettingsView: View {
     struct AppIconSelectionView: View {
         @Binding var selectedAppIcon: String
         @State private var iconError: String?
-        @Environment(\.openURL) var openURL
-        @Environment(\.dismiss) var dismiss
 
         // Updated app icons array with tuples (previewName, displayName, iconName, author)
         static let appIcons: [(String, String, String?, (String, String)?)] = [
@@ -343,36 +337,6 @@ struct SettingsView: View {
             }
         }
 
-        // ... rest of the code remains unchanged
     }
 
-    struct IconLabel: View {
-        let icon: String
-        let author: (name: String, link: String)?
-        let openURL: OpenURLAction
-
-        var body: some View {
-            VStack(spacing: 4) {
-                Text(icon)
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
-
-                if let author = author {
-                    (Text("by ")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        + Text(author.name)
-                        .font(.caption)
-                        .foregroundColor(.secondary))
-                        .onTapGesture {
-                            if let url = URL(string: author.link) {
-                                openURL(url)
-                            }
-                        }
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
 }

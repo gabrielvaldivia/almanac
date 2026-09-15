@@ -112,6 +112,10 @@ If an unmaterialized recurrence gap would consume the entire 10,000-iteration ba
 
 Removed the write-only row/editor binding chain, unused ContentView state, repeat-selection flags with no behavioral readers, unused editor helpers/formatters, and ineffective List-only modifiers. The editor now shares its existing displayed date-default policy between initialization and appearance. Repeat controls bind directly to their real options; persisted legacy repeat fields remain supported. Removed only the unused argument from the active recurrence wrapper. All 144 unit tests, three save/cancel/delete/repeat-correction UI regressions, and the signed app/widget Release build passed. The long-gap fix was pushed as `c0b744a`.
 
+### 26. Cleanup — Remove unused code and stale target configuration
+
+Removed the unreferenced Past Events view/font modifier, unused AppData and color/settings helpers, unused imports, the empty notification-action branch, and seven orphan build records. EventLoader remains in the widget and is no longer compiled into the app. Removed retired Google OAuth metadata while preserving the app's upnext deep links. Removed the test-only timeline height formula; actual rendered-height tests remain, and lane-allocation tests now assert only the production layout model. All 144 unit tests, project/plist validation, and the signed app/widget Release build passed. Packaged URL metadata was inspected. Editor cleanup was pushed as `3aa0414`.
+
 ## Remaining
 
 All 23 main findings have delivered fixes. The unused/redundant-code inventory and final verification remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
