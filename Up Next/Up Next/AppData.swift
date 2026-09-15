@@ -203,6 +203,22 @@ class AppData: NSObject, ObservableObject {
         }
     }
 
+    func extendRecurrences(before end: Date, now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        guard storageError == nil else { return false }
+        let updated = Recurrence.replenishing(events, now: now, calendar: calendar, before: end)
+        guard updated != events else { return true }
+        do {
+            try eventStore.save(updated)
+            events = updated
+            WidgetCenter.shared.reloadAllTimelines()
+            scheduleDailyNotification()
+            return true
+        } catch {
+            storageError = "Could not load more events: \(error.localizedDescription)"
+            return false
+        }
+    }
+
     func restoreEventBackup() {
         do {
             events = try eventStore.restoreBackup()

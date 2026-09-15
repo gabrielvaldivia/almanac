@@ -114,6 +114,32 @@ final class StorageTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testRecurrencePagePersistsBeforePublishingAndPreservesDataOnSaveFailure() async throws {
+        try await withIsolatedAppData { data in
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let event = Event(title: "Daily", date: today, color: CodableColor(color: .blue), repeatOption: .daily, seriesID: UUID())
+            data.events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: today)
+            data.saveEvents()
+            let firstPage = data.events
+            let end = calendar.date(byAdding: .day, value: 730, to: today)!
+            XCTAssertTrue(data.extendRecurrences(before: end, now: today))
+            XCTAssertEqual(data.events.count, 730)
+            XCTAssertEqual(Array(data.events.prefix(firstPage.count)), firstPage)
+            XCTAssertEqual(try EventStore().load().map(\.id), data.events.map(\.id))
+            let saved = data.events
+            let corrupt = Data("corrupt".utf8)
+            AppPreferences.shared.set(corrupt, forKey: "events")
+            let later = calendar.date(byAdding: .day, value: 1095, to: today)!
+            XCTAssertFalse(data.extendRecurrences(before: later, now: today))
+            XCTAssertEqual(data.events, saved)
+            XCTAssertEqual(AppPreferences.shared.data(forKey: "events"), corrupt)
+            XCTAssertNotNil(data.storageError)
+            XCTAssertFalse(data.extendRecurrences(before: later, now: today))
+        }
+    }
+
     func testCategoryCodecMigratesNumericDatesAndPreservesUnreadablePayloads() throws {
         let name = "test.categories.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!

@@ -281,6 +281,43 @@ final class EventFlowTests: XCTestCase {
         XCTAssertFalse(more.exists, "The button disappears once all later events are loaded")
     }
 
+    func testShowMoreGeneratesSparseRecurrencesWithoutMovingTheCurrentRow() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        try seedEvents([("Every two years", 0)], in: app)
+        let encoded = Data(app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"]!.utf8)
+        var fixtures = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [[String: Any]])
+        let anchor = fixtures[0]["date"]!
+        let until = Calendar.current.date(byAdding: .year, value: 2, to: Calendar.current.startOfDay(for: Date()))!
+        fixtures[0]["seriesID"] = UUID().uuidString
+        fixtures[0]["repeatOption"] = "Custom"
+        fixtures[0]["customRepeatCount"] = 2
+        fixtures[0]["repeatUnit"] = "Years"
+        fixtures[0]["occurrenceIndex"] = 0
+        fixtures[0]["recurrence"] = ["anchor": anchor, "frequency": "Custom", "interval": 2,
+                                     "unit": "Years", "end": "On Date", "until": ISO8601DateFormatter().string(from: until), "count": 1]
+        app.launchEnvironment["ALMANAC_UI_TEST_EVENTS"] = String(decoding: try JSONSerialization.data(withJSONObject: fixtures), as: UTF8.self)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        let rows = list.staticTexts.matching(identifier: "Every two years")
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5))
+        let originalY = rows.firstMatch.frame.minY
+        let more = list.buttons["showMoreEvents"]
+        XCTAssertTrue(more.exists)
+        more.tap()
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows.firstMatch.frame.minY, originalY, accuracy: 1)
+        more.tap()
+        let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 2"), object: rows)
+        XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
+        XCTAssertEqual(rows.firstMatch.frame.minY, originalY, accuracy: 1)
+        XCTAssertFalse(more.exists)
+        app.terminate(); app.launch()
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5))
+        more.tap(); more.tap()
+        XCTAssertEqual(rows.count, 2, "Reloading pages must preserve the saved recurrence without duplicates")
+    }
+
     func testShowMoreCanAdvanceThroughEmpty365DayPages() throws {
         continueAfterFailure = false
         let app = makeApp()

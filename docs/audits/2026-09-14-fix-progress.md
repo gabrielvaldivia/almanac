@@ -4,6 +4,8 @@ The user requested one change at a time, ordered by impact relative to effort, w
 
 The baseline checkpoint is `b39fc0b`. It includes the previously verified widget/composer/list work and the audit evidence. Two upstream UI-test changes were incorporated; the timeline test now measures visibility against the actual overlay and starts drags within the visible list. The corrected test and composer check passed. The checkpoint was pushed, built, installed, and launched on Gabe's iPhone.
 
+The user subsequently waived phone installation and requested continued work. F06 was pushed as `b686973`; its build passed, but the phone disconnected before installation. From F05 onward, each change is tested, Release-built, and pushed without waiting for a phone.
+
 ## Order
 
 Start with small, low-risk fixes that remove a freeze or unintended edits (F17, F15, F10, F11), then recurrence correctness (F01/F02), current list issues (F06/F05/F23), parser/editor issues, remaining recurrence/widget/storage issues, accessibility/release packaging, and safe cleanup. Reorder when implementation reveals a simpler fix or a dependency. No feature removal or broad redesign is part of this work.
@@ -38,6 +40,10 @@ Series dates are recalculated by occurrence index instead of uniformly shifting 
 
 Row tracking now uses the actual timeline overlay edge. Before shrinking the overlay while scrolling the list, it also checks that the proposed height would not reveal an earlier event group and send focus backward. Only date crossings reach the parent, and the native scroll inset stays stable. All 32 timeline unit tests and four timeline UI regressions passed, including forward/reverse scrolling through crowded dates; the new regression also passed on iOS 18.5. The successful screenshot was inspected. A test-only exact-frame assertion was adjusted for floating point rounding. Signed phone build passed. F02 was pushed as `324340f` and installed before starting this change.
 
+### 8. F05 — Show more generates recurring events for each page
+
+Explicit page boundaries now extend recurrence generation before advancing the list window. Existing occurrences and IDs remain unchanged, and a failed save does not publish unsaved events or advance the page. Future availability checks the rule's ending/exclusions and uses the series category rather than an exception's category. All 125 unit tests and three paging UI tests passed, including sparse recurrence across an empty year, persistence, and stable scroll position. App/widget Release build passed.
+
 ## Remaining
 
-F03–F05, F07–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F07–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

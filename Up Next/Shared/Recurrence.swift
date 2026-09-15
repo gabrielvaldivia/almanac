@@ -85,11 +85,29 @@ struct RecurrenceRule: Codable, Equatable {
         result.timeZone = calendar.timeZone
         return result
     }
+
+    func nextIndex(onOrAfter boundary: Date, fromIndex: Int = 0, calendar: Calendar = .current) -> Int? {
+        guard frequency != .never, (1...1000).contains(interval),
+              end != .after || (1...10000).contains(count) else { return nil }
+        let calendar = resolvedCalendar(calendar)
+        let elapsed = calendar.dateComponents([component], from: anchor, to: boundary).value(for: component) ?? 0
+        // Start just before the estimate to account for month-end clamping.
+        var index = max(0, fromIndex, elapsed / interval - 1)
+        let exclusions = Set(excludedIndices)
+        while let date = date(at: index, calendar: calendar) {
+            if end == .after && index >= count { return nil }
+            if end == .onDate, let until, calendar.startOfDay(for: date) > calendar.startOfDay(for: until) { return nil }
+            if date >= boundary && !exclusions.contains(index) { return index }
+            guard index < Int.max else { return nil }
+            index += 1
+        }
+        return nil
+    }
 }
 
 enum Recurrence {
     static func generate(_ seed: Event, rule: RecurrenceRule, fromIndex: Int = 0,
-                         now: Date = Date(), calendar: Calendar = .current) -> [Event] {
+                         now: Date = Date(), calendar: Calendar = .current, before end: Date? = nil) -> [Event] {
         let calendar = rule.resolvedCalendar(calendar)
         guard rule.frequency != .never, (1...1000).contains(rule.interval),
               rule.end != .after || (1...10000).contains(rule.count) else { return [] }
@@ -110,7 +128,9 @@ enum Recurrence {
                   let date = rule.date(at: index, calendar: calendar) else { break }
             if rule.end == .onDate, let until = rule.until,
                calendar.startOfDay(for: date) > calendar.startOfDay(for: until) { break }
-            if rule.end != .after && date > horizon { break }
+            if let end {
+                if date >= end { break }
+            } else if rule.end != .after && date > horizon { break }
             if !exclusions.contains(index) {
                 result.append(occurrence(seed, rule: rule, seriesID: seriesID, index: index,
                                          date: date, duration: duration, calendar: calendar))
@@ -138,7 +158,8 @@ enum Recurrence {
         return event
     }
 
-    static func replenishing(_ events: [Event], now: Date = Date(), calendar: Calendar = .current) -> [Event] {
+    static func replenishing(_ events: [Event], now: Date = Date(), calendar: Calendar = .current,
+                             before end: Date? = nil) -> [Event] {
         var result = events
         let groups = Dictionary(grouping: events.filter { $0.seriesID != nil }, by: { $0.seriesID! })
         for (id, group) in groups {
@@ -170,9 +191,25 @@ enum Recurrence {
             }
             let members = result.filter { $0.seriesID == id }
             let nextIndex = (members.compactMap(\.occurrenceIndex).max() ?? -1) + 1
-            result.append(contentsOf: generate(seed, rule: rule, fromIndex: nextIndex, now: now, calendar: calendar))
+            result.append(contentsOf: generate(seed, rule: rule, fromIndex: nextIndex, now: now, calendar: calendar, before: end))
         }
         return result
+    }
+
+    static func hasEvents(onOrAfter boundary: Date, in events: [Event], category: String? = nil,
+                          calendar: Calendar = .current) -> Bool {
+        if events.contains(where: { $0.date >= boundary && (category == nil || $0.category == category) }) { return true }
+        let groups = Dictionary(grouping: events.filter { $0.seriesID != nil }, by: { $0.seriesID! })
+        return groups.values.contains { group in
+            let ordered = group.sorted { $0.date < $1.date }
+            // Choose the series seed before filtering: a differently categorized
+            // exception does not change the category of future occurrences.
+            guard let seed = ordered.first(where: { !$0.isRecurrenceException }) ?? ordered.first,
+                  seed.repeatOption != .never, category == nil || seed.category == category,
+                  let rule = seed.recurrence else { return false }
+            let next = (group.compactMap(\.occurrenceIndex).max() ?? -1) + 1
+            return rule.nextIndex(onOrAfter: boundary, fromIndex: next, calendar: calendar) != nil
+        }
     }
 
     static func removingOccurrence(_ event: Event, from events: [Event]) -> [Event] {

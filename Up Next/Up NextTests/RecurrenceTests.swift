@@ -42,6 +42,66 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertTrue(filled.contains { $0.date == date(2032, 1, 1) })
     }
 
+    func testPagingMaterializesExact365DayWindowsAndPreservesExistingOccurrences() {
+        let event = seed(.daily, date(2027, 1, 1))
+        var window = EventListWindow(today: event.date, calendar: calendar)
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: event.date, calendar: calendar)
+        XCTAssertEqual(events.filter { window.contains($0.date) }.count, 365)
+        let original = events
+        for expected in [730, 1095] {
+            window.loadMore()
+            events = Recurrence.replenishing(events, now: event.date, calendar: calendar, before: window.end)
+            XCTAssertEqual(events.count, expected)
+            XCTAssertEqual(Array(events.prefix(original.count)), original)
+            XCTAssertTrue(events.allSatisfy { $0.date < window.end })
+            XCTAssertTrue(Recurrence.hasEvents(onOrAfter: window.end, in: events, calendar: calendar))
+            XCTAssertEqual(Recurrence.replenishing(events, now: event.date, calendar: calendar, before: window.end), events)
+        }
+        XCTAssertEqual(Set(events.map(\.id)).count, events.count)
+    }
+
+    func testSparseRecurrenceCanPageAcrossEmptyYearsAndStopsAtItsEnding() {
+        var event = seed(.custom, date(2027, 1, 1))
+        event.customRepeatCount = 2; event.repeatUnit = "Years"; event.repeatUntil = date(2029, 1, 1)
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .onDate), now: event.date, calendar: calendar)
+        var window = EventListWindow(today: event.date, calendar: calendar)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertTrue(Recurrence.hasEvents(onOrAfter: window.end, in: events, calendar: calendar))
+        window.loadMore()
+        events = Recurrence.replenishing(events, now: event.date, calendar: calendar, before: window.end)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertTrue(Recurrence.hasEvents(onOrAfter: window.end, in: events, calendar: calendar))
+        window.loadMore()
+        events = Recurrence.replenishing(events, now: event.date, calendar: calendar, before: window.end)
+        XCTAssertEqual(events.map(\.date), [date(2027, 1, 1), date(2029, 1, 1)])
+        XCTAssertFalse(Recurrence.hasEvents(onOrAfter: window.end, in: events, calendar: calendar))
+    }
+
+    func testFutureOccurrenceLookupRespectsExclusionsCountsAndClampedMonths() {
+        let event = seed(.monthly, date(2030, 1, 31))
+        var rule = RecurrenceRule(event: event, end: .after)
+        XCTAssertEqual(rule.nextIndex(onOrAfter: date(2030, 2, 1), calendar: calendar), 1)
+        XCTAssertEqual(rule.nextIndex(onOrAfter: date(2030, 3, 1), calendar: calendar), 2)
+        rule.excludedIndices = [1, 2]
+        XCTAssertNil(rule.nextIndex(onOrAfter: date(2030, 2, 1), calendar: calendar))
+        rule.end = .indefinitely
+        XCTAssertEqual(rule.nextIndex(onOrAfter: date(2030, 2, 1), calendar: calendar), 3)
+        rule.end = .onDate; rule.until = date(2030, 3, 31)
+        XCTAssertNil(rule.nextIndex(onOrAfter: date(2030, 2, 1), calendar: calendar))
+    }
+
+    func testPagingAvailabilityUsesTheSeriesCategoryInsteadOfAnExceptionCategory() {
+        var event = seed(.yearly, date(2030, 1, 1)); event.category = "Social"
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: event.date, calendar: calendar)
+        events[0].category = "Work"; events[0].isRecurrenceException = true
+        let boundary = date(2032, 1, 1)
+        XCTAssertFalse(Recurrence.hasEvents(onOrAfter: boundary, in: events, category: "Work", calendar: calendar))
+        XCTAssertTrue(Recurrence.hasEvents(onOrAfter: boundary, in: events, category: "Social", calendar: calendar))
+        let filled = Recurrence.replenishing(events, now: event.date, calendar: calendar, before: date(2033, 1, 1))
+        XCTAssertEqual(filled.last?.category, "Social")
+        XCTAssertEqual(filled.first?.category, "Work")
+    }
+
     func testEditingEndCountChangesSeriesWithoutChangingSurvivingIDs() {
         let event = seed(.daily, date(2030, 1, 1))
         let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)

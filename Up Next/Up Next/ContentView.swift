@@ -379,8 +379,13 @@ struct ContentView: View {
                                 Button("Show more") {
                                     // Appending a page must keep the current row
                                     // and scroll ownership, without reloading storage.
-                                    eventListWindow.loadMore()
+                                    var expanded = eventListWindow
+                                    expanded.loadMore()
+                                    if appData.extendRecurrences(before: expanded.end) {
+                                        eventListWindow = expanded
+                                    }
                                 }
+                                .disabled(appData.storageError != nil)
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
                                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -587,8 +592,7 @@ struct ContentView: View {
     }
 
     private var hasMoreListEvents: Bool {
-        let end = eventListWindow.end
-        return timelineEvents.contains { $0.date >= end }
+        Recurrence.hasEvents(onOrAfter: eventListWindow.end, in: appData.events, category: selectedCategoryFilter)
     }
 
     private func selectTimelineEvent(_ event: Event) {
