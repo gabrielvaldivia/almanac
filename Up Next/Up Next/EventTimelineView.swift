@@ -756,7 +756,7 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
             let lhs = distance(to: $0), rhs = distance(to: $1)
             if lhs != rhs { return lhs < rhs }
             return ($0.placement?.event.id.uuidString ?? "") < ($1.placement?.event.id.uuidString ?? "")
-        } ?? super.hitTest(point, with: event)
+        } ?? self
     }
 
     @objc private func prepareSelectionFeedback() {

@@ -75,6 +75,20 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testOffscreenMarkersDoNotCaptureTapsAtTheTimelineEdge() throws {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 200))
+        timeline.update(events: [Event(title: "Offscreen", date: timeline.anchor, color: CodableColor(color: .blue))])
+        timeline.setDayPosition(0.9)
+        timeline.layoutIfNeeded()
+        let marker = try XCTUnwrap(timeline.subviews.compactMap { $0 as? UIButton }.first)
+        XCTAssertLessThan(marker.frame.maxX, timeline.bounds.minX)
+        let point = CGPoint(x: timeline.bounds.minX + 1, y: marker.frame.midY)
+        XCTAssertTrue(marker.point(inside: marker.convert(point, from: timeline), with: nil))
+        XCTAssertTrue(timeline.hitTest(point, with: nil) === timeline,
+                      "An expanded target must not select a completely invisible event")
+    }
+
+    @MainActor
     func testTimeZoneChangesPreserveVisibleDatesAndKeepTodayCorrect() throws {
         let originalZone = NSTimeZone.default
         defer { NSTimeZone.default = originalZone }

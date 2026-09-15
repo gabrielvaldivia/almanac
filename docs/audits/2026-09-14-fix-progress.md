@@ -124,6 +124,10 @@ Medium and large widgets share their rendering path while retaining their respec
 
 Replaced color's redundant Codable methods with synthesis and removed additional unused notification/widget imports from UI files. A literal legacy fixture verifies identical encoded keys/values and rejection of missing color components. All 146 unit tests passed, followed by the final 14 storage tests after preserving the existing category test's actor annotation. The signed app/widget Release build passed. Widget cleanup was pushed as `42d3f4a`.
 
+### 29. Verification refinement — Ignore invisible timeline targets
+
+The edge probe reproduced UIKit's fallback hit testing selecting a fully offscreen marker through its expanded bounds. Empty visible timeline space now receives the touch itself, so only visible markers can be selected and panning remains available. The probe failed before the fix and passes afterward. All 147 unit tests and the final signed app/widget Release build passed. Serialization cleanup was pushed as `7a2fddb`.
+
 ## Remaining
 
-All 23 main findings have delivered fixes. The unused/redundant-code inventory and final verification remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+All 23 main findings have delivered fixes. The audited cleanup is complete; final UI and compatibility verification is in progress. Active subscriptions and persisted legacy event fields are deliberately retained to preserve existing behavior. Cosmetic EventSheet naming changes were not needed for a bug fix or removal of unused code. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
