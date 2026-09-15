@@ -172,6 +172,57 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertTrue(Recurrence.removingOccurrence(single, from: [single], calendar: calendar).isEmpty)
     }
 
+    func testSingleSparseOccurrenceEditsDoNotChangeFutureMetadataOrDisableTheSchedule() throws {
+        var event = seed(.custom, date(2030, 1, 1)); event.customRepeatCount = 2; event.repeatUnit = "Years"
+        event.category = "Social"; event.endDate = date(2030, 1, 2)
+        let original = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely, calendar: calendar), now: event.date, calendar: calendar)
+        var replacement = original[0]
+        replacement.title = "Exception"; replacement.endDate = date(2030, 1, 5)
+        replacement.color = CodableColor(color: .orange); replacement.category = "Work"
+        replacement.notificationsEnabled = false; replacement.repeatOption = .never
+        let updated = Recurrence.updatingOccurrence(original[0], with: replacement, in: original, calendar: calendar)
+        XCTAssertEqual(updated[0].id, original[0].id)
+        XCTAssertEqual(updated[0].title, "Exception")
+        XCTAssertEqual(updated[0].endDate, date(2030, 1, 5))
+        XCTAssertEqual(updated[0].repeatOption, .never)
+        XCTAssertTrue(updated[0].isRecurrenceException)
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601; decoder.userInfo[.eventCalendar] = calendar
+        let restored = try decoder.decode([Event].self, from: encoder.encode(updated))
+        let filled = Recurrence.replenishing(restored, now: date(2034, 1, 1), calendar: calendar)
+        for offset in [2, 4] {
+            let future = try XCTUnwrap(filled.first { $0.date == date(2030 + offset, 1, 1) })
+            XCTAssertEqual(future.title, event.title); XCTAssertEqual(future.color, event.color)
+            XCTAssertEqual(future.category, event.category); XCTAssertEqual(future.notificationsEnabled, event.notificationsEnabled)
+            XCTAssertEqual(future.endDate, date(2030 + offset, 1, 2))
+            XCTAssertEqual(future.repeatOption, .custom); XCTAssertEqual(future.customRepeatCount, 2)
+            XCTAssertEqual(future.repeatUnit, "Years"); XCTAssertFalse(future.isRecurrenceException)
+        }
+        XCTAssertEqual(Set(filled.map(\.id)).count, filled.count)
+    }
+
+    func testEditingOrDeletingTheLastNormalOccurrenceKeepsTheOriginalSeriesSource() throws {
+        let event = seed(.yearly, date(2030, 1, 1))
+        let original = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely, calendar: calendar), now: event.date, calendar: calendar)
+        var firstEdit = original[0]; firstEdit.title = "First exception"
+        let first = Recurrence.updatingOccurrence(original[0], with: firstEdit, in: original, calendar: calendar)
+        XCTAssertEqual(first.count, original.count, "No extra occurrence is needed while another normal one survives")
+        var secondEdit = original[1]; secondEdit.title = "Second exception"
+        let edited = Recurrence.updatingOccurrence(original[1], with: secondEdit, in: first, calendar: calendar)
+        XCTAssertEqual(edited.map(\.title), ["First exception", "Second exception", event.title])
+        let deleted = Recurrence.removingOccurrence(original[1], from: first, calendar: calendar)
+        XCTAssertEqual(deleted.map(\.title), ["First exception", event.title])
+        XCTAssertEqual(deleted.last?.date, date(2032, 1, 1))
+        XCTAssertEqual(deleted.last?.recurrence?.excludedIndices, [1])
+        let later = Recurrence.replenishing(deleted, now: date(2033, 1, 1), calendar: calendar)
+        XCTAssertTrue(later.filter { !$0.isRecurrenceException }.allSatisfy { $0.title == event.title })
+        XCTAssertFalse(later.contains { $0.occurrenceIndex == 1 })
+        var finite = event; finite.repeatUntilCount = 1
+        let last = Recurrence.generate(finite, rule: RecurrenceRule(event: finite, end: .after, calendar: calendar), calendar: calendar)
+        XCTAssertEqual(Recurrence.updatingOccurrence(last[0], with: secondEdit, in: last, calendar: calendar).count, 1,
+                       "An exhausted finite series does not gain a future occurrence")
+    }
+
     func testEditingEndCountChangesSeriesWithoutChangingSurvivingIDs() {
         let event = seed(.daily, date(2030, 1, 1))
         let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)

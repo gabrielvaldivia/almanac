@@ -84,6 +84,10 @@ Added target-specific manifests for existing preference access: app-only setting
 
 Deleting the last loaded occurrence now retains the next valid occurrence beyond the normal horizon when the rule still has future dates. Exclusions and finite endings are respected, and unrelated events remain unchanged. The existing occurrence-based storage format is preserved. All 42 recurrence/regression/birthday tests passed across the initial run and corrected recurrence rerun; the new persistence fixture now consistently supplies its explicit calendar when creating and decoding the rule. App/widget Release build passed. F20 was pushed as `e0473e0`.
 
+### 19. F04 — Individual edits stay confined to their occurrence
+
+Before editing or deleting the last unmodified occurrence, retain the next valid unmodified occurrence as the series' metadata source. This keeps the existing storage format while isolating title, duration, color, category, notifications, and repeat edits. Finite exhausted series gain no extra dates. All 137 unit tests and a full editor → This Event Only → relaunch → page forward UI regression passed. Final app/widget Release build passed without source warnings. Metadata already overwritten by older app versions cannot be reconstructed automatically. F03 was pushed as `56cc78b`.
+
 ## Remaining
 
-F04, F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

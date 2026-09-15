@@ -1033,6 +1033,35 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons[renamed].waitForNonExistence(timeout: 5))
     }
 
+    func testEditingOnlyOneSparseOccurrenceKeepsTheFutureTitle() {
+        continueAfterFailure = false
+        let app = makeApp()
+        app.launch()
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Sparse occasion every 2 years")
+        app.buttons["quickAddSubmit"].tap()
+        let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.staticTexts["Sparse occasion"].waitForExistence(timeout: 5))
+        list.staticTexts["Sparse occasion"].tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        let title = app.textFields["Title"]
+        title.tap()
+        title.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "Sparse occasion".count))
+        title.typeText("Just this occasion")
+        app.navigationBars["Edit Event"].buttons["Save"].tap()
+        app.buttons["This Event Only"].tap()
+        XCTAssertTrue(list.staticTexts["Just this occasion"].waitForExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(list.staticTexts["Just this occasion"].waitForExistence(timeout: 5))
+        for _ in 0..<2 where !list.staticTexts["Sparse occasion"].exists {
+            list.buttons["showMoreEvents"].tap()
+        }
+        XCTAssertTrue(list.staticTexts["Sparse occasion"].waitForExistence(timeout: 5))
+        XCTAssertEqual(list.staticTexts.matching(identifier: "Just this occasion").count, 1)
+        XCTAssertEqual(list.staticTexts.matching(identifier: "Sparse occasion").count, 1)
+    }
+
     func testCreateEditPersistAndDeleteEvent() {
         continueAfterFailure = false
         let app = makeApp()

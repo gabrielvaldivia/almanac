@@ -238,9 +238,7 @@ struct EditEventView: View {
         switch option {
         case .thisEvent:
             if event.seriesID != nil {
-                updated.recurrence = event.recurrence
-                updated.isRecurrenceException = true
-                if let index = events.firstIndex(where: { $0.id == event.id }) { events[index] = updated }
+                events = Recurrence.updatingOccurrence(event, with: updated, in: events)
             } else if updated.repeatOption != .never {
                 updated.seriesID = UUID()
                 events.removeAll { $0.id == event.id }

@@ -227,7 +227,7 @@ enum Recurrence {
     }
 
     static func removingOccurrence(_ event: Event, from events: [Event], calendar: Calendar = .current) -> [Event] {
-        var result = events.compactMap { member -> Event? in
+        let result = events.compactMap { member -> Event? in
             if member.id == event.id { return nil }
             var updated = member
             if let id = event.seriesID, member.seriesID == id, let index = event.occurrenceIndex,
@@ -236,20 +236,42 @@ enum Recurrence {
             }
             return updated
         }
-        guard let id = event.seriesID, let index = event.occurrenceIndex, var rule = event.recurrence,
-              events.contains(where: { $0.id == event.id }), !result.contains(where: { $0.seriesID == id }) else { return result }
+        guard let index = event.occurrenceIndex, var rule = event.recurrence,
+              events.contains(where: { $0.id == event.id }) else { return result }
         if !rule.excludedIndices.contains(index) { rule.excludedIndices.append(index) }
+        return preservingSeriesSeed(event, rule: rule, in: result, calendar: calendar)
+    }
+
+    static func updatingOccurrence(_ selected: Event, with replacement: Event, in events: [Event],
+                                   calendar: Calendar = .current) -> [Event] {
+        guard let position = events.firstIndex(where: { $0.id == selected.id }) else { return events }
+        var result = events
+        var updated = replacement
+        updated.id = selected.id
+        updated.seriesID = selected.seriesID
+        updated.occurrenceIndex = selected.occurrenceIndex
+        updated.recurrence = selected.recurrence
+        updated.isRecurrenceException = true
+        result[position] = updated
+        guard let rule = selected.recurrence else { return result }
+        return preservingSeriesSeed(selected, rule: rule, in: result, calendar: calendar)
+    }
+
+    private static func preservingSeriesSeed(_ seed: Event, rule: RecurrenceRule, in events: [Event],
+                                             calendar: Calendar) -> [Event] {
+        guard let id = seed.seriesID, !events.contains(where: { $0.seriesID == id && !$0.isRecurrenceException }) else { return events }
+        let lastIndex = max(seed.occurrenceIndex ?? -1, events.filter { $0.seriesID == id }.compactMap(\.occurrenceIndex).max() ?? -1)
         let calendar = rule.resolvedCalendar(calendar)
-        // The rule lives on its occurrences. Retain the next real occurrence
-        // before removing its last carrier, even beyond the default horizon.
-        if let next = rule.nextIndex(onOrAfter: rule.anchor, fromIndex: index + 1, calendar: calendar),
+        // Keep an unmodified occurrence as the source for future metadata.
+        // The next real date can lie beyond the normal generation horizon.
+        if let next = rule.nextIndex(onOrAfter: rule.anchor, fromIndex: lastIndex + 1, calendar: calendar),
            let date = rule.date(at: next, calendar: calendar) {
-            let duration = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: event.date),
-                                                         to: calendar.startOfDay(for: event.endDate ?? event.date)).day ?? 0)
-            result.append(occurrence(event, rule: rule, seriesID: id, index: next,
-                                     date: date, duration: duration, calendar: calendar))
+            let duration = max(0, calendar.dateComponents([.day], from: calendar.startOfDay(for: seed.date),
+                                                         to: calendar.startOfDay(for: seed.endDate ?? seed.date)).day ?? 0)
+            return events + [occurrence(seed, rule: rule, seriesID: id, index: next,
+                                        date: date, duration: duration, calendar: calendar)]
         }
-        return result
+        return events
     }
 
     static func updatingSeries(_ selected: Event, with replacement: Event, in events: [Event],
