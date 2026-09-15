@@ -3,7 +3,9 @@ import UIKit
 
 enum TimelineAppearance {
     static let background = UIColor { traits in
-        traits.userInterfaceStyle == .dark ? .black : UIColor(white: 0.96, alpha: 1)
+        traits.userInterfaceStyle == .dark
+            ? UIColor.secondarySystemBackground.resolvedColor(with: traits)
+            : UIColor(white: 0.96, alpha: 1)
     }
 }
 

@@ -79,7 +79,7 @@ struct EventRowColors {
         }
         var tint = category
         tint.opacity *= highlighted ? (dark ? 0.4 : 0.24) : (style == "naked" ? 0 : dark ? 0.2 : 0.1)
-        background = Self.composite(tint, over: resolved(dark ? .secondarySystemBackground : .systemBackground))
+        background = Self.composite(tint, over: resolved(.systemBackground))
         let preferredTitle = dark ? resolved(.white) : style == "naked" ? resolved(.label) : category
         var preferredDate = dark ? resolved(.white) : style == "naked" ? resolved(.secondaryLabel) : category
         preferredDate.opacity *= dark ? 0.5 : style == "naked" ? 1 : 0.7
@@ -90,7 +90,7 @@ struct EventRowColors {
     static func secondaryLabel(dark: Bool) -> Color {
         let traits = UITraitCollection(userInterfaceStyle: dark ? .dark : .light)
         let foreground = CodableColor(color: Color(uiColor: UIColor.secondaryLabel.resolvedColor(with: traits)))
-        let background = CodableColor(color: Color(uiColor: (dark ? UIColor.secondarySystemBackground : .systemBackground).resolvedColor(with: traits)))
+        let background = CodableColor(color: Color(uiColor: UIColor.systemBackground.resolvedColor(with: traits)))
         return readable(foreground, over: background).color
     }
 

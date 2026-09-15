@@ -63,7 +63,7 @@ struct ContentView: View {
     }
 
     private var eventListBackground: Color {
-        Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground)
+        Color(uiColor: .systemBackground)
     }
 
     private var timelineBackground: Color {
