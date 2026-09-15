@@ -119,10 +119,12 @@ enum Recurrence {
         let seriesID = seed.seriesID ?? UUID()
         var result: [Event] = []
         var index = fromIndex
-        // Avoid materializing decades of history for a newly created indefinite event.
-        if rule.end != .after && fromIndex == 0 && rule.anchor < now {
+        // Retain stored history, but skip an unmaterialized gap that would use
+        // the entire batch before reaching current/ongoing occurrences.
+        if rule.end != .after && rule.anchor < now {
             let elapsed = calendar.dateComponents([rule.component], from: rule.anchor, to: now).value(for: rule.component) ?? 0
-            index = max(0, elapsed / rule.interval - duration - 1)
+            let recentIndex = max(0, elapsed / rule.interval - duration - 1)
+            if fromIndex == 0 || recentIndex - fromIndex >= 10000 { index = recentIndex }
         }
         for _ in 0..<10000 {
             guard rule.end != .after || index < rule.count,

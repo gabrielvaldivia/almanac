@@ -42,6 +42,28 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertTrue(filled.contains { $0.date == date(2032, 1, 1) })
     }
 
+    func testLongInactivityRefillsTheFutureWithoutDiscardingStoredHistory() {
+        var event = seed(.daily, date(2030, 1, 1))
+        event.endDate = date(2030, 1, 4)
+        var rule = RecurrenceRule(event: event, end: .indefinitely, calendar: calendar)
+        let now = date(2065, 1, 1)
+        let todayIndex = calendar.dateComponents([.day], from: event.date, to: now).day!
+        rule.excludedIndices = [20, todayIndex + 2]
+        let original = Recurrence.generate(event, rule: rule, now: event.date, calendar: calendar)
+        let refilled = Recurrence.replenishing(original, now: now, calendar: calendar)
+        XCTAssertEqual(Array(refilled.prefix(original.count)), original)
+        XCTAssertTrue(refilled.contains { $0.date == now })
+        XCTAssertTrue(refilled.contains { $0.date == date(2066, 1, 1) })
+        XCTAssertTrue(refilled.contains { $0.date < now && ($0.endDate ?? $0.date) >= now })
+        XCTAssertFalse(refilled.contains { rule.excludedIndices.contains($0.occurrenceIndex ?? -1) })
+        XCTAssertLessThan(refilled.count - original.count, 400)
+        XCTAssertEqual(Recurrence.replenishing(refilled, now: now, calendar: calendar), refilled)
+
+        event.repeatUntilCount = 10000
+        let finite = RecurrenceRule(event: event, end: .after, calendar: calendar)
+        XCTAssertEqual(Recurrence.generate(event, rule: finite, fromIndex: 9998, now: now, calendar: calendar).map(\.occurrenceIndex), [9998, 9999])
+    }
+
     func testPagingMaterializesExact365DayWindowsAndPreservesExistingOccurrences() {
         let event = seed(.daily, date(2027, 1, 1))
         var window = EventListWindow(today: event.date, calendar: calendar)
