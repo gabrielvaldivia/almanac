@@ -14,13 +14,6 @@ struct EventRow: View {
     var event: Event
     var isHighlighted = false
     @Binding var selectedEvent: Event?
-    @Binding var newEventTitle: String
-    @Binding var newEventDate: Date
-    @Binding var newEventEndDate: Date
-    @Binding var showEndDate: Bool
-    @Binding var selectedCategory: String?
-    @Binding var showEditSheet: Bool
-    var categories: [(name: String, color: Color)]
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appData: AppData
 
@@ -28,20 +21,10 @@ struct EventRow: View {
         RoundedRectangle(cornerRadius: eventStyle == "bubbly" ? 24 : 8)
     }
 
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E, MMM d"
-        return formatter
-    }()
-
-    private func getDurationText(start: Date, end: Date?) -> String {
-        return rangeDescription(from: start, to: end)
-    }
-
     var body: some View {
         let colors = EventRowColors(category: event.color, style: appData.eventStyle,
                                     dark: colorScheme == .dark, highlighted: isHighlighted)
-        Button(action: editEvent) {
+        Button { selectedEvent = event } label: {
         HStack(alignment: .top, spacing: appData.eventStyle == "naked" ? 8 : 20) {
             // Event Style Indicator
             if appData.eventStyle == "naked" {
@@ -62,7 +45,7 @@ struct EventRow: View {
                 }
 
                 // Event date and duration
-                Text(getDurationText(start: event.date, end: event.endDate))
+                Text(EventDateText.range(start: event.date, end: event.endDate, reference: Date()))
                     .font(.footnote)
                     .foregroundColor(colors.date.color)
                     .fixedSize(horizontal: false, vertical: true)
@@ -81,33 +64,6 @@ struct EventRow: View {
         return appData.eventStyle == "naked" ? .clear : event.color.color.opacity(colorScheme == .dark ? 0.2 : 0.1)
     }
 
-    private func editEvent() {
-            selectedEvent = event
-            newEventTitle = event.title
-            newEventDate = event.date
-            newEventEndDate =
-                event.endDate ?? Calendar.current.date(byAdding: .day, value: 1, to: event.date)
-                ?? event.date
-            showEndDate = event.endDate != nil
-            selectedCategory = event.category
-            showEditSheet = true
-    }
-
-    private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
-        EventDateText.range(start: startDate, end: endDate, reference: Date())
-    }
-}
-
-extension RepeatOption {
-    var shorthand: String {
-        switch self {
-        case .daily: return "d"
-        case .weekly: return "w"
-        case .monthly: return "m"
-        case .yearly: return "y"
-        case .never, .custom: return ""
-        }
-    }
 }
 
 /// Adjust only text that needs more contrast; category decoration remains unchanged.

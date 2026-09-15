@@ -399,7 +399,6 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(recurring.dateOptions.repeatOption, .custom)
         XCTAssertEqual(recurring.dateOptions.customRepeatCount, 2)
         XCTAssertEqual(recurring.dateOptions.repeatUntil, date(2026, 12, 15))
-        XCTAssertTrue(recurring.usesCustomRepeat)
         XCTAssertTrue(recurring.hasRepeatSelection)
     }
 
@@ -418,7 +417,6 @@ final class QuickEventTests: XCTestCase {
         XCTAssertEqual(draft.dateOptions.date, date(2026, 10, 1))
         XCTAssertNil(draft.categoryOptions.selectedCategory)
         XCTAssertEqual(draft.dateOptions.repeatOption, .never)
-        XCTAssertTrue(draft.usesCustomRepeat)
         XCTAssertTrue(draft.hasCategorySelection)
         XCTAssertTrue(draft.hasRepeatSelection)
         let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions,

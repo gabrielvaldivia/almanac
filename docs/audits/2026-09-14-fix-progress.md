@@ -108,6 +108,10 @@ Event text now retains its preferred color when readable and otherwise adjusts t
 
 If an unmaterialized recurrence gap would consume the entire 10,000-iteration batch before reaching current events, generation skips that gap and fills the current/future horizon. Stored history, IDs, exclusions, overlapping durations, normal short-gap fills, and finite count endings remain intact. Missing decades are intentionally not backfilled. All 46 recurrence/birthday/regression tests and the signed app/widget Release build passed. F19 was pushed as `0dfb507`.
 
+### 25. Cleanup — Remove obsolete editor state and wrappers
+
+Removed the write-only row/editor binding chain, unused ContentView state, repeat-selection flags with no behavioral readers, unused editor helpers/formatters, and ineffective List-only modifiers. The editor now shares its existing displayed date-default policy between initialization and appearance. Repeat controls bind directly to their real options; persisted legacy repeat fields remain supported. Removed only the unused argument from the active recurrence wrapper. All 144 unit tests, three save/cancel/delete/repeat-correction UI regressions, and the signed app/widget Release build passed. The long-gap fix was pushed as `c0b744a`.
+
 ## Remaining
 
 All 23 main findings have delivered fixes. The unused/redundant-code inventory and final verification remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

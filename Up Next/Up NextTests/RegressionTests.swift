@@ -65,7 +65,7 @@ final class RegressionTests: XCTestCase {
         event.useCustomRepeatOptions = true
         for interval in [0, -1, Int.max] {
             event.customRepeatCount = interval
-            XCTAssertTrue(generateRepeatingEvents(for: event, repeatUntilOption: .indefinitely, showEndDate: false).isEmpty)
+            XCTAssertTrue(generateRepeatingEvents(for: event, repeatUntilOption: .indefinitely).isEmpty)
         }
     }
 

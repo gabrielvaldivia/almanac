@@ -319,13 +319,12 @@ private struct QuickScheduleEditorDraft: Identifiable {
 
 private struct QuickRepeatEditor: View {
     @State var options: DateOptions
-    @State private var usesCustomRepeat = true
     var onSave: (DateOptions) -> Void
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                RepeatSection(dateOptions: $options, useCustomRepeatOptions: $usesCustomRepeat)
+                RepeatSection(dateOptions: $options)
                 if let message = options.validationMessage {
                     Text(message).font(.footnote).foregroundStyle(.red)
                 }

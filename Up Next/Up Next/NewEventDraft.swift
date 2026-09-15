@@ -5,7 +5,6 @@ struct NewEventDraft {
     var title: String
     var dateOptions: DateOptions
     var categoryOptions: CategoryOptions
-    var usesCustomRepeat = false
     var hasCategorySelection = false
     var hasRepeatSelection = false
     var scheduleReviewMessage: String?
@@ -27,7 +26,6 @@ struct NewEventDraft {
             showRepeatOptions: (selected?.repeatOption ?? .never) != .never,
             repeatUnit: selected?.repeatUnit ?? "Days", customRepeatCount: selected?.customRepeatCount ?? 1)
         if let recurrence {
-            usesCustomRepeat = true
             dateOptions.repeatOption = recurrence.option
             dateOptions.customRepeatCount = recurrence.interval
             dateOptions.repeatUnit = recurrence.unit
@@ -126,7 +124,6 @@ struct QuickEventOverrides {
             draft.dateOptions.repeatUntilCount = repeatOptions.repeatUntilCount
             draft.dateOptions.repeatUntil = repeatOptions.repeatUntil
             draft.dateOptions.showRepeatOptions = repeatOptions.repeatOption != .never
-            draft.usesCustomRepeat = true
         }
         return draft
     }

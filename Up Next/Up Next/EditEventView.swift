@@ -45,6 +45,18 @@ public struct DateOptions {
     }
 }
 
+extension DateOptions {
+    init(event: Event) {
+        self.init(date: event.date, endDate: event.endDate ?? event.date,
+                  showEndDate: event.endDate != nil, repeatOption: event.repeatOption,
+                  repeatUntil: event.recurrence?.until ?? event.repeatUntil ?? event.date,
+                  repeatUntilOption: event.recurrence?.end ?? (event.repeatUntil == nil ? .indefinitely : .onDate),
+                  repeatUntilCount: event.recurrence?.count ?? event.repeatUntilCount ?? 1,
+                  showRepeatOptions: event.repeatOption != .never, repeatUnit: event.repeatUnit ?? "Days",
+                  customRepeatCount: event.customRepeatCount ?? 1)
+    }
+}
+
 // Struct for category options
 public struct CategoryOptions {
     var selectedCategory: String?
@@ -53,7 +65,6 @@ public struct CategoryOptions {
 
 // Struct for view state
 public struct ViewState {
-    var showCategoryManagementView: Bool
     var showDeleteActionSheet: Bool
     var showDeleteButtons: Bool
 }
@@ -68,10 +79,8 @@ struct EditEventView: View {
     @State private var dateOptions: DateOptions
     @State private var categoryOptions: CategoryOptions
     @State private var viewState: ViewState
-    @State private var useCustomRepeatOptions: Bool = false
 
     @State private var showDeleteSeriesAlert = false
-    @State private var deleteOption: DeleteOption = .thisEvent
 
     // Function to save the event
     let saveEvents: () -> Void
@@ -93,19 +102,7 @@ struct EditEventView: View {
             ?? Event(title: "", date: Date(), color: CodableColor(color: .blue))
         self._eventDetails = State(
             initialValue: EventDetails(title: event.title, selectedEvent: event))
-        self._dateOptions = State(
-            initialValue: DateOptions(
-                date: event.date,
-                endDate: event.endDate ?? event.date,
-                showEndDate: event.endDate != nil,
-                repeatOption: event.repeatOption,
-                repeatUntil: event.repeatUntil ?? Date(),
-                repeatUntilOption: event.recurrence?.end ?? (event.repeatUntil == nil ? .indefinitely : .onDate),
-                repeatUntilCount: event.repeatUntilCount ?? 1,
-                showRepeatOptions: event.repeatOption != .never,
-                repeatUnit: event.repeatUnit ?? "Days",
-                customRepeatCount: event.customRepeatCount ?? 1
-            ))
+        self._dateOptions = State(initialValue: DateOptions(event: event))
         self._categoryOptions = State(
             initialValue: CategoryOptions(
                 selectedCategory: event.category,
@@ -113,7 +110,6 @@ struct EditEventView: View {
             ))
         self._viewState = State(
             initialValue: ViewState(
-                showCategoryManagementView: false,
                 showDeleteActionSheet: false,
                 showDeleteButtons: true
             ))
@@ -126,7 +122,6 @@ struct EditEventView: View {
                 dateOptions: $dateOptions,
                 categoryOptions: $categoryOptions,
                 viewState: $viewState,
-                useCustomRepeatOptions: $useCustomRepeatOptions,
                 deleteEvent: deleteEvent,
                 deleteSeries: { showDeleteSeriesAlert = true }
             )
@@ -166,7 +161,6 @@ struct EditEventView: View {
                     title: Text("Delete Event"),
                     message: Text("Are you sure you want to delete this event?"),
                     primaryButton: .destructive(Text("Delete this event")) {
-                        deleteOption = .thisEvent
                         deleteEvent()
                     },
                     secondaryButton: .cancel()
@@ -202,24 +196,6 @@ struct EditEventView: View {
         showEditSheet = false
     }
 
-    // Function to delete a single event
-    func deleteSingleEvent() {
-        guard let event = eventDetails.selectedEvent else { return }
-        appData.deleteEvent(event)
-    }
-
-    // Function to get the color of the selected category
-    func getCategoryColor() -> Color {
-        return categoryOptions.selectedColor.color
-    }
-
-    // Custom date formatter
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM, d, yyyy"
-        return formatter
-    }
-
     // Function to apply changes to an event or series of events
     func applyChanges(to option: DeleteOption) {
         guard let event = eventDetails.selectedEvent else { return }
@@ -242,7 +218,7 @@ struct EditEventView: View {
             } else if updated.repeatOption != .never {
                 updated.seriesID = UUID()
                 events.removeAll { $0.id == event.id }
-                events.append(contentsOf: generateRepeatingEvents(for: updated, repeatUntilOption: dateOptions.repeatUntilOption, showEndDate: dateOptions.showEndDate))
+                events.append(contentsOf: generateRepeatingEvents(for: updated, repeatUntilOption: dateOptions.repeatUntilOption))
             } else {
                 updated.recurrence = nil
                 if let index = events.firstIndex(where: { $0.id == event.id }) { events[index] = updated }
@@ -261,22 +237,11 @@ struct EditEventView: View {
         if let event = selectedEvent {
             eventDetails.selectedEvent = event
             eventDetails.title = event.title
-            dateOptions.date = event.date
-            dateOptions.endDate = event.endDate ?? event.date
-            dateOptions.showEndDate = event.endDate != nil
-
-            dateOptions.repeatOption = event.repeatOption
-            dateOptions.repeatUntil = event.recurrence?.until ?? event.repeatUntil ?? event.date
-            dateOptions.repeatUntilOption = event.recurrence?.end ?? (event.repeatUntil == nil ? .indefinitely : .onDate)
-            dateOptions.repeatUntilCount = event.recurrence?.count ?? event.repeatUntilCount ?? 1
-            dateOptions.showRepeatOptions = event.repeatOption != .never
-            dateOptions.repeatUnit = event.repeatUnit ?? "Days"
-            dateOptions.customRepeatCount = event.customRepeatCount ?? 1
+            dateOptions = DateOptions(event: event)
 
             categoryOptions.selectedCategory = event.category
             categoryOptions.selectedColor = event.color
 
-            useCustomRepeatOptions = event.repeatOption != .never
         }
     }
 }

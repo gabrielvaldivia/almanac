@@ -9,7 +9,6 @@ struct EventForm: View {
     @Binding var dateOptions: DateOptions
     @Binding var categoryOptions: CategoryOptions
     @Binding var viewState: ViewState
-    @Binding var useCustomRepeatOptions: Bool
 
     var deleteEvent: () -> Void
     var deleteSeries: () -> Void
@@ -19,7 +18,6 @@ struct EventForm: View {
     @State private var showCustomEndDatePicker = false
     @State private var tempEndDate: Date?
     @State private var showColorPickerSheet = false
-    @State private var predefinedColors: [Color] = []
 
     var body: some View {
         ZStack {
@@ -35,9 +33,7 @@ struct EventForm: View {
                         showCustomStartDatePicker: $showCustomStartDatePicker,
                         showCustomEndDatePicker: $showCustomEndDatePicker,
                         tempEndDate: $tempEndDate)
-                    RepeatSection(
-                        dateOptions: $dateOptions,
-                        useCustomRepeatOptions: $useCustomRepeatOptions)
+                    RepeatSection(dateOptions: $dateOptions)
                     if let message = dateOptions.validationMessage {
                         Text(message).font(.footnote).foregroundStyle(.red)
                     }
@@ -55,12 +51,7 @@ struct EventForm: View {
                 .padding()
             }
         }
-        .onAppear(perform: setupInitialState)
         .onDisappear(perform: cleanupState)
-    }
-
-    private func setupInitialState() {
-        predefinedColors = CustomColorPickerSheet.predefinedColors
     }
 
     private func cleanupState() {
@@ -180,32 +171,22 @@ struct DateSection: View {
 
 struct RepeatSection: View {
     @Binding var dateOptions: DateOptions
-    @Binding var useCustomRepeatOptions: Bool
 
     var body: some View {
         RepeatOptions(
-            repeatOption: manual(\.repeatOption),
-            showRepeatOptions: manual(\.showRepeatOptions),
-            customRepeatCount: manual(\.customRepeatCount),
-            repeatUnit: manual(\.repeatUnit),
-            repeatUntilOption: manual(\.repeatUntilOption),
-            repeatUntilCount: manual(\.repeatUntilCount),
-            repeatUntil: manual(\.repeatUntil)
+            repeatOption: $dateOptions.repeatOption,
+            showRepeatOptions: $dateOptions.showRepeatOptions,
+            customRepeatCount: $dateOptions.customRepeatCount,
+            repeatUnit: $dateOptions.repeatUnit,
+            repeatUntilOption: $dateOptions.repeatUntilOption,
+            repeatUntilCount: $dateOptions.repeatUntilCount,
+            repeatUntil: $dateOptions.repeatUntil
         )
         .padding(.vertical, 6)
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)
     }
 
-    private func manual<T>(_ key: WritableKeyPath<DateOptions, T>) -> Binding<T> {
-        Binding(
-            get: { dateOptions[keyPath: key] },
-            set: {
-                dateOptions[keyPath: key] = $0
-                useCustomRepeatOptions = true
-            }
-        )
-    }
 }
 
 struct CategoryAndColorSection: View {

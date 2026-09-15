@@ -19,19 +19,13 @@ struct ContentView: View {
     @Namespace private var composerTransition
     @State private var quickEventOverrides = QuickEventOverrides()
     @State private var attemptedQuickSubmit = false
-    @State private var newEventTitle: String = ""
-    @State private var newEventDate: Date = Date()
-    @State private var newEventEndDate: Date = Date()
     @State private var selectedEvent: Event?
     private var editSheetPresented: Binding<Bool> {
         Binding(get: { selectedEvent != nil }, set: { if !$0 { selectedEvent = nil } })
     }
     @State private var highlightedEventID: UUID?
     @State private var highlightRequestID: UUID?
-    @State private var showEndDate: Bool = false
-    @State private var showPastEventsView: Bool = false
     @State private var selectedCategoryFilter: String? = nil
-    @State private var selectedCategory: String? = nil
     @State private var eventListPosition: Date?
     @State private var eventListWindow = EventListWindow()
     @State private var timelineShowsToday = true
@@ -44,17 +38,6 @@ struct ContentView: View {
     @State private var timelineScrollRequest: EventSheetScrollRequest?
     @State private var scrollSynchronization = EventScrollSynchronization()
     @State private var scrollToTodayRequest: UUID?
-    @State private var eventDetails = EventDetails(
-        title: "", selectedEvent: Event(title: "", date: Date(), color: CodableColor(color: .blue)))
-    @State private var dateOptions = DateOptions(
-        date: Date(), endDate: Date(), showEndDate: false, repeatOption: .never,
-        repeatUntil: Date(), repeatUntilOption: .indefinitely, repeatUntilCount: 1,
-        showRepeatOptions: false, repeatUnit: "Days", customRepeatCount: 1)
-    @State private var categoryOptions = CategoryOptions(
-        selectedCategory: nil, selectedColor: CodableColor(color: .blue))
-    @State private var viewState = ViewState(
-        showCategoryManagementView: false, showDeleteActionSheet: false, showDeleteButtons: true)
-
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
@@ -63,13 +46,6 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @FocusState private var isQuickEntryFocused: Bool
-
-    // Date formatters
-    let yearFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy"
-        return formatter
-    }()
 
     private var timelineTitle: String {
         TimelineHeading.text(first: timelineMonth, last: timelineMonth, yearOnly: timelineUsesYearHeading)
@@ -655,18 +631,10 @@ struct ContentView: View {
                     EventRow(
                         event: event,
                         isHighlighted: highlightedEventID == event.id,
-                        selectedEvent: $selectedEvent,
-                        newEventTitle: $newEventTitle,
-                        newEventDate: $newEventDate,
-                        newEventEndDate: $newEventEndDate,
-                        showEndDate: $showEndDate,
-                        selectedCategory: $selectedCategory,
-                        showEditSheet: editSheetPresented,
-                        categories: simplifiedCategories
+                        selectedEvent: $selectedEvent
                     )
                     .accessibilityAddTraits(highlightedEventID == event.id ? .isSelected : [])
                     .id(event.id)
-                    .listRowSeparator(.hidden)
                 }
             }
         }
