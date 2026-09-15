@@ -41,12 +41,6 @@ struct UpNextWidgetEntryView: View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var widgetFamily
 
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E, MMM d"
-        return formatter
-    }()
-
     func fetchCategoryColors() -> [String: Color] {
         var categoryColors: [String: Color] = [:]
         if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
@@ -64,12 +58,6 @@ struct UpNextWidgetEntryView: View {
         let categoryColors = fetchCategoryColors()
         let defaultCategoryColor = categoryColors[AppPreferences.shared.string(forKey: "defaultCategory") ?? ""] ?? .blue
 
-        let filteredEvents = entry.events.filter { event in
-            let twelveMonthsFromNow = Calendar.current.date(
-                byAdding: .month, value: 12, to: entry.date)!
-            return event.date <= twelveMonthsFromNow
-        }
-
         VStack(alignment: .leading) {
             HStack {
                 Text("UP NEXT")
@@ -84,7 +72,7 @@ struct UpNextWidgetEntryView: View {
                 }
             }
 
-            if filteredEvents.isEmpty {
+            if entry.events.isEmpty {
                 Spacer()
                 Text("No upcoming events")
                     .foregroundColor(.gray)
@@ -96,11 +84,10 @@ struct UpNextWidgetEntryView: View {
 
                 // Small widget
                 case .systemSmall:
-                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(2)  // Sort events by date
+                    let visibleEvents = entry.events.prefix(2)
                     VStack {
                         VStack(alignment: .leading, spacing: 8) {
-                            ForEach(Array(visibleEvents.enumerated()), id: \.offset) {
-                                index, event in
+                            ForEach(Array(visibleEvents)) { event in
                                 HStack {
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(
@@ -128,8 +115,7 @@ struct UpNextWidgetEntryView: View {
                             Spacer()
                         }
 
-                        let remainingEventsCount = getRemainingEventsCount(
-                            events: filteredEvents, visibleCount: 2)
+                        let remainingEventsCount = max(0, entry.events.count - 2)
                         if remainingEventsCount > 0 {
                             Text(
                                 "\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")"
@@ -139,45 +125,20 @@ struct UpNextWidgetEntryView: View {
                         }
                     }
 
-                // Medium widget
-                case .systemMedium:
-                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(2)  // Sort events by date
-                    let groupedEvents = Dictionary(
-                        grouping: visibleEvents,
-                        by: { event in
-                            if event.date <= entry.date && (event.endDate ?? event.date) >= entry.date {
-                                return "Today"
-                            } else if let endDate = event.endDate,
-                                Calendar.current.isDate(endDate, inSameDayAs: entry.date)
-                            {
-                                return "Today"
-                            } else {
-                                return event.date.relativeDate(now: entry.date)
-                            }
-                        })
-                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                        let date1 = entry.date.addingTimeInterval(
-                            TimeInterval(daysFromRelativeDate(key1)))
-                        let date2 = entry.date.addingTimeInterval(
-                            TimeInterval(daysFromRelativeDate(key2)))
-                        return date1 < date2
-                    }
-
-                    ForEach(sortedKeys, id: \.self) { key in
+                case .systemMedium, .systemLarge:
+                    let isLarge = widgetFamily == .systemLarge
+                    ForEach(WidgetEvents.grouped(entry.events, limit: isLarge ? 5 : 2, at: entry.date)) { group in
                         HStack(alignment: .top) {
-                            Text(key.capitalized)
+                            Text(group.date.relativeDate(now: entry.date).capitalized)
                                 .frame(width: 70, alignment: .leading)
                                 .font(.caption)
                                 .foregroundColor(.gray)
                                 .padding(.vertical, 2)
                             VStack(alignment: .leading) {
-                                ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) {
-                                    index, event in
+                                ForEach(group.events) { event in
                                     HStack {
                                         RoundedRectangle(cornerRadius: 4)
-                                            .fill(
-                                                event.color.color
-                                            )
+                                            .fill(event.color.color)
                                             .frame(width: 4)
                                             .padding(.vertical, 1)
                                         VStack(alignment: .leading) {
@@ -185,13 +146,10 @@ struct UpNextWidgetEntryView: View {
                                                 .font(.subheadline)
                                                 .fontWeight(.medium)
                                                 .lineLimit(2)
-                                                .padding(.bottom, 0)
-                                            Text(
-                                                rangeDescription(
-                                                    from: event.date, to: event.endDate)
-                                            )
-                                            .foregroundColor(.gray)
-                                            .font(.caption)
+                                                .padding(.bottom, isLarge ? 1 : 0)
+                                            Text(rangeDescription(from: event.date, to: event.endDate))
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
                                         }
                                     }
                                     .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
@@ -199,96 +157,7 @@ struct UpNextWidgetEntryView: View {
                                 }
                             }
                         }
-                    }
-
-                // Large widget
-                case .systemLarge:
-                    let visibleEvents = filteredEvents.sorted(by: { $0.date < $1.date }).prefix(5)  // Sort events by date
-                    let groupedEvents = Dictionary(
-                        grouping: visibleEvents,
-                        by: { event in
-                            if event.date <= entry.date && (event.endDate ?? event.date) >= entry.date {
-                                return "Today"
-                            } else if let endDate = event.endDate,
-                                Calendar.current.isDate(endDate, inSameDayAs: entry.date)
-                            {
-                                return "Today"
-                            } else {
-                                return event.date.relativeDate(now: entry.date)
-                            }
-                        })
-                    let sortedKeys = groupedEvents.keys.sorted { key1, key2 in
-                        let date1 = entry.date.addingTimeInterval(
-                            TimeInterval(daysFromRelativeDate(key1)))
-                        let date2 = entry.date.addingTimeInterval(
-                            TimeInterval(daysFromRelativeDate(key2)))
-                        return date1 < date2
-                    }
-
-                    ForEach(sortedKeys, id: \.self) { key in
-                        HStack(alignment: .top) {
-                            Text(key.capitalized)
-                                .frame(width: 70, alignment: .leading)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .padding(.vertical, 2)
-                            VStack(alignment: .leading) {
-                                ForEach(Array(groupedEvents[key]!.enumerated()), id: \.offset) {
-                                    index, event in
-                                    HStack {
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(
-                                                event.color.color
-                                            )
-                                            .frame(width: 4)
-                                            .padding(.vertical, 1)
-                                        VStack(alignment: .leading) {
-                                            Text(event.title)
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                                .lineLimit(2)
-                                                .padding(.bottom, 1)
-                                            Text(
-                                                rangeDescription(
-                                                    from: event.date, to: event.endDate)
-                                            )
-                                            .foregroundColor(.gray)
-                                            .font(.caption)
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: 40, alignment: .leading)
-                                    .padding(.bottom, 6)
-                                }
-                            }
-                        }.padding(.bottom, 10)
-                    }
-
-                // Next Event widget
-                case .accessoryRectangular:
-                    let visibleEvents = filteredEvents.prefix(1)
-                    ForEach(visibleEvents) { event in
-                        VStack(alignment: .leading) {
-                            Text(event.title)
-                                .font(.subheadline)
-                                .lineLimit(1)
-                                .padding(.bottom, 1)
-                            Text(rangeDescription(from: event.date, to: event.endDate))
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 4)
-                    }
-
-                    let remainingEventsCount = getRemainingEventsCount(
-                        events: filteredEvents, visibleCount: 1)
-                    if remainingEventsCount > 0 {
-                        Spacer()
-                        Text(
-                            "\(remainingEventsCount) more \(remainingEventsCount == 1 ? "event" : "events")"
-                        )
-                        .foregroundColor(.gray)
-                        .font(.caption)
+                        .padding(.bottom, isLarge ? 10 : 0)
                     }
 
                 default:
@@ -298,17 +167,9 @@ struct UpNextWidgetEntryView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .widgetURL(URL(string: "upnext://widgetTapped"))  // Add this line to handle widget tap
+        .widgetURL(URL(string: "upnext://widgetTapped"))
     }
 
-    // Add this helper function to calculate remaining events count
-    private func getRemainingEventsCount(events: [Event], visibleCount: Int) -> Int {
-        let twelveMonthsFromNow = Calendar.current.date(byAdding: .month, value: 12, to: entry.date)!
-        let futureEvents = events.filter { $0.date <= twelveMonthsFromNow }
-        return max(0, futureEvents.count - visibleCount)
-    }
-
-    // Remove widget-specific implementation and use the shared one from Utilities
     private func rangeDescription(from startDate: Date, to endDate: Date?) -> String {
         EventDateText.range(start: startDate, end: endDate, reference: entry.date)
     }
@@ -327,15 +188,6 @@ struct UpNextWidget: Widget {
         .configurationDisplayName("Up Next")
         .description("Shows upcoming events.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-extension ConfigurationAppIntent {
-
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.category = "All Categories"
-        return intent
     }
 }
 

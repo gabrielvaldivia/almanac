@@ -69,6 +69,27 @@ final class RegressionTests: XCTestCase {
         }
     }
 
+    func testWidgetGroupsKeepVisibleLimitsOrderAndOngoingEvents() {
+        let calendar = Calendar.current
+        let today = makeEvent(day: 2).date
+        var ongoing = makeEvent("Ongoing", day: 1); ongoing.endDate = makeEvent(day: 3).date
+        let sameDay = makeEvent("Same day", day: 2)
+        let tomorrow = makeEvent("Tomorrow", day: 3)
+        let later = makeEvent("Later", day: 16)
+        let snapshot = WidgetEvents.upcoming([later, tomorrow, makeEvent("Past", day: 1), sameDay, ongoing], at: today)
+        XCTAssertEqual(snapshot.map(\.id), [ongoing.id, sameDay.id, tomorrow.id, later.id])
+        let medium = WidgetEvents.grouped(snapshot, limit: 2, at: today)
+        XCTAssertEqual(medium.map(\.date), [today])
+        XCTAssertEqual(medium.flatMap(\.events).map(\.id), [ongoing.id, sameDay.id])
+        let large = WidgetEvents.grouped(snapshot, limit: 5, at: today)
+        XCTAssertEqual(large.map(\.date), [today, tomorrow.date, later.date])
+        XCTAssertEqual(large.flatMap(\.events), snapshot)
+        XCTAssertTrue(WidgetEvents.grouped(snapshot, limit: 0, at: today).isEmpty)
+        let afterMidnight = calendar.date(byAdding: .day, value: 1, to: today)!
+        let refreshed = WidgetEvents.upcoming(snapshot, at: afterMidnight)
+        XCTAssertEqual(WidgetEvents.grouped(refreshed, limit: 2, at: afterMidnight).flatMap(\.events).map(\.id), [ongoing.id, tomorrow.id])
+    }
+
     func testWidgetLinksHaveValidatedRoutes() {
         let id = UUID()
         XCTAssertEqual(DeepLink(url: DeepLink.eventURL(id)), .event(id))

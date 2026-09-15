@@ -116,6 +116,10 @@ Removed the write-only row/editor binding chain, unused ContentView state, repea
 
 Removed the unreferenced Past Events view/font modifier, unused AppData and color/settings helpers, unused imports, the empty notification-action branch, and seven orphan build records. EventLoader remains in the widget and is no longer compiled into the app. Removed retired Google OAuth metadata while preserving the app's upnext deep links. Removed the test-only timeline height formula; actual rendered-height tests remain, and lane-allocation tests now assert only the production layout model. All 144 unit tests, project/plist validation, and the signed app/widget Release build passed. Packaged URL metadata was inspected. Editor cleanup was pushed as `3aa0414`.
 
+### 27. Cleanup — Consolidate widget grouping and rendering
+
+Medium and large widgets share their rendering path while retaining their respective event limits and spacing. Snapshots are filtered/sorted once, groups use calendar dates directly, and ongoing events still appear under Today. Removed repeated remaining-count filtering, the relative-label parsing round trip, unused formatter/preview code, and the undeclared accessory-family branch. The separate Next Event widget remains unchanged. All 29 targeted widget/storage/calendar tests and the signed app/widget Release build passed. Unused-code cleanup was pushed as `1f9d61e`.
+
 ## Remaining
 
 All 23 main findings have delivered fixes. The unused/redundant-code inventory and final verification remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

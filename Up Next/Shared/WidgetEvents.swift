@@ -14,6 +14,22 @@ enum WidgetEvents {
         }.sorted { $0.date == $1.date ? $0.id.uuidString < $1.id.uuidString : $0.date < $1.date }
     }
 
+    struct DayGroup: Identifiable {
+        let date: Date
+        let events: [Event]
+        var id: Date { date }
+    }
+
+    /// Group an already sorted upcoming snapshot without parsing display labels.
+    static func grouped(_ events: [Event], limit: Int, at date: Date,
+                        calendar: Calendar = .current) -> [DayGroup] {
+        let today = calendar.startOfDay(for: date)
+        let groups = Dictionary(grouping: events.prefix(max(0, limit))) {
+            max(today, calendar.startOfDay(for: $0.date))
+        }
+        return groups.keys.sorted().map { DayGroup(date: $0, events: groups[$0]!) }
+    }
+
     static func entryDates(now: Date = Date(), calendar: Calendar = .current) -> [Date] {
         [now] + (1...7).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: now)) }
     }

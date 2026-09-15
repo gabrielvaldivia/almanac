@@ -52,28 +52,3 @@ extension Date {
         }
     }
 }
-
-// Converts a relative date string to the number of days from today
-func daysFromRelativeDate(_ relativeDate: String) -> Int {
-    switch relativeDate {
-    case "Today":
-        return 0
-    case "Yesterday":
-        return -1
-    case "Tomorrow":
-        return 1
-    case let otherDay where otherDay.contains(" days ago"):
-        let days = Int(otherDay.replacingOccurrences(of: " days ago", with: "")) ?? 0
-        return -days
-    case let otherDay where otherDay.contains(" day ago"):
-        return -1
-    case let otherDay where otherDay.starts(with: "in ") && otherDay.hasSuffix(" days"):
-        let days =
-            Int(
-                otherDay.replacingOccurrences(of: "in ", with: "").replacingOccurrences(
-                    of: " days", with: "")) ?? 0
-        return days
-    default:
-        return 0
-    }
-}
