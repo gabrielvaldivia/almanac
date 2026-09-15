@@ -42,6 +42,39 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testSmallTimelineMarkersHaveExpandedTargetsWithNearestMarkerSelection() throws {
+        let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 300))
+        let events = (0..<4).map {
+            Event(title: "Target \($0)", date: timeline.anchor, color: CodableColor(color: .blue))
+        }
+        timeline.update(events: events)
+        timeline.layoutIfNeeded()
+        for level in TimelineZoomLevel.allCases {
+            timeline.beginZoom(at: 0)
+            timeline.changeZoom(scale: level.pointsPerDay / timeline.pointsPerDay, at: 0)
+            timeline.endZoom()
+            timeline.layoutIfNeeded()
+            let markers = timeline.subviews.compactMap { $0 as? UIButton }.sorted { $0.frame.minY < $1.frame.minY }
+            XCTAssertEqual(markers.count, 4)
+            for marker in markers {
+                XCTAssertLessThanOrEqual(marker.bounds.height, 20, "The visual marker stays small")
+                XCTAssertTrue(marker.point(inside: CGPoint(x: marker.bounds.midX + 21, y: marker.bounds.midY), with: nil))
+                let center = CGPoint(x: marker.frame.midX, y: marker.frame.midY)
+                XCTAssertTrue(timeline.hitTest(center, with: nil) === marker, "Actual marks win over neighboring expanded targets")
+                let outside = CGPoint(x: marker.frame.maxX + 1, y: marker.frame.midY)
+                XCTAssertFalse(marker.frame.contains(outside))
+                XCTAssertTrue(timeline.hitTest(outside, with: nil) === marker)
+                marker.sendActions(for: .touchUpInside)
+                XCTAssertEqual(timeline.highlightedEventID, events.first { $0.title == marker.accessibilityLabel }?.id)
+            }
+            let first = try XCTUnwrap(markers.first)
+            let second = markers[1]
+            let nearSecond = CGPoint(x: second.frame.midX, y: (first.frame.maxY + second.frame.minY) / 2 + 0.5)
+            XCTAssertTrue(timeline.hitTest(nearSecond, with: nil) === second)
+        }
+    }
+
+    @MainActor
     func testTimeZoneChangesPreserveVisibleDatesAndKeepTodayCorrect() throws {
         let originalZone = NSTimeZone.default
         defer { NSTimeZone.default = originalZone }

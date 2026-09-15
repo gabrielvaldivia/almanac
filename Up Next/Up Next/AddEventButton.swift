@@ -58,7 +58,7 @@ struct QuickAddEventField: View {
                 .fill(Color(uiColor: .tertiaryLabel))
                 .frame(width: 32, height: 4)
                 .frame(maxWidth: .infinity)
-                .frame(height: 12)
+                .frame(height: 44)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onDismiss)
                 .accessibilityAddTraits(.isButton)

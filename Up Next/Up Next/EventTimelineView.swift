@@ -734,6 +734,31 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         }
     }
 
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard isUserInteractionEnabled, !isHidden, alpha > 0.01, bounds.contains(point),
+              point.y >= axisHeader.frame.maxY else {
+            return super.hitTest(point, with: event)
+        }
+        // Dense markers share expanded touch areas. Prefer the actual marker,
+        // then the nearest edge/center, rather than whichever was added last.
+        let candidates = eventButtons.values.filter {
+            !$0.isHidden && $0.isEnabled && $0.alpha > 0.01 && $0.isAccessibilityElement
+                && $0.point(inside: $0.convert(point, from: self), with: event)
+        }
+        func distance(to button: TimelineEventButton) -> (CGFloat, CGFloat) {
+            let frame = button.frame
+            let dx = max(frame.minX - point.x, 0, point.x - frame.maxX)
+            let dy = max(frame.minY - point.y, 0, point.y - frame.maxY)
+            return (dx * dx + dy * dy,
+                    pow(frame.midX - point.x, 2) + pow(frame.midY - point.y, 2))
+        }
+        return candidates.min {
+            let lhs = distance(to: $0), rhs = distance(to: $1)
+            if lhs != rhs { return lhs < rhs }
+            return ($0.placement?.event.id.uuidString ?? "") < ($1.placement?.event.id.uuidString ?? "")
+        } ?? super.hitTest(point, with: event)
+    }
+
     @objc private func prepareSelectionFeedback() {
         selectionFeedback.prepare()
     }
@@ -749,6 +774,11 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
 }
 
 private final class TimelineEventButton: UIButton {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        bounds.insetBy(dx: -max(0, (44 - bounds.width) / 2),
+                       dy: -max(0, (44 - bounds.height) / 2)).contains(point)
+    }
+
     var placement: TimelineEventPlacement? {
         didSet { updateSelectionAppearance() }
     }

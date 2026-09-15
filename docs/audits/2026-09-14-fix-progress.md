@@ -96,6 +96,10 @@ Categories acquire persistent IDs while existing name-only payloads remain reada
 
 Category recovery now offers an explicit Cancel/Restore confirmation and validates the backup before saving. Stable identities restore renamed event links without attaching reused names to different categories; missing categories leave events uncategorized with their details and colors intact. The original corrupt payload is preserved, and event-save failures roll back before category changes. All 141 unit tests, the Cancel → Restore → relaunch UI regression, and the signed app/widget Release build passed. The confirmation screenshot was inspected. F13 was pushed as `318adb8`.
 
+### 22. F18 — Expand small touch targets
+
+Timeline markers retain their visual bounds with minimum 44-point effective targets. Overlapping targets prefer the nearest visible marker and preserve actual marker hits. The composer's visible handle stays small with a 44-point interactive height; its tap gesture still cancels during dragging. All 35 timeline unit tests, four composer/pinch UI regressions, and the signed app/widget Release build passed. F21 was pushed as `7234412`.
+
 ## Remaining
 
-F18–F19 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F19 remains open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
