@@ -335,7 +335,8 @@ class AppData: NSObject, ObservableObject {
         var updatedCategories = categories
         updatedCategories[index] = category
         return commitCategoryChange(updatedCategories, events: updatedEvents,
-                                    defaultCategory: defaultCategory == oldName ? category.name : defaultCategory)
+                                    defaultCategory: defaultCategory == oldName ? category.name : defaultCategory,
+                                    renaming: (oldName, category.name))
     }
 
     @discardableResult
@@ -356,9 +357,10 @@ class AppData: NSObject, ObservableObject {
     }
 
     private func commitCategoryChange(_ updatedCategories: [EventCategory], events updatedEvents: [Event],
-                                      defaultCategory updatedDefault: String) -> Bool {
+                                      defaultCategory updatedDefault: String, renaming: (from: String, to: String)? = nil) -> Bool {
         let defaults = AppPreferences.shared
-        let previous = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup"].map {
+        let previous = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup",
+                        CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey].map {
             (key: $0, data: defaults.data(forKey: $0))
         }
         func restorePreviousPayloads() {
@@ -375,7 +377,7 @@ class AppData: NSObject, ObservableObject {
             storageError = "Could not save events: \(error.localizedDescription)"
             return false
         }
-        do { try CategoryStorage.save(categoryRecords(updatedCategories)) }
+        do { try CategoryStorage.save(categoryRecords(updatedCategories), renaming: renaming) }
         catch {
             restorePreviousPayloads()
             categoryStorageError = "Categories could not be saved. The original data is preserved. \(error.localizedDescription)"

@@ -88,6 +88,10 @@ Deleting the last loaded occurrence now retains the next valid occurrence beyond
 
 Before editing or deleting the last unmodified occurrence, retain the next valid unmodified occurrence as the series' metadata source. This keeps the existing storage format while isolating title, duration, color, category, notifications, and repeat edits. Finite exhausted series gain no extra dates. All 137 unit tests and a full editor → This Event Only → relaunch → page forward UI regression passed. Final app/widget Release build passed without source warnings. Metadata already overwritten by older app versions cannot be reconstructed automatically. F03 was pushed as `56cc78b`.
 
+### 20. F13 — Widget category filters survive renames and name reuse
+
+Categories acquire persistent IDs while existing name-only payloads remain readable. Widget options keep their String parameter for configuration compatibility and display category names with stable internal values. A persistent legacy-name map follows renames and retains deleted identities, so reusing an old name cannot redirect an existing widget. Category transactions also roll back this metadata. All 138 unit tests passed, followed by 21 storage/regression tests covering unreadable identity metadata. Both Release targets passed, including the updated App Intents provider. F04 was pushed as `b56fdd0`.
+
 ## Remaining
 
-F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F18–F19 and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

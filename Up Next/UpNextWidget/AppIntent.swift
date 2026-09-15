@@ -23,17 +23,14 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
         }
     }
 
-    static var options: [String] {
-        var categories = ["All Categories"]
-        if let sharedDefaults = UserDefaults(suiteName: "group.UpNextIdentifier"),
-           let data = sharedDefaults.data(forKey: "categories"),
-           let decoded = try? CategoryStorage.decode(data) {
-            categories.append(contentsOf: decoded.map { $0.name })
-        }
-        return categories
-    }
 }
 
 struct CategoryOptionsProvider: DynamicOptionsProvider {
-    func results() async throws -> [String] { ConfigurationAppIntent.options }
+    func results() async throws -> IntentItemCollection<String> {
+        let categories = AppPreferences.shared.data(forKey: "categories").flatMap { try? CategoryStorage.decode($0) } ?? []
+        let items = [IntentItem("All Categories", title: "All Categories")] + categories.map {
+            IntentItem(CategoryStorage.widgetSelection(for: $0), title: "\($0.name)")
+        }
+        return IntentItemCollection(sections: [IntentItemSection(items: items)])
+    }
 }

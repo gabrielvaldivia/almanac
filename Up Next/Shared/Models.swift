@@ -216,6 +216,7 @@ struct CategoryData: Codable {
     let repeatUntilCount: Int
     let repeatUntil: Date
     var keywords: [String] = []
+    var id: UUID?
 }
 
 // Model for a color that can be encoded and decoded
@@ -264,11 +265,12 @@ struct CodableColor: Codable, Equatable {
 extension CategoryData {
     private enum CodingKeys: String, CodingKey {
         case name, color, repeatOption, showRepeatOptions, customRepeatCount, repeatUnit,
-             repeatUntilOption, repeatUntilCount, repeatUntil, calendarRepeatUntil, keywords
+             repeatUntilOption, repeatUntilCount, repeatUntil, calendarRepeatUntil, keywords, id
     }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         name = try values.decode(String.self, forKey: .name)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id)
         keywords = try values.decodeIfPresent([String].self, forKey: .keywords) ?? []
         color = try values.decode(CodableColor.self, forKey: .color)
         repeatOption = try values.decodeIfPresent(RepeatOption.self, forKey: .repeatOption) ?? .never
@@ -284,6 +286,7 @@ extension CategoryData {
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(name, forKey: .name)
+        try values.encodeIfPresent(id, forKey: .id)
         try values.encode(keywords, forKey: .keywords)
         try values.encode(color, forKey: .color)
         try values.encode(repeatOption, forKey: .repeatOption)

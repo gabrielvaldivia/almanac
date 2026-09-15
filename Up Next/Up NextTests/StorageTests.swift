@@ -74,14 +74,15 @@ final class StorageTests: XCTestCase {
 
     @MainActor
     func testCategoryChangeSaveFailuresLeaveBothStoresAndDefaultsIntact() async throws {
-        for damagedKey in ["events", "categories"] {
+        for damagedKey in ["events", "categories", CategoryStorage.widgetAliasesKey] {
             try await withIsolatedAppData { data in
                 data.events = [Event(title: "Keep", date: Date(), color: CodableColor(color: .orange), category: "Work")]
                 data.defaultCategory = "Work"
                 data.saveEvents(); data.saveCategories()
                 let originalEvents = data.events
                 AppPreferences.shared.set(Data("corrupt".utf8), forKey: damagedKey)
-                let keys = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup"]
+                let keys = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup",
+                            CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey]
                 let originalPayloads = keys.map { AppPreferences.shared.data(forKey: $0) }
                 var renamed = data.categories[0]; renamed.name = "Career"
                 XCTAssertFalse(data.updateCategory(named: "Work", with: renamed), damagedKey)
@@ -137,6 +138,53 @@ final class StorageTests: XCTestCase {
             XCTAssertEqual(AppPreferences.shared.data(forKey: "events"), corrupt)
             XCTAssertNotNil(data.storageError)
             XCTAssertFalse(data.extendRecurrences(before: later, now: today))
+        }
+    }
+
+    @MainActor
+    func testWidgetCategoryIdentitySurvivesRenamesAndDoesNotFollowReusedNames() async throws {
+        try await withIsolatedAppData { data in
+            let today = Calendar.current.startOfDay(for: Date())
+            data.events = [Event(title: "Original category", date: today, color: CodableColor(color: .blue), category: "Work")]
+            data.saveEvents(); data.saveCategories()
+            // Simulate the released name-only category payload and widget setting.
+            var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(AppPreferences.shared.data(forKey: "categories"))) as? [[String: Any]])
+            for index in legacy.indices { legacy[index].removeValue(forKey: "id") }
+            AppPreferences.shared.set(try JSONSerialization.data(withJSONObject: legacy), forKey: "categories")
+            AppPreferences.shared.removeObject(forKey: CategoryStorage.widgetAliasesKey)
+            var category = data.categories[0]; category.name = "Career"
+            XCTAssertTrue(data.updateCategory(named: "Work", with: category))
+            func records() throws -> [CategoryData] {
+                try CategoryStorage.decode(XCTUnwrap(AppPreferences.shared.data(forKey: "categories")))
+            }
+            let initial = try XCTUnwrap(records().first { $0.name == "Career" })
+            let token = CategoryStorage.widgetSelection(for: initial)
+            XCTAssertTrue(token.hasPrefix("almanac-category:"))
+            XCTAssertEqual(WidgetEvents.upcoming(data.events, category: "Work", at: today).map(\.title), ["Original category"])
+            category.name = "Business"
+            XCTAssertTrue(data.updateCategory(named: "Career", with: category))
+            XCTAssertEqual(try records().first { $0.name == "Business" }?.id, initial.id)
+            var replacementCategory = category; replacementCategory.name = "Work"
+            data.categories.append(replacementCategory)
+            data.events.append(Event(title: "New category", date: today, color: CodableColor(color: .blue), category: "Work"))
+            data.saveEvents()
+            let newCategory = try XCTUnwrap(records().first { $0.name == "Work" })
+            XCTAssertNotEqual(newCategory.id, initial.id)
+            let newToken = CategoryStorage.widgetSelection(for: newCategory)
+            for selection in ["Work", "Career", token] {
+                XCTAssertEqual(WidgetEvents.upcoming(data.events, category: selection, at: today).map(\.title), ["Original category"])
+            }
+            XCTAssertEqual(WidgetEvents.upcoming(data.events, category: newToken, at: today).map(\.title), ["New category"])
+            data.loadCategories(); data.loadEvents()
+            XCTAssertTrue(data.removeCategories(at: IndexSet(integer: 0)))
+            for selection in ["Work", "Career", token] {
+                XCTAssertTrue(WidgetEvents.upcoming(data.events, category: selection, at: today).isEmpty, selection)
+            }
+            XCTAssertEqual(WidgetEvents.upcoming(data.events, category: newToken, at: today).map(\.title), ["New category"])
+            XCTAssertEqual(WidgetEvents.upcoming(data.events, category: "All Categories", at: today).count, 2)
+            AppPreferences.shared.set(Data("corrupt".utf8), forKey: CategoryStorage.widgetAliasesKey)
+            XCTAssertTrue(WidgetEvents.upcoming(data.events, category: "Work", at: today).isEmpty)
+            XCTAssertEqual(WidgetEvents.upcoming(data.events, category: newToken, at: today).map(\.title), ["New category"])
         }
     }
 
