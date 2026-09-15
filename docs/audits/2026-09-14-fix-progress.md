@@ -48,6 +48,10 @@ Explicit page boundaries now extend recurrence generation before advancing the l
 
 The list refreshes its calendar anchor on foregrounding and significant time changes while retaining the number of pages already loaded. Recurrences are extended before publishing the refreshed boundary. Tests cover midnight, time-zone travel, daylight saving, preserved history, and unchanged sparse paging/scroll behavior: 49 unit tests and the paging UI regression passed. App/widget Release build passed. F05 was pushed as `96f1885`.
 
+### 10. F07 — Invalid dates remain unresolved beside valid repeat text
+
+Named-date detection now covers the parser's day-first, abbreviated, and ordinal forms. A successfully parsed cadence carries an unresolved-start-date flag, so it cannot suppress date correction. Choosing a date resolves only that issue and retains the cadence. All 39 quick-entry tests passed, including 15 invalid date/cadence combinations and valid counterparts. App/widget Release build passed. F23 was pushed as `a20992b`.
+
 ## Remaining
 
-F03–F04, F07–F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F08–F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

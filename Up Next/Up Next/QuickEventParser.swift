@@ -5,12 +5,15 @@ struct ParsedEventInput: Equatable {
     let date: Date
     let endDate: Date?
     let recurrence: ParsedEventRecurrence?
+    let requiresDateReview: Bool
 
-    init(title: String, date: Date, endDate: Date? = nil, recurrence: ParsedEventRecurrence? = nil) {
+    init(title: String, date: Date, endDate: Date? = nil, recurrence: ParsedEventRecurrence? = nil,
+         requiresDateReview: Bool = false) {
         self.title = title
         self.date = date
         self.endDate = endDate
         self.recurrence = recurrence
+        self.requiresDateReview = requiresDateReview
     }
 }
 
@@ -40,6 +43,14 @@ enum QuickEventParser {
     private static let rangeStartPattern = #"(?:^|\s)(?:from\s+)?((?:(?:this\s+next|next|this)\s+)?(?:sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)|today|tomorrow|tonight|in\s+\d{1,3}\s+(?:days?|weeks?)|\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}(?:/(?:\d{4}|\d{2}))?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:,?\s+\d{4})?)\s*(?:(?:to|through|until)\b|[–—-])\s*([\s\S]*)$"#
 
     static func containsDateRange(_ text: String) -> Bool { match(rangeStartPattern, in: text) != nil }
+
+    private static let monthNames = #"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?"#
+
+    static func containsDateHint(_ text: String) -> Bool {
+        containsDateRange(text) || match(#"(?:^|\s)\d{1,4}[-/]\d*"#, in: text) != nil ||
+            match(#"\b"# + monthNames + #"\s+\d"#, in: text) != nil ||
+            match(#"\b\d{1,2}(?:st|nd|rd|th)?\s+"# + monthNames + #"\b"#, in: text) != nil
+    }
 
     private static func parseDatedEvent(_ text: String, now: Date, calendar: Calendar) -> ParsedEventInput? {
         guard let range = match(rangeStartPattern, in: text) else {
@@ -112,7 +123,6 @@ enum QuickEventParser {
             return result(match, date: nextDate(month: Int(match.groups[1])!, day: Int(match.groups[2])!,
                                                 year: Int(match.groups[0]), today: today, calendar: calendar))
         }
-        let monthNames = #"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?"#
         let day = #"(\d{1,2})(?:st|nd|rd|th)?"#
         let year = #"(?:,?\s+(\d{4}))?$"#
         if let match = match(#"(?:^|\s)"# + monthNames + #"\s+"# + day + year, in: text) {
@@ -152,6 +162,7 @@ enum QuickEventParser {
         // A weekday cadence advances that date to the first matching weekday.
         let datedPrefix = parseDatedEvent(prefix, now: now, calendar: calendar)
         if containsDateRange(prefix), datedPrefix == nil { return nil }
+        let requiresDateReview = datedPrefix == nil && containsDateHint(prefix)
         let title = datedPrefix?.title ?? prefix
         var start = datedPrefix?.date ?? calendar.startOfDay(for: now)
         if let starting = match(#"\s+(?:starting|from)\b"#, in: schedule) {
@@ -212,7 +223,8 @@ enum QuickEventParser {
             title: title, date: start,
             endDate: duration.flatMap { calendar.date(byAdding: .day, value: $0, to: start) },
             recurrence: ParsedEventRecurrence(option: interval == 1 ? standardOption : .custom,
-                                               interval: interval, unit: unit, until: until)
+                                               interval: interval, unit: unit, until: until),
+            requiresDateReview: requiresDateReview
         )
     }
 

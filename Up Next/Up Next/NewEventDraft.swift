@@ -102,10 +102,9 @@ struct QuickEventOverrides {
         // Invalid text stays in the composer until its schedule is corrected
         // either in the text itself or through the relevant pill.
         let rangeHint = QuickEventParser.containsDateRange(text)
-        let dateHint = #"(?:^|\s)\d{1,4}[-/]\d*|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d"#
         let repeatHint = #"\b(?:every|until|through|starting)\b"#
-        let dateNeedsReview = parsed == nil && date == nil && (rangeHint || text.range(
-            of: dateHint, options: [.regularExpression, .caseInsensitive]) != nil)
+        let dateNeedsReview = date == nil && (parsed?.requiresDateReview == true ||
+            (parsed == nil && QuickEventParser.containsDateHint(text)))
         let repeatNeedsReview = parsed == nil && repeatOptions == nil && !rangeHint && text.range(
             of: repeatHint, options: [.regularExpression, .caseInsensitive]) != nil
         if dateNeedsReview && repeatNeedsReview {

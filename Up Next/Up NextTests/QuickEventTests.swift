@@ -599,6 +599,26 @@ final class QuickEventTests: XCTestCase {
         XCTAssertTrue(correctedRepeat.resolve("Dinner 2/30", category: nil, appData: data).requiresScheduleReview)
     }
 
+    func testInvalidNamedDatesAndRecurringStartDatesRequireDateCorrection() {
+        let data = AppData()
+        let now = date(2026, 9, 13)
+        for phrase in ["31 February", "Sept 32", "Feb. 30", "30th February", "2/30"] {
+            for cadence in ["", " every year", " weekly"] {
+                let text = "Party \(phrase)\(cadence)"
+                let draft = QuickEventOverrides().resolve(text, category: nil, appData: data, now: now, calendar: calendar)
+                XCTAssertTrue(draft.requiresScheduleReview, text)
+                XCTAssertEqual(draft.scheduleReviewMessage, "Choose a date or update the date in the text.")
+                let corrected = QuickEventOverrides(date: date(2026, 10, 1)).resolve(text, category: nil, appData: data, now: now, calendar: calendar)
+                XCTAssertFalse(corrected.requiresScheduleReview, text)
+                XCTAssertEqual(corrected.dateOptions.date, date(2026, 10, 1))
+                XCTAssertEqual(corrected.dateOptions.repeatOption, cadence.isEmpty ? .never : cadence.contains("year") ? .yearly : .weekly)
+            }
+        }
+        for text in ["Party 28 February", "Party Sept 30 every year", "Party Feb. 29 weekly", "Party 30th September"] {
+            XCTAssertFalse(QuickEventOverrides().resolve(text, category: nil, appData: data, now: now, calendar: calendar).requiresScheduleReview, text)
+        }
+    }
+
     func testQuickAndManualCreationPreserveEditableDetails() {
         var dates = DateOptions(date: date(2026, 12, 18), endDate: date(2026, 12, 20), showEndDate: true,
                                 repeatOption: .never, repeatUntil: date(2027, 12, 18),
