@@ -102,6 +102,35 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertEqual(filled.first?.category, "Work")
     }
 
+    func testWidgetAndAppReplenishmentAgreeOnFutureIDsWithoutRewritingStoredIDs() throws {
+        let event = seed(.yearly, date(2030, 1, 1))
+        var stored = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely), now: event.date, calendar: calendar)
+        stored[1].id = UUID() // A previously saved occurrence may have a legacy random ID.
+        stored[0].isRecurrenceException = true; stored[0].title = "Exception"
+        let widget = Recurrence.replenishing(stored, now: date(2032, 6, 1), calendar: calendar)
+        let app = Recurrence.replenishing(stored, now: date(2032, 6, 2), calendar: calendar)
+        XCTAssertEqual(Array(widget.prefix(stored.count)), stored)
+        XCTAssertEqual(Array(app.prefix(stored.count)), stored)
+        let linkedEvent = try XCTUnwrap(widget.first { $0.date == date(2033, 1, 1) })
+        XCTAssertEqual(DeepLink(url: DeepLink.eventURL(linkedEvent.id)), .event(linkedEvent.id))
+        XCTAssertEqual(app.first { $0.id == linkedEvent.id }?.date, linkedEvent.date)
+        XCTAssertEqual(widget.map(\.id), app.map(\.id))
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let saved = try EventStore.decode(encoder.encode(app))
+        let later = Recurrence.replenishing(saved, now: date(2034, 6, 1), calendar: calendar)
+        XCTAssertEqual(Array(later.prefix(saved.count)), saved)
+        XCTAssertEqual(Set(later.map(\.id)).count, later.count)
+    }
+
+    func testOccurrenceIDsUseStableNamespacedVersionFiveIdentifiers() {
+        let namespace = UUID(uuidString: "00000000-0000-4000-8000-000000000001")!
+        // Independently calculated with Python's standard-library uuid.uuid5.
+        XCTAssertEqual(Recurrence.occurrenceID(seriesID: namespace, index: 7).uuidString.lowercased(),
+                       "5e857776-9c1d-502c-a927-07949f122170")
+        XCTAssertNotEqual(Recurrence.occurrenceID(seriesID: namespace, index: 7), Recurrence.occurrenceID(seriesID: namespace, index: 8))
+        XCTAssertNotEqual(Recurrence.occurrenceID(seriesID: namespace, index: 7), Recurrence.occurrenceID(seriesID: UUID(), index: 7))
+    }
+
     func testEditingEndCountChangesSeriesWithoutChangingSurvivingIDs() {
         let event = seed(.daily, date(2030, 1, 1))
         let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)

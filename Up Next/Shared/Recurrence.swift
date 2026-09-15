@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct RecurrenceRule: Codable, Equatable {
     var anchor: Date { didSet { anchorDay = CalendarDay(anchor) } }
@@ -143,7 +144,7 @@ enum Recurrence {
     private static func occurrence(_ seed: Event, rule: RecurrenceRule, seriesID: UUID, index: Int,
                                    date: Date, duration: Int, calendar: Calendar) -> Event {
         var event = seed
-        event.id = index == 0 ? seed.id : UUID()
+        event.id = index == 0 ? seed.id : occurrenceID(seriesID: seriesID, index: index)
         event.date = date
         event.endDate = seed.endDate == nil ? nil : calendar.date(byAdding: .day, value: duration, to: date)
         event.calendarDay = CalendarDay(date, calendar: calendar)
@@ -156,6 +157,19 @@ enum Recurrence {
         event.repeatUntil = rule.until
         event.repeatUntilCount = rule.count
         return event
+    }
+
+    static func occurrenceID(seriesID: UUID, index: Int) -> UUID {
+        // UUID v5: the stored series ID is the namespace, and the occurrence
+        // index is the name. This identifies records; it is not a security hash.
+        var namespace = seriesID.uuid
+        var data = withUnsafeBytes(of: &namespace) { Data($0) }
+        data.append(contentsOf: "almanac.occurrence.\(index)".utf8)
+        var bytes = Array(Insecure.SHA1.hash(data: data).prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 
     static func replenishing(_ events: [Event], now: Date = Date(), calendar: Calendar = .current,

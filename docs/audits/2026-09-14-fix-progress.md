@@ -72,6 +72,10 @@ Rows and widgets now include both years for ranges crossing a year boundary. The
 
 The timeline retains its anchor's civil date when local midnight changes and invalidates event/axis layout on calendar or day changes, including unchanged event arrays. Direct date/Today navigation refreshes this state as well. All 37 timeline/calendar tests passed, including four time zones, the date line, stable event positions, and correct Today navigation. App/widget Release build passed. F22 was pushed as `885c626`.
 
+### 16. F12 — Widget and app agree on generated occurrence IDs
+
+New recurring occurrences derive UUID v5 identifiers from the persisted series ID and occurrence index. Saved IDs remain untouched, including legacy random IDs and exceptions. Tests independently validate the UUID algorithm and widget/app refill link resolution, persistence, and later replenishment. All 133 unit tests passed. App/widget Release build passed. F14 was pushed as `eeb1aee`.
+
 ## Remaining
 
-F03–F04, F12–F13, and F18–F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F13, and F18–F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
