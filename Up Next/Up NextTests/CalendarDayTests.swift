@@ -23,6 +23,25 @@ final class CalendarDayTests: XCTestCase {
         }
     }
 
+    func testDateRangesIncludeBothYearsWhenTheyCrossTheYearBoundary() {
+        let calendar = calendar("America/New_York")
+        func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+            calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        }
+        let reference = date(2026, 9, 14)
+        let crossYear = EventDateText.range(start: date(2026, 12, 31), end: date(2027, 1, 2), reference: reference, calendar: calendar)
+        XCTAssertTrue(crossYear.contains("2026")); XCTAssertTrue(crossYear.contains("2027"))
+        XCTAssertTrue(crossYear.hasSuffix("(3 days)"))
+        let ongoing = EventDateText.range(start: date(2026, 12, 31), end: date(2027, 1, 2), reference: date(2027, 1, 1), calendar: calendar)
+        XCTAssertTrue(ongoing.contains("2026")); XCTAssertTrue(ongoing.contains("2027"))
+        XCTAssertTrue(ongoing.hasSuffix("(2 days left)"))
+        for year in [2025, 2026, 2027] {
+            let text = EventDateText.range(start: date(year, 10, 1), end: date(year, 10, 2), reference: reference, calendar: calendar)
+            XCTAssertEqual(text.contains(String(year)), year != 2026)
+        }
+        XCTAssertFalse(EventDateText.range(start: reference, end: nil, reference: reference, calendar: calendar).contains("2026"))
+    }
+
     func testReminderKeepsItsClockTimeAcrossTimeZones() {
         let name = "test.clock.\(UUID())", origin = calendar("America/New_York")
         let defaults = UserDefaults(suiteName: name)!

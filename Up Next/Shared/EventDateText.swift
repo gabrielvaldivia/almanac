@@ -1,9 +1,14 @@
 import Foundation
 
 enum EventDateText {
+    static func includesYear(start: Date, end: Date? = nil, reference: Date = Date(), calendar: Calendar = .current) -> Bool {
+        !calendar.isDate(start, equalTo: reference, toGranularity: .year) ||
+            end.map { !calendar.isDate(start, equalTo: $0, toGranularity: .year) } == true
+    }
+
     static func range(start: Date, end: Date?, reference: Date = Date(), calendar: Calendar = .current) -> String {
         let formatter = DateFormatter(); formatter.calendar = calendar; formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = calendar.component(.year, from: start) == calendar.component(.year, from: reference) ? "E, MMM d" : "E, MMM d, yyyy"
+        formatter.dateFormat = includesYear(start: start, end: end, reference: reference, calendar: calendar) ? "E, MMM d, yyyy" : "E, MMM d"
         let first = formatter.string(from: start)
         guard let end else { return first }
         let today = calendar.startOfDay(for: reference), startDay = calendar.startOfDay(for: start), endDay = calendar.startOfDay(for: end)

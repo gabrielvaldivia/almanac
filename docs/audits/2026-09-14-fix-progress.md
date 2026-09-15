@@ -64,6 +64,10 @@ New series with an explicit end date generate from the requested start through t
 
 The Add End Date sheet has a Done action that commits its selected date; selecting another date retains the existing immediate-save behavior. Both paths share one commit method. A UI regression passed for today's date and a future start, saving/relaunching, and removing the end date. App/widget Release build passed. F09 was pushed as `97882be`.
 
+### 14. F22 — Cross-year ranges retain year context
+
+Rows and widgets now include both years for ranges crossing a year boundary. The composer shares the year-inclusion rule and retains its compact formatting. All 44 calendar/quick-entry tests passed, covering current, past, future, and ongoing ranges. App/widget Release build passed. F16 was pushed as `2ce6f2c`.
+
 ## Remaining
 
-F03–F04, F12–F14, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F12–F14, and F18–F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

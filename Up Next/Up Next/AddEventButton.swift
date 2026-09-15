@@ -22,18 +22,17 @@ struct QuickAddEventField: View {
         let date = draft.dateOptions.date
         if draft.dateOptions.showEndDate {
             let end = draft.dateOptions.endDate
-            let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: end)
-            let currentYear = calendar.component(.year, from: date) == calendar.component(.year, from: Date())
-            if sameYear && currentYear && calendar.component(.month, from: date) == calendar.component(.month, from: end) {
+            let includesYear = EventDateText.includesYear(start: date, end: end)
+            if !includesYear && calendar.isDate(date, equalTo: end, toGranularity: .month) {
                 return "\(date.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.day()))"
             }
-            let format: Date.FormatStyle = sameYear && currentYear
+            let format: Date.FormatStyle = !includesYear
                 ? .dateTime.month(.abbreviated).day() : .dateTime.month(.abbreviated).day().year(.twoDigits)
             return "\(date.formatted(format)) – \(end.formatted(format))"
         }
         if calendar.isDateInToday(date) { return "Today" }
         if calendar.isDateInTomorrow(date) { return "Tomorrow" }
-        if calendar.component(.year, from: date) != calendar.component(.year, from: Date()) {
+        if EventDateText.includesYear(start: date) {
             return date.formatted(.dateTime.month(.abbreviated).day().year(.twoDigits))
         }
         return date.formatted(.dateTime.month(.abbreviated).day())
