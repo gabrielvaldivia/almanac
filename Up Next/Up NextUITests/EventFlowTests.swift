@@ -893,6 +893,35 @@ final class EventFlowTests: XCTestCase {
         app.alerts["Delete Event"].buttons["Delete this event"].tap()
     }
 
+    func testFullEditorCanConfirmItsInitiallySelectedEndDate() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        let fixtures = [("Same-day event", 0), ("Future event", 15)]
+        try seedEvents(fixtures, in: app)
+        app.launch()
+        let formatter = DateFormatter(); formatter.dateStyle = .medium
+        for (title, offset) in fixtures {
+            let row = app.scrollViews["eventList"].staticTexts[title]
+            XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+            XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+            let end = app.buttons["End date"]
+            XCTAssertEqual(end.value as? String, "None")
+            end.tap()
+            let confirm = app.buttons["confirmInitialEndDate"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+            let date = Calendar.current.date(byAdding: .day, value: offset, to: Date())!
+            XCTAssertEqual(end.value as? String, formatter.string(from: date))
+            app.navigationBars["Edit Event"].buttons["Save"].tap()
+            app.terminate(); app.launch()
+            XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+            XCTAssertEqual(end.value as? String, formatter.string(from: date))
+            end.tap()
+            app.buttons["Remove End Date"].tap()
+            XCTAssertEqual(end.value as? String, "None")
+            app.navigationBars["Edit Event"].buttons["Save"].tap()
+        }
+    }
+
     func testInvalidScheduleCanBeCorrectedInComposer() {
         continueAfterFailure = false
         let app = makeApp()

@@ -356,11 +356,16 @@ struct CustomDatePicker: View {
     var body: some View {
         VStack {
             if isEndDatePicker && !showEndDate {
-                Text("Add End Date")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .padding(.top, 20)
+                HStack {
+                    Text("Add End Date")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button("Done", action: confirmSelection)
+                        .accessibilityIdentifier("confirmInitialEndDate")
+                }
+                .padding(.top, 20)
             }
 
             DatePicker(
@@ -370,11 +375,7 @@ struct CustomDatePicker: View {
                 displayedComponents: [.date]
             )
             .datePickerStyle(GraphicalDatePickerStyle())
-            .onChange(of: tempDate) { oldValue, newValue in
-                selectedDate = newValue
-                onDateSelected()
-                showCustomDatePicker = false
-            }
+            .onChange(of: tempDate) { _, _ in confirmSelection() }
 
             if isEndDatePicker && showEndDate, let onRemoveEndDate = onRemoveEndDate {
                 Button(action: onRemoveEndDate) {
@@ -394,6 +395,12 @@ struct CustomDatePicker: View {
         } else {
             return Date.distantPast...Date.distantFuture
         }
+    }
+
+    private func confirmSelection() {
+        selectedDate = tempDate
+        onDateSelected()
+        showCustomDatePicker = false
     }
 }
 
