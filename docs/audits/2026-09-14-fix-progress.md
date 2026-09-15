@@ -76,6 +76,10 @@ The timeline retains its anchor's civil date when local midnight changes and inv
 
 New recurring occurrences derive UUID v5 identifiers from the persisted series ID and occurrence index. Saved IDs remain untouched, including legacy random IDs and exceptions. Tests independently validate the UUID algorithm and widget/app refill link resolution, persistence, and later replenishment. All 133 unit tests passed. App/widget Release build passed. F14 was pushed as `eeb1aee`.
 
+### 17. F20 — App and widget include required privacy manifests
+
+Added target-specific manifests for existing preference access: app-only settings (`CA92.1`) and App Group storage (`1C8F.1`) in the app, and App Group storage in the widget. Reasons were checked against [Apple's reference](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons?language=objc). Plist/project validation and the Release build passed; both packaged manifests and their reason sets were inspected. No runtime logic changed. F12 was pushed as `a123cbd`.
+
 ## Remaining
 
-F03–F04, F13, and F18–F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

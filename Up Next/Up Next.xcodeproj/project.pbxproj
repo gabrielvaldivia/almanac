@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A91420260000000000000003 /* App PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A91420260000000000000001 /* App PrivacyInfo.xcprivacy */; };
+        A91420260000000000000004 /* Widget PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A91420260000000000000002 /* Widget PrivacyInfo.xcprivacy */; };
 		12736DCA7BCBF515938B0029 /* BirthdayImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */; };
 		28D6C15966EB1FB82A24018E /* ContactBirthdaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */; };
 		0E0ADBF48D0525C7D347094C /* BirthdayContactsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101B826C0CD77EC35C1BCF5 /* BirthdayContactsStore.swift */; };
@@ -127,6 +129,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+        A91420260000000000000001 /* App PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Up Next/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
+        A91420260000000000000002 /* Widget PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "UpNextWidget/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
 		54B29B48A048458C95B15BD3 /* BirthdayImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/BirthdayImportTests.swift"; sourceTree = SOURCE_ROOT; };
 		43576E20FAAF7982AF2AE269 /* ContactBirthdaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/ContactBirthdaysView.swift"; sourceTree = SOURCE_ROOT; };
 		A101B826C0CD77EC35C1BCF5 /* BirthdayContactsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/BirthdayContactsStore.swift"; sourceTree = SOURCE_ROOT; };
@@ -282,6 +286,8 @@
 				AA4E2B1300420E0C57E87638 /* EventWindow.swift */,
 				9DD701A80E51DEAB22E8ACFF /* DeepLink.swift */,
 				D779FBF97208130751AAF53A /* AppPreferences.swift */,
+                A91420260000000000000001 /* App PrivacyInfo.xcprivacy */,
+                A91420260000000000000002 /* Widget PrivacyInfo.xcprivacy */,
 				D9AA25E5FED3B5CB56BAE292 /* NotificationTests.swift */,
 				69F4791119ECD9F2CCD11504 /* NotificationPlan.swift */,
 				7D72B9A22B982535A34BD94F /* RegressionTests.swift */,
@@ -477,6 +483,7 @@
 			files = (
 				407AE1B62C6C573100DEAD7C /* Almanac Pro.storekit in Resources */,
 				405920E92C23B863008A9CF2 /* Assets.xcassets in Resources */,
+                A91420260000000000000004 /* Widget PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -487,6 +494,7 @@
 				407AE1B52C6C573100DEAD7C /* Almanac Pro.storekit in Resources */,
 				40790D792C23286C005DDC65 /* Preview Assets.xcassets in Resources */,
 				40790D762C23286C005DDC65 /* Assets.xcassets in Resources */,
+                A91420260000000000000003 /* App PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
