@@ -82,7 +82,7 @@ final class StorageTests: XCTestCase {
                 let originalEvents = data.events
                 AppPreferences.shared.set(Data("corrupt".utf8), forKey: damagedKey)
                 let keys = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup",
-                            CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey]
+                            CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey, CategoryStorage.readableCurrentKey]
                 let originalPayloads = keys.map { AppPreferences.shared.data(forKey: $0) }
                 var renamed = data.categories[0]; renamed.name = "Career"
                 XCTAssertFalse(data.updateCategory(named: "Work", with: renamed), damagedKey)
@@ -185,6 +185,78 @@ final class StorageTests: XCTestCase {
             AppPreferences.shared.set(Data("corrupt".utf8), forKey: CategoryStorage.widgetAliasesKey)
             XCTAssertTrue(WidgetEvents.upcoming(data.events, category: "Work", at: today).isEmpty)
             XCTAssertEqual(WidgetEvents.upcoming(data.events, category: newToken, at: today).map(\.title), ["New category"])
+        }
+    }
+
+    @MainActor
+    func testCategoryBackupRecoveryRestoresRenamedLinksWithoutChangingEventDetails() async throws {
+        try await withIsolatedAppData { data in
+            let event = Event(title: "Keep", date: Calendar.current.startOfDay(for: Date()), color: CodableColor(color: .orange), category: "Work")
+            data.events = [event]; data.defaultCategory = "Work"
+            data.saveEvents(); data.saveCategories()
+            let original = try CategoryStorage.decode(XCTUnwrap(AppPreferences.shared.data(forKey: "categories")))
+            let token = CategoryStorage.widgetSelection(for: original[0])
+            var renamed = data.categories[0]; renamed.name = "Career"
+            XCTAssertTrue(data.updateCategory(named: "Work", with: renamed))
+            let corrupt = Data("corrupt categories".utf8)
+            AppPreferences.shared.set(corrupt, forKey: "categories")
+            data.loadCategories()
+            XCTAssertNotNil(data.categoryStorageError)
+            XCTAssertTrue(data.restoreCategoryBackup())
+            XCTAssertNil(data.categoryStorageError)
+            XCTAssertEqual(data.categories[0].name, "Work")
+            XCTAssertEqual(data.events, [event])
+            XCTAssertEqual(data.defaultCategory, "Work")
+            XCTAssertEqual(AppPreferences.shared.data(forKey: "categories.preservedOriginal"), corrupt)
+            XCTAssertEqual(try EventStore().load().first?.category, "Work")
+            XCTAssertEqual(CategoryStorage.name(forWidgetSelection: token), "Work")
+            XCTAssertEqual(CategoryStorage.name(forWidgetSelection: "Career"), "Work")
+        }
+    }
+
+    @MainActor
+    func testCategoryRecoveryDoesNotAttachReusedNamesToDifferentCategories() async throws {
+        try await withIsolatedAppData { data in
+            let date = Calendar.current.startOfDay(for: Date())
+            data.events = [Event(title: "Original", date: date, color: CodableColor(color: .orange), category: "Work")]
+            data.saveEvents(); data.saveCategories()
+            var renamed = data.categories[0]; renamed.name = "Business"
+            XCTAssertTrue(data.updateCategory(named: "Work", with: renamed))
+            var newCategory = renamed; newCategory.name = "Work"
+            data.categories.append(newCategory)
+            let newEvent = Event(title: "New", date: date, color: CodableColor(color: .purple), category: "Work")
+            data.events.append(newEvent); data.defaultCategory = "Work"; data.saveEvents()
+            AppPreferences.shared.set(Data("corrupt".utf8), forKey: "categories")
+            data.loadCategories()
+            XCTAssertTrue(data.restoreCategoryBackup())
+            XCTAssertEqual(data.events.map(\.category), ["Business", nil])
+            XCTAssertEqual(data.events[1].id, newEvent.id)
+            XCTAssertEqual(data.events[1].color, newEvent.color)
+            XCTAssertEqual(data.defaultCategory, "")
+            XCTAssertTrue(data.events.allSatisfy { event in event.category == nil || data.categories.contains { $0.name == event.category } })
+        }
+    }
+
+    @MainActor
+    func testCategoryRecoveryRefusesUnreadableBackupsAndEventSaveFailures() async throws {
+        for damagedKey in ["categories.lastReadableBackup", CategoryStorage.widgetAliasesBackupKey, "events"] {
+            try await withIsolatedAppData { data in
+                data.events = [Event(title: "Keep", date: Date(), color: CodableColor(color: .blue), category: "Work")]
+                data.saveEvents(); data.saveCategories()
+                AppPreferences.shared.set(Data("corrupt category payload".utf8), forKey: "categories")
+                AppPreferences.shared.set(Data("corrupt".utf8), forKey: damagedKey)
+                let before = AppPreferences.shared.data(forKey: "categories")
+                let events = data.events
+                XCTAssertFalse(data.restoreCategoryBackup(), damagedKey)
+                XCTAssertEqual(AppPreferences.shared.data(forKey: "categories"), before)
+                XCTAssertEqual(data.events, events)
+            }
+        }
+        try await withIsolatedAppData { data in
+            XCTAssertFalse(data.restoreCategoryBackup())
+            data.saveCategories()
+            data.storageError = "Events need recovery"
+            XCTAssertFalse(data.restoreCategoryBackup())
         }
     }
 

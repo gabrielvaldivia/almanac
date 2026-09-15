@@ -92,6 +92,10 @@ Before editing or deleting the last unmodified occurrence, retain the next valid
 
 Categories acquire persistent IDs while existing name-only payloads remain readable. Widget options keep their String parameter for configuration compatibility and display category names with stable internal values. A persistent legacy-name map follows renames and retains deleted identities, so reusing an old name cannot redirect an existing widget. Category transactions also roll back this metadata. All 138 unit tests passed, followed by 21 storage/regression tests covering unreadable identity metadata. Both Release targets passed, including the updated App Intents provider. F04 was pushed as `b56fdd0`.
 
+### 21. F21 — Recover categories from a readable backup
+
+Category recovery now offers an explicit Cancel/Restore confirmation and validates the backup before saving. Stable identities restore renamed event links without attaching reused names to different categories; missing categories leave events uncategorized with their details and colors intact. The original corrupt payload is preserved, and event-save failures roll back before category changes. All 141 unit tests, the Cancel → Restore → relaunch UI regression, and the signed app/widget Release build passed. The confirmation screenshot was inspected. F13 was pushed as `318adb8`.
+
 ## Remaining
 
-F18–F19 and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F18–F19 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

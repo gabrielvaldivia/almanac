@@ -1062,6 +1062,32 @@ final class EventFlowTests: XCTestCase {
         XCTAssertEqual(list.staticTexts.matching(identifier: "Sparse occasion").count, 1)
     }
 
+    func testCategoryBackupRecoveryCanBeCanceledAndRestored() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        try seedEvents([("Recovered event", 0)], category: "Work", in: app)
+        app.launchEnvironment["ALMANAC_UI_TEST_CORRUPT_CATEGORIES"] = "1"
+        app.launch()
+        app.buttons["Settings"].tap()
+        app.buttons["Manage Categories"].tap()
+        let restore = app.buttons["Restore Category Backup"]
+        XCTAssertTrue(restore.waitForExistence(timeout: 5)); restore.tap()
+        let alert = app.alerts["Restore category backup?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Category backup recovery confirmation"; screenshot.lifetime = .keepAlways; add(screenshot)
+        alert.buttons["Cancel"].tap()
+        XCTAssertTrue(restore.exists)
+        restore.tap(); alert.buttons["Restore Backup"].tap()
+        XCTAssertTrue(restore.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Work"].exists)
+        app.terminate(); app.launch()
+        let row = app.scrollViews["eventList"].staticTexts["Recovered event"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
+        XCTAssertTrue(app.navigationBars["Edit Event"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Work"].exists)
+    }
+
     func testCreateEditPersistAndDeleteEvent() {
         continueAfterFailure = false
         let app = makeApp()

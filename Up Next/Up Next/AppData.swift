@@ -127,6 +127,15 @@ class AppData: NSObject, ObservableObject {
                 fatalError("Invalid UI test events: \(error)")
             }
         }
+        if AppPreferences.uiTestSuiteName != nil,
+           AppPreferences.shared.data(forKey: "categories") == nil,
+           ProcessInfo.processInfo.environment["ALMANAC_UI_TEST_CORRUPT_CATEGORIES"] == "1" {
+            do {
+                try CategoryStorage.save(categoryRecords(categories))
+                AppPreferences.shared.set(Data("Unreadable category fixture".utf8), forKey: "categories")
+                loadCategories()
+            } catch { fatalError("Invalid UI test category backup: \(error)") }
+        }
         #endif
         loadEvents()
         isDataLoaded = true
@@ -164,6 +173,7 @@ class AppData: NSObject, ObservableObject {
         guard let data = AppPreferences.shared.data(forKey: "categories") else { return }
         do {
             let decoded = try CategoryStorage.decode(data)
+            AppPreferences.shared.set(data, forKey: CategoryStorage.readableCurrentKey)
             categoryStorageError = nil
             self.categories = decoded.map { categoryData in
                 return (
@@ -186,6 +196,39 @@ class AppData: NSObject, ObservableObject {
 
     @Published var storageError: String?
     private let eventStore = EventStore()
+
+    @discardableResult
+    func restoreCategoryBackup() -> Bool {
+        guard storageError == nil else {
+            categoryStorageError = "Restore your events in Settings before restoring categories."
+            return false
+        }
+        let recovery: CategoryStorage.Recovery
+        do { recovery = try CategoryStorage.prepareRecovery() }
+        catch { categoryStorageError = error.localizedDescription; return false }
+        let updatedEvents = events.map { event -> Event in
+            var updated = event
+            updated.category = recovery.categoryName(for: event.category)
+            return updated
+        }
+        let previous = ["events", "events.lastReadableBackup"].map { ($0, AppPreferences.shared.data(forKey: $0)) }
+        do { try eventStore.save(updatedEvents) }
+        catch {
+            for (key, data) in previous {
+                if let data { AppPreferences.shared.set(data, forKey: key) }
+                else { AppPreferences.shared.removeObject(forKey: key) }
+            }
+            storageError = "Could not save recovered event categories: \(error.localizedDescription)"
+            return false
+        }
+        CategoryStorage.restore(recovery)
+        events = updatedEvents
+        defaultCategory = recovery.categoryName(for: defaultCategory) ?? ""
+        loadCategories()
+        WidgetCenter.shared.reloadAllTimelines()
+        scheduleDailyNotification()
+        return true
+    }
 
     func loadEvents() {
         do {
@@ -360,7 +403,8 @@ class AppData: NSObject, ObservableObject {
                                       defaultCategory updatedDefault: String, renaming: (from: String, to: String)? = nil) -> Bool {
         let defaults = AppPreferences.shared
         let previous = ["events", "events.lastReadableBackup", "categories", "categories.lastReadableBackup",
-                        CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey].map {
+                        CategoryStorage.widgetAliasesKey, CategoryStorage.widgetAliasesBackupKey,
+                        CategoryStorage.readableCurrentKey].map {
             (key: $0, data: defaults.data(forKey: $0))
         }
         func restorePreviousPayloads() {

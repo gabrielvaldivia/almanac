@@ -14,6 +14,7 @@ import WidgetKit
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData
     @State private var showingAddCategorySheet = false
+    @State private var showingBackupConfirmation = false
     private struct CategorySelection: Identifiable {
         let id: String
     }
@@ -26,6 +27,8 @@ struct CategoriesView: View {
                 Section {
                     Text(error).font(.footnote)
                     Button("Retry Loading Categories") { appData.loadCategories() }
+                    Button("Restore Category Backup") { showingBackupConfirmation = true }
+                        .disabled(appData.storageError != nil)
                 }
             }
             if appData.storageError != nil {
@@ -66,6 +69,12 @@ struct CategoriesView: View {
         .formStyle(GroupedFormStyle())
         .navigationBarTitle("Manage Categories", displayMode: .inline)
         .navigationBarItems(trailing: EditButton())
+        .alert("Restore category backup?", isPresented: $showingBackupConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Restore Backup") { appData.restoreCategoryBackup() }
+        } message: {
+            Text("Restore the last readable categories. Event details and colors stay intact. Events in categories missing from the backup become uncategorized.")
+        }
 
         // Add Category View
         .sheet(isPresented: $showingAddCategorySheet) {
