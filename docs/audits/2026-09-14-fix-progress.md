@@ -56,6 +56,10 @@ Named-date detection now covers the parser's day-first, abbreviated, and ordinal
 
 Recurrence recognition now requires a cadence-like phrase, and incomplete-ending hints require a preceding title. Titles containing Every, Until, Through, Starting, or Daily retain their text, including when a real date or cadence follows them. Malformed supported schedules still request correction. All 40 quick-entry tests and the composer correction UI test passed. App/widget Release build passed. F07 was pushed as `7740d8b`.
 
+### 12. F09 — Creating a historical finite series adds its events
+
+New series with an explicit end date generate from the requested start through the inclusive end, subject to the existing 10,000-occurrence safeguard. This does not alter replenishment or editing's history-retention policy. Regressions cover short historical ranges, a leap year, a single-day series, and persisted identities. All 129 unit tests passed. App/widget Release build passed. F08 was pushed as `a5e1e44`.
+
 ## Remaining
 
-F03–F04, F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

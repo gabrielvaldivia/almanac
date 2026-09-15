@@ -643,6 +643,26 @@ final class QuickEventTests: XCTestCase {
         }
     }
 
+    func testCreatingHistoricalFiniteSeriesIncludesTheRequestedDates() throws {
+        let data = AppData()
+        for (start, end, count) in [(date(2024, 1, 1), date(2024, 1, 3), 3),
+                                   (date(2024, 1, 1), date(2025, 1, 1), 367),
+                                   (date(2024, 1, 1), date(2024, 1, 1), 1)] {
+            var draft = NewEventDraft(title: "Historical series", date: start, category: "Work", appData: data)
+            draft.dateOptions.repeatOption = .daily
+            draft.dateOptions.repeatUntilOption = .onDate
+            draft.dateOptions.repeatUntil = end
+            let events = NewEventDraft.events(title: draft.title, dates: draft.dateOptions, category: draft.categoryOptions, calendar: calendar)
+            XCTAssertEqual(events.count, count)
+            XCTAssertEqual(events.first?.date, start)
+            XCTAssertEqual(events.last?.date, end)
+            XCTAssertEqual(events.map(\.occurrenceIndex), Array(0..<count).map(Optional.some))
+            XCTAssertTrue(events.allSatisfy { $0.category == "Work" && $0.recurrence?.end == .onDate })
+            let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+            XCTAssertEqual(try EventStore.decode(encoder.encode(events)).map(\.id), events.map(\.id))
+        }
+    }
+
     func testQuickAndManualCreationPreserveEditableDetails() {
         var dates = DateOptions(date: date(2026, 12, 18), endDate: date(2026, 12, 20), showEndDate: true,
                                 repeatOption: .never, repeatUntil: date(2027, 12, 18),

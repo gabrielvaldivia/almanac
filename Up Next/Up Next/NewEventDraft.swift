@@ -56,9 +56,14 @@ struct NewEventDraft {
             customRepeatCount: dates.customRepeatCount, repeatUnit: dates.repeatUnit,
             repeatUntilCount: dates.repeatUntilCount, useCustomRepeatOptions: true)
         guard !event.title.isEmpty, dates.validationMessage == nil else { return [] }
-        return dates.repeatOption == .never ? [event] : Recurrence.generate(
+        guard dates.repeatOption != .never else { return [event] }
+        // An explicitly bounded new series includes its requested history.
+        // Future replenishment still uses the normal rolling horizon.
+        let finiteEnd = dates.repeatUntilOption == .onDate
+            ? calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: dates.repeatUntil)) : nil
+        return Recurrence.generate(
             event, rule: RecurrenceRule(event: event, end: dates.repeatUntilOption, calendar: calendar),
-            calendar: calendar)
+            now: finiteEnd == nil ? Date() : dates.date, calendar: calendar, before: finiteEnd)
     }
 }
 
