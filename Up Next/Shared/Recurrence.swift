@@ -3,6 +3,9 @@ import Foundation
 struct RecurrenceRule: Codable, Equatable {
     var anchor: Date { didSet { anchorDay = CalendarDay(anchor) } }
     var anchorDay: CalendarDay?
+    // Retain the requested day if deriving an earlier anchor lands in a
+    // shorter month (for example, April 30 minus two months is February 28).
+    var preferredDayOfMonth: Int?
     var frequency: RepeatOption
     var interval: Int
     var unit: String
@@ -17,6 +20,7 @@ struct RecurrenceRule: Codable, Equatable {
     init(event: Event, end: RepeatUntilOption, calendar: Calendar = .current) {
         anchor = event.date
         anchorDay = CalendarDay(event.date, calendar: calendar)
+        preferredDayOfMonth = event.recurrence?.preferredDayOfMonth
         frequency = event.repeatOption
         interval = frequency == .custom ? (event.customRepeatCount ?? 1) : 1
         unit = event.repeatUnit ?? "Days"
@@ -27,7 +31,7 @@ struct RecurrenceRule: Codable, Equatable {
         calendarIdentifier = event.recurrence?.calendarIdentifier
     }
 
-    enum CodingKeys: String, CodingKey { case anchor, anchorDay, frequency, interval, unit, end, until, untilDay, count, excludedIndices, calendarIdentifier }
+    enum CodingKeys: String, CodingKey { case anchor, anchorDay, preferredDayOfMonth, frequency, interval, unit, end, until, untilDay, count, excludedIndices, calendarIdentifier }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -35,6 +39,7 @@ struct RecurrenceRule: Codable, Equatable {
         let legacyAnchor = try values.decode(Date.self, forKey: .anchor)
         anchorDay = try values.decodeIfPresent(CalendarDay.self, forKey: .anchorDay) ?? CalendarDay(legacyAnchor, calendar: calendar)
         anchor = anchorDay?.date(in: calendar) ?? legacyAnchor
+        preferredDayOfMonth = try values.decodeIfPresent(Int.self, forKey: .preferredDayOfMonth)
         frequency = try values.decode(RepeatOption.self, forKey: .frequency)
         interval = try values.decode(Int.self, forKey: .interval)
         unit = try values.decode(String.self, forKey: .unit)
@@ -67,7 +72,11 @@ struct RecurrenceRule: Codable, Equatable {
         guard index >= 0, (1...1000).contains(interval) else { return nil }
         let (offset, overflow) = index.multipliedReportingOverflow(by: interval)
         guard !overflow else { return nil }
-        return resolvedCalendar(calendar).date(byAdding: component, value: offset, to: anchor)
+        let calendar = resolvedCalendar(calendar)
+        guard let date = calendar.date(byAdding: component, value: offset, to: anchor) else { return nil }
+        guard let preferredDayOfMonth, component == .month || component == .year else { return date }
+        guard let days = calendar.range(of: .day, in: .month, for: date) else { return nil }
+        return calendar.date(bySetting: .day, value: min(max(days.lowerBound, preferredDayOfMonth), days.upperBound - 1), of: date)
     }
 
     func resolvedCalendar(_ calendar: Calendar) -> Calendar {
@@ -189,24 +198,51 @@ enum Recurrence {
         }
         var newRule = replacement.recurrence ?? oldRule
         newRule.excludedIndices = oldRule.excludedIndices
-        let samePattern = oldRule.frequency == newRule.frequency && oldRule.interval == newRule.interval && oldRule.unit == newRule.unit
+        let samePattern = oldRule.component == newRule.component && oldRule.interval == newRule.interval
         let sameEnding = oldRule.end == newRule.end && oldRule.until == newRule.until && oldRule.count == newRule.count
         let shift = calendar.dateComponents([.day], from: calendar.startOfDay(for: selected.date), to: calendar.startOfDay(for: replacement.date)).day ?? 0
-        if samePattern {
-            newRule.anchor = calendar.date(byAdding: .day, value: shift, to: oldRule.anchor) ?? oldRule.anchor
+        func hasDateException(_ event: Event) -> Bool {
+            guard event.isRecurrenceException, let index = event.occurrenceIndex,
+                  let scheduled = oldRule.date(at: index, calendar: calendar) else { return false }
+            return !calendar.isDate(event.date, inSameDayAs: scheduled)
+        }
+        if samePattern && shift == 0 {
+            newRule.anchor = oldRule.anchor
+            newRule.preferredDayOfMonth = oldRule.preferredDayOfMonth
         } else {
+            var targetDate = replacement.date
+            if samePattern, hasDateException(selected), let index = selected.occurrenceIndex,
+               let scheduled = oldRule.date(at: index, calendar: calendar) {
+                targetDate = calendar.date(byAdding: .day, value: shift, to: scheduled) ?? targetDate
+            }
             newRule.anchor = calendar.date(byAdding: newRule.component,
-                value: -(selected.occurrenceIndex ?? 0) * newRule.interval, to: replacement.date) ?? replacement.date
+                value: -(selected.occurrenceIndex ?? 0) * newRule.interval, to: targetDate) ?? targetDate
+            let requestedDay = calendar.component(.day, from: targetDate)
+            newRule.preferredDayOfMonth = (newRule.component == .month || newRule.component == .year) &&
+                calendar.component(.day, from: newRule.anchor) != requestedDay ? requestedDay : nil
         }
         newRule.anchorDay = CalendarDay(newRule.anchor, calendar: calendar)
         newRule.untilDay = newRule.until.map { CalendarDay($0, calendar: calendar) }
         if samePattern && sameEnding {
             // Metadata and date shifts preserve every stored occurrence, including older long series.
-            let originalsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            return EventSeries.updatingLegacy(selected, with: replacement, in: events, calendar: calendar).map { member in
-                guard member.seriesID == id else { return member }
-                var updated = member
-                let original = originalsByID[member.id]!
+            let duration = replacement.endDate.map {
+                calendar.dateComponents([.day], from: calendar.startOfDay(for: replacement.date),
+                                        to: calendar.startOfDay(for: $0)).day ?? 0
+            }
+            return events.map { original in
+                guard original.seriesID == id else { return original }
+                var updated = replacement
+                updated.id = original.id
+                updated.seriesID = id
+                let shifted = calendar.date(byAdding: .day, value: shift, to: original.date) ?? original.date
+                if shift != 0, !hasDateException(original), let index = original.occurrenceIndex {
+                    updated.date = newRule.date(at: index, calendar: calendar) ?? shifted
+                } else {
+                    updated.date = shifted
+                }
+                updated.endDate = duration.flatMap { calendar.date(byAdding: .day, value: $0, to: updated.date) }
+                updated.calendarDay = CalendarDay(updated.date, calendar: calendar)
+                updated.calendarEndDay = updated.endDate.map { CalendarDay($0, calendar: calendar) }
                 updated.recurrence = newRule
                 updated.occurrenceIndex = original.occurrenceIndex
                 updated.isRecurrenceException = original.isRecurrenceException

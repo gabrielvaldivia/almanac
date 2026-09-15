@@ -115,4 +115,76 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertEqual(updated.map(\.id), Array(events.prefix(3)).map(\.id))
         XCTAssertEqual(updated.map(\.date), [date(2030, 1, 1), date(2030, 1, 2), date(2030, 1, 3)])
     }
+
+    func testMovingMonthlySeriesFromAnyOccurrenceKeepsCalendarDatesConsistent() {
+        let event = seed(.monthly, date(2030, 1, 31))
+        let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        let cases = [
+            (0, date(2030, 1, 30), [date(2030, 1, 30), date(2030, 2, 28), date(2030, 3, 30)]),
+            (1, date(2030, 2, 27), [date(2030, 1, 27), date(2030, 2, 27), date(2030, 3, 27)]),
+            (2, date(2030, 4, 30), [date(2030, 2, 28), date(2030, 3, 30), date(2030, 4, 30)])
+        ]
+        for (index, movedDate, expected) in cases {
+            var replacement = events[index]; replacement.date = movedDate
+            let updated = EventSeries.updating(events[index], with: replacement, in: events, calendar: calendar)
+            XCTAssertEqual(updated.map(\.id), events.map(\.id))
+            XCTAssertEqual(updated.map(\.date), expected)
+            for (index, member) in updated.enumerated() {
+                XCTAssertEqual(member.date, member.recurrence?.date(at: index, calendar: calendar))
+            }
+        }
+    }
+
+    func testMovingYearlySeriesToLeapDayPersistsItsIntendedDay() throws {
+        var event = seed(.yearly, date(2029, 2, 28)); event.repeatUntilCount = 4
+        let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        var replacement = events[3]; replacement.date = date(2032, 2, 29)
+        let updated = EventSeries.updating(events[3], with: replacement, in: events, calendar: calendar)
+        XCTAssertEqual(updated.map(\.date), [date(2029, 2, 28), date(2030, 2, 28), date(2031, 2, 28), date(2032, 2, 29)])
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        decoder.userInfo[.eventCalendar] = calendar
+        let rule = try decoder.decode(RecurrenceRule.self, from: encoder.encode(XCTUnwrap(updated[0].recurrence)))
+        XCTAssertEqual(rule.date(at: 7, calendar: calendar), date(2036, 2, 29))
+        var metadata = updated[3]; metadata.title = "Renamed"
+        let renamed = EventSeries.updating(updated[3], with: metadata, in: updated, calendar: calendar)
+        XCTAssertEqual(renamed.map(\.date), updated.map(\.date))
+        XCTAssertEqual(renamed.map(\.id), updated.map(\.id))
+    }
+
+    func testMonthlyMovesPreserveDateExceptionsWithoutTreatingMetadataAsADateException() {
+        let event = seed(.monthly, date(2030, 1, 31))
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        events[1].title = "Title exception"; events[1].isRecurrenceException = true
+        events[2].date = date(2030, 3, 15); events[2].isRecurrenceException = true
+        var replacement = events[0]; replacement.date = date(2030, 1, 30)
+        let updated = EventSeries.updating(events[0], with: replacement, in: events, calendar: calendar)
+        XCTAssertEqual(updated.map(\.date), [date(2030, 1, 30), date(2030, 2, 28), date(2030, 3, 14)])
+        XCTAssertEqual(updated.map(\.isRecurrenceException), events.map(\.isRecurrenceException))
+    }
+
+    func testEquivalentCustomMonthlyPatternKeepsTheOriginalMonthEndAnchor() {
+        let event = seed(.monthly, date(2030, 1, 31))
+        let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        var replacement = events[1]
+        replacement.repeatOption = .custom; replacement.repeatUnit = "Months"
+        replacement.recurrence!.frequency = .custom; replacement.recurrence!.unit = "Months"
+        let updated = EventSeries.updating(events[1], with: replacement, in: events, calendar: calendar)
+        XCTAssertEqual(updated.map(\.date), events.map(\.date))
+        XCTAssertEqual(updated.first?.recurrence?.anchor, event.date)
+    }
+
+    func testMovingFromADateExceptionKeepsAShortMonthAnchorConsistent() {
+        let event = seed(.monthly, date(2030, 1, 31))
+        let initial = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        var firstMove = initial[2]; firstMove.date = date(2030, 4, 30)
+        var events = EventSeries.updating(initial[2], with: firstMove, in: initial, calendar: calendar)
+        events[2].date = date(2030, 4, 15); events[2].isRecurrenceException = true
+        var replacement = events[2]; replacement.date = date(2030, 4, 16)
+        let updated = EventSeries.updating(events[2], with: replacement, in: events, calendar: calendar)
+        XCTAssertEqual(updated.map(\.date), [date(2030, 3, 1), date(2030, 4, 1), date(2030, 4, 16)])
+        XCTAssertEqual(updated[0].recurrence?.date(at: 0, calendar: calendar), updated[0].date)
+        XCTAssertEqual(updated[1].recurrence?.date(at: 1, calendar: calendar), updated[1].date)
+        XCTAssertEqual(updated.map(\.id), events.map(\.id))
+    }
 }

@@ -28,8 +28,12 @@ Renames and deletions now share model-level recovery guards. Both payloads save 
 
 ### 5. F01 — Recurrence ending changes preserve history
 
-Existing occurrence indices that still satisfy the edited rule are retained independently of the future-generation horizon. Surviving IDs and date exceptions remain intact, exclusions remain excluded, and missing years are not backfilled. Anchors/endings retain the supplied calendar through encoding. All 115 unit tests passed, followed by 20 focused calendar/recurrence/birthday tests after the storage-calendar refinement. Signed phone build passed.
+Existing occurrence indices that still satisfy the edited rule are retained independently of the future-generation horizon. Surviving IDs and date exceptions remain intact, exclusions remain excluded, and missing years are not backfilled. Anchors/endings retain the supplied calendar through encoding. All 115 unit tests passed, followed by 20 focused calendar/recurrence/birthday tests after the storage-calendar refinement. Signed phone build passed. Pushed as `7a4343d` and installed on the phone.
+
+### 6. F02 — Month/year moves follow the recurrence rule
+
+Series dates are recalculated by occurrence index instead of uniformly shifting month-end dates. Moving a middle occurrence retains its requested day even when deriving the anchor crosses a shorter month; an optional backward-compatible rule field preserves that day. Explicit date exceptions keep their date offset, metadata-only exceptions follow the rule, and equivalent custom intervals keep the anchor. The common edit path now uses one traversal. All 119 unit tests passed, followed by 36 focused tests after adding the short-month/date-exception edge case (120 unit tests now exist). Signed phone build passed.
 
 ## Remaining
 
-F02–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
