@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import Up_Next
 
 final class RegressionTests: XCTestCase {
@@ -6,6 +7,28 @@ final class RegressionTests: XCTestCase {
         let date = Calendar.current.date(from: DateComponents(year: 2030, month: 1, day: day))!
         return Event(title: title, date: date, color: CodableColor(color: .blue),
                      repeatOption: seriesID == nil ? .never : .daily, seriesID: seriesID)
+    }
+
+    func testEventTextHasReadableContrastAcrossStylesColorsAndHighlights() {
+        let colors: [Color] = [.blue, .red, .yellow, .orange, .pink, .purple, .green, .cyan,
+                               .white, .black, .gray, Color(red: 0.97, green: 0.93, blue: 0.81),
+                               Color(red: 0.12, green: 0.05, blue: 0.2).opacity(0.3)]
+        for color in colors {
+            for style in ["bubbly", "classic", "naked"] {
+                for dark in [false, true] {
+                    for highlighted in [false, true] {
+                        let palette = EventRowColors(category: CodableColor(color: color), style: style,
+                                                     dark: dark, highlighted: highlighted)
+                        XCTAssertGreaterThanOrEqual(EventRowColors.contrast(palette.title, palette.background), 4.5)
+                        XCTAssertGreaterThanOrEqual(EventRowColors.contrast(palette.date, palette.background), 4.5)
+                    }
+                }
+            }
+        }
+        XCTAssertEqual(EventRowColors.contrast(CodableColor(color: .white), CodableColor(color: .black)), 21, accuracy: 0.0001)
+        let blue = CodableColor(color: Color(red: 0, green: 0.2, blue: 0.5))
+        XCTAssertEqual(EventRowColors(category: blue, style: "bubbly", dark: false, highlighted: false).title, blue,
+                       "Already readable category text retains its color")
     }
 
     func testWidgetKeepsEventsThroughTheirLastCalendarDay() {

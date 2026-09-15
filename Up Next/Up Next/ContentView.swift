@@ -58,6 +58,7 @@ struct ContentView: View {
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -629,21 +630,26 @@ struct ContentView: View {
 
     // View for each event row
     func eventRowView(key: String, events: [Event], pinnedTop: CGFloat = 0) -> some View {
-        HStack(alignment: .top) {
-            GeometryReader { dayGeometry in
-                Text(key.uppercased())
-                    .font(.system(.caption, design: .monospaced, weight: .medium))
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, appData.eventStyle == "naked" ? 6 : 14)
-                    .visualEffect { content, labelGeometry in
-                        // Keep the day beside its events, then let the next day
-                        // push it away at the bottom of this group.
-                        content.offset(y: min(max(0, pinnedTop - labelGeometry.frame(in: .named("eventList")).minY),
-                                              max(0, dayGeometry.size.height - labelGeometry.size.height)))
-                    }
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .top))
+        return layout {
+            if dynamicTypeSize.isAccessibilitySize {
+                relativeDayLabel(key)
+                    .padding(.top, 8)
+            } else {
+                GeometryReader { dayGeometry in
+                    relativeDayLabel(key)
+                        .padding(.vertical, appData.eventStyle == "naked" ? 6 : 14)
+                        .visualEffect { content, labelGeometry in
+                            // Keep the day beside its events, then let the next day
+                            // push it away at the bottom of this group.
+                            content.offset(y: min(max(0, pinnedTop - labelGeometry.frame(in: .named("eventList")).minY),
+                                                  max(0, dayGeometry.size.height - labelGeometry.size.height)))
+                        }
+                }
+                .frame(width: 100)
             }
-            .frame(width: 100)
             VStack(alignment: .leading) {
                 ForEach(events, id: \.id) { event in
                     EventRow(
@@ -664,6 +670,15 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func relativeDayLabel(_ key: String) -> some View {
+        Text(key.uppercased())
+            .font(.system(.caption, design: .monospaced, weight: .medium))
+            .foregroundStyle(EventRowColors.secondaryLabel(dark: colorScheme == .dark))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("relativeEventDate")
     }
 
     // Empty state view when no events are available or when a category with no events is selected

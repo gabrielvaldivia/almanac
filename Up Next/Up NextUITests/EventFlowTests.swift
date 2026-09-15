@@ -566,6 +566,43 @@ final class EventFlowTests: XCTestCase {
         XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
 
+    func testLargestTextReflowsEventDatesAndKeepsCalendarSelectionUsable() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        try seedEvents([("Large text event title", 0), ("Later event", 15)], in: app)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        let row = list.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Large text event title")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        let date = app.staticTexts.matching(identifier: "relativeEventDate").firstMatch
+        XCTAssertGreaterThan(row.frame.width, list.frame.width * 0.8)
+        XCTAssertLessThanOrEqual(date.frame.maxY, row.frame.minY)
+        let listCapture = XCTAttachment(screenshot: app.screenshot())
+        listCapture.name = "Event list at largest accessibility text size"
+        listCapture.lifetime = .keepAlways; add(listCapture)
+        openComposer(app)
+        let input = app.descendants(matching: .any).matching(identifier: "quickEventInput").firstMatch
+        input.typeText("Large text calendar")
+        app.buttons["quickEventDate"].tap()
+        app.collectionViews.buttons["Choose Dates…"].tap()
+        let picker = app.scrollViews["quickDatePicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        let first = app.buttons["calendarDay-1"]
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        if !first.isHittable { picker.swipeUp() }
+        XCTAssertGreaterThan(first.frame.width, app.frame.width * 0.75)
+        first.tap()
+        XCTAssertEqual(first.value as? String, "Start date")
+        let calendarCapture = XCTAttachment(screenshot: app.screenshot())
+        calendarCapture.name = "Calendar at largest accessibility text size"
+        calendarCapture.lifetime = .keepAlways; add(calendarCapture)
+        app.buttons["Done"].tap()
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        XCTAssertEqual(input.value as? String, "Large text calendar")
+    }
+
     func testComposerParsesPillsAndSavesQuickEdits() {
         continueAfterFailure = false
         let app = makeApp()

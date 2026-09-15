@@ -100,6 +100,10 @@ Category recovery now offers an explicit Cancel/Restore confirmation and validat
 
 Timeline markers retain their visual bounds with minimum 44-point effective targets. Overlapping targets prefer the nearest visible marker and preserve actual marker hits. The composer's visible handle stays small with a 44-point interactive height; its tap gesture still cancels during dragging. All 35 timeline unit tests, four composer/pinch UI regressions, and the signed app/widget Release build passed. F21 was pushed as `7234412`.
 
+### 23. F19 — Readable event text and accessibility-size layouts
+
+Event text now retains its preferred color when readable and otherwise adjusts toward sufficient contrast against its actual tinted background. Relative dates and calendar selection colors also receive contrast correction. Decorative category colors remain unchanged. The color calculation follows [W3C relative luminance and contrast guidance](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum). At accessibility text sizes, date labels sit above full-width cards and the calendar becomes a scrollable date list with its range action at the top. Standard-size calendar range selection is unchanged, and calendar scaling is no longer capped. All 143 unit tests and the existing calendar range UI test passed. The new large-text test initially selected a same-named timeline marker; after scoping it to the list, it passed twice, including the final contrast refinement. The final 12 regression tests and signed app/widget Release build passed. Large-text list/calendar screenshots were inspected; native navigation-bar text follows the system's toolbar sizing while section headings scale fully. F18 was pushed as `2a9c4b4`.
+
 ## Remaining
 
-F19 remains open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+All 23 main findings have delivered fixes. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

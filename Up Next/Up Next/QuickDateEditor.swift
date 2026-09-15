@@ -57,6 +57,7 @@ struct QuickDateEditor: View {
     @State private var selection: CalendarDateSelection
     @State private var visibleMonth: Date
     var onSave: (Date, Date?) -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var dayHeight = 44.0
 
     init(options: DateOptions, onSave: @escaping (Date, Date?) -> Void) {
@@ -74,8 +75,9 @@ struct QuickDateEditor: View {
                     if selection.end != nil {
                         endpointControl
                     }
+                    if dynamicTypeSize.isAccessibilitySize { rangeButton }
                     calendar
-                    rangeButton
+                    if !dynamicTypeSize.isAccessibilitySize { rangeButton }
                 }
                 .padding(20)
             }
@@ -89,7 +91,7 @@ struct QuickDateEditor: View {
                 }
             }
         }
-        .presentationDetents([.height(selection.end == nil ? 560 : 620), .large])
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(selection.end == nil ? 560 : 620), .large])
         .presentationDragIndicator(.visible)
     }
 
@@ -131,39 +133,44 @@ struct QuickDateEditor: View {
 
     private var calendar: some View {
         VStack(spacing: 8) {
-            HStack {
+            let headerLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout())
+            headerLayout {
                 Text(visibleMonth, format: .dateTime.month(.wide).year())
                     .font(.headline)
                     .accessibilityIdentifier("calendarMonth")
-                Spacer(minLength: 0)
-                monthButton(-1, label: "Previous month", icon: "chevron.backward")
-                monthButton(1, label: "Next month", icon: "chevron.forward")
-            }
-
-            let symbols = selection.calendar.veryShortStandaloneWeekdaySymbols
-            HStack(spacing: 0) {
-                ForEach(0..<7, id: \.self) { index in
-                    Text(symbols[(index + selection.calendar.firstWeekday - 1) % 7])
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                HStack {
+                    monthButton(-1, label: "Previous month", icon: "chevron.backward")
+                    monthButton(1, label: "Next month", icon: "chevron.forward")
                 }
             }
-            .accessibilityHidden(true)
+
+            if !dynamicTypeSize.isAccessibilitySize {
+                let symbols = selection.calendar.veryShortStandaloneWeekdaySymbols
+                HStack(spacing: 0) {
+                    ForEach(0..<7, id: \.self) { index in
+                        Text(symbols[(index + selection.calendar.firstWeekday - 1) % 7])
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
 
             let days = selection.monthDays(containing: visibleMonth)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: dynamicTypeSize.isAccessibilitySize ? 1 : 7), spacing: 4) {
                 ForEach(days.indices, id: \.self) { index in
                     if let date = days[index] {
                         dayButton(date)
-                    } else {
+                    } else if !dynamicTypeSize.isAccessibilitySize {
                         Color.clear.frame(height: dayHeight).accessibilityHidden(true)
                     }
                 }
             }
             .accessibilityIdentifier("dateRangeCalendar")
         }
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private func monthButton(_ offset: Int, label: String, icon: String) -> some View {
@@ -185,29 +192,36 @@ struct QuickDateEditor: View {
         let isEndpoint = isStart || isEnd
         let isSelected = selection.contains(date)
         let spansDays = selection.end.map { $0 > selection.start } ?? false
+        let selectionColor = EventRowColors.readable(CodableColor(color: .blue), over: CodableColor(color: .white)).color
         return Button {
             selection.select(date)
         } label: {
-            Text(date, format: .dateTime.day())
+            Text(date, format: dynamicTypeSize.isAccessibilitySize
+                 ? .dateTime.weekday(.abbreviated).month(.abbreviated).day() : .dateTime.day())
                 .font(.body.weight(isEndpoint ? .semibold : .regular))
                 .foregroundStyle(isEndpoint ? Color.white : selection.calendar.isDateInToday(date) ? .blue : .primary)
                 .frame(maxWidth: .infinity)
-                .frame(height: dayHeight)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: dayHeight)
                 .background {
                     ZStack {
                         if isSelected && spansDays {
                             GeometryReader { geometry in
                                 Rectangle().fill(.blue.opacity(0.18))
-                                    .padding(.leading, isStart ? geometry.size.width / 2 : 0)
-                                    .padding(.trailing, isEnd ? geometry.size.width / 2 : 0)
+                                    .padding(.leading, isStart && !dynamicTypeSize.isAccessibilitySize ? geometry.size.width / 2 : 0)
+                                    .padding(.trailing, isEnd && !dynamicTypeSize.isAccessibilitySize ? geometry.size.width / 2 : 0)
                                     .padding(.vertical, 2)
                             }
                         }
                         if isEndpoint {
                             // Keep the range band from tinting half of the endpoint over the sheet material.
-                            Circle().fill(.blue)
-                                .background(Circle().fill(Color(uiColor: .systemBackground)))
-                                .padding(2)
+                            if dynamicTypeSize.isAccessibilitySize {
+                                RoundedRectangle(cornerRadius: 12).fill(selectionColor)
+                            } else {
+                                Circle().fill(selectionColor)
+                                    .background(Circle().fill(Color(uiColor: .systemBackground)))
+                                    .padding(2)
+                            }
                         }
                     }
                     .foregroundStyle(Color.blue)
