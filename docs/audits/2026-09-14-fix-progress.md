@@ -1,5 +1,7 @@
 # Audit fixes — September 14, 2026
 
+**Completed:** all 23 audit findings, the rare long-inactivity boundary, and the safe unused/redundant-code cleanup. Final app code: `8c27b64`.
+
 The user requested one change at a time, ordered by impact relative to effort, with verification, a push, and a phone build/install after every change. Existing features, data compatibility, and presentation are preserved except where a documented bug requires correction.
 
 The baseline checkpoint is `b39fc0b`. It includes the previously verified widget/composer/list work and the audit evidence. Two upstream UI-test changes were incorporated; the timeline test now measures visibility against the actual overlay and starts drags within the visible list. The corrected test and composer check passed. The checkpoint was pushed, built, installed, and launched on Gabe's iPhone.
@@ -128,6 +130,12 @@ Replaced color's redundant Codable methods with synthesis and removed additional
 
 The edge probe reproduced UIKit's fallback hit testing selecting a fully offscreen marker through its expanded bounds. Empty visible timeline space now receives the touch itself, so only visible markers can be selected and panning remains available. The probe failed before the fix and passes afterward. All 147 unit tests and the final signed app/widget Release build passed. Serialization cleanup was pushed as `7a2fddb`.
 
-## Remaining
+## Final verification
 
-All 23 main findings have delivered fixes. The audited cleanup is complete; final UI and compatibility verification is in progress. Active subscriptions and persisted legacy event fields are deliberately retained to preserve existing behavior. Cosmetic EventSheet naming changes were not needed for a bug fix or removal of unused code. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+The final app code at `8c27b64` passed all 147 unit tests and the full 28-test UI suite on iOS 26.5 (no failures; 744 seconds for the UI suite). Scrolling through density changes, composer short drags, and the largest-text calendar/list flow also passed on iOS 18.5. The signed Release app and embedded widget built successfully; their signatures, packaged privacy manifests, and retained app deep-link scheme were verified. The final test-only capture refinement also passed and confirms that selected calendar text retains its appearance after touch focus moves away.
+
+Inspected evidence: [large-text event list](2026-09-14-fix-assets/large-text-list.png), [settled large-text calendar](2026-09-14-fix-assets/large-text-calendar.png), and [overlapping timeline without clipped markers](2026-09-14-fix-assets/overlapping-timeline.png). Screenshot data is synthetic and isolated from the user's events.
+
+Local result bundles are `/tmp/almanac-final-unit.xcresult`, `/tmp/almanac-final-ui.xcresult`, `/tmp/almanac-final-ios18.xcresult`, and `/tmp/almanac-final-calendar-evidence.xcresult`. The final signed build is `/tmp/almanac-audit/DeviceBuild/Build/Products/Release-iphoneos/Up Next.app`. The [GitHub regression workflow](https://github.com/gabrielvaldivia/almanac/actions/workflows/ios-tests.yml) tracks remote validation; the local results above are complete.
+
+Phone installation was skipped after the user's waiver. Physical VoiceOver/widget configuration and real StoreKit transactions were not exercised. Active subscriptions and persisted legacy event fields remain to preserve existing behavior; cosmetic EventSheet naming changes were unnecessary. Original audit reports and defect-reproduction probes remain historical evidence, with a link to this delivery ledger. No audited finding remains unaddressed.

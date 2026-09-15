@@ -595,6 +595,9 @@ final class EventFlowTests: XCTestCase {
         XCTAssertGreaterThan(first.frame.width, app.frame.width * 0.75)
         first.tap()
         XCTAssertEqual(first.value as? String, "Start date")
+        // Capture the selected appearance after moving touch focus off the day.
+        app.staticTexts["calendarMonth"].tap()
+        XCTAssertEqual(first.value as? String, "Start date")
         let calendarCapture = XCTAttachment(screenshot: app.screenshot())
         calendarCapture.name = "Calendar at largest accessibility text size"
         calendarCapture.lifetime = .keepAlways; add(calendarCapture)
