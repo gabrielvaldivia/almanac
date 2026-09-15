@@ -131,6 +131,47 @@ final class RecurrenceTests: XCTestCase {
         XCTAssertNotEqual(Recurrence.occurrenceID(seriesID: namespace, index: 7), Recurrence.occurrenceID(seriesID: UUID(), index: 7))
     }
 
+    func testDeletingTheOnlyLoadedOccurrencePreservesASparseFutureSchedule() throws {
+        var event = seed(.custom, date(2030, 1, 1)); event.customRepeatCount = 2; event.repeatUnit = "Years"
+        var events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .indefinitely, calendar: calendar), now: event.date, calendar: calendar)
+        XCTAssertEqual(events.count, 1)
+        let unrelated = Event(title: "Keep", date: event.date, color: CodableColor(color: .red))
+        events.append(unrelated)
+        for (index, expectedDate) in [(0, date(2032, 1, 1)), (1, date(2034, 1, 1))] {
+            let selected = try XCTUnwrap(events.first { $0.seriesID == event.seriesID })
+            events = Recurrence.removingOccurrence(selected, from: events, calendar: calendar)
+            XCTAssertEqual(events.first { $0.id == unrelated.id }, unrelated)
+            let next = try XCTUnwrap(events.first { $0.seriesID == event.seriesID })
+            XCTAssertEqual(next.date, expectedDate)
+            XCTAssertEqual(next.occurrenceIndex, index + 1)
+            XCTAssertEqual(next.recurrence?.excludedIndices, Array(0...index))
+            XCTAssertNotEqual(next.id, selected.id)
+        }
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        decoder.userInfo[.eventCalendar] = calendar
+        let restored = try decoder.decode([Event].self, from: encoder.encode(events))
+        XCTAssertEqual(restored.first { $0.seriesID == event.seriesID }?.recurrence?.anchor, event.date)
+        let filled = Recurrence.replenishing(restored, now: date(2036, 1, 1), calendar: calendar)
+        XCTAssertTrue(filled.contains { $0.date == date(2036, 1, 1) })
+        XCTAssertFalse(filled.contains { $0.seriesID == event.seriesID && ($0.occurrenceIndex ?? 0) < 2 })
+    }
+
+    func testDeletingSparseOccurrencesRespectsFiniteEndingsAndExclusions() throws {
+        var event = seed(.custom, date(2030, 1, 1)); event.customRepeatCount = 2; event.repeatUnit = "Years"
+        event.repeatUntil = date(2034, 1, 1)
+        var rule = RecurrenceRule(event: event, end: .onDate); rule.excludedIndices = [1]
+        let original = Recurrence.generate(event, rule: rule, now: event.date, calendar: calendar)
+        let remaining = Recurrence.removingOccurrence(original[0], from: original, calendar: calendar)
+        XCTAssertEqual(remaining.map(\.date), [date(2034, 1, 1)])
+        XCTAssertTrue(Recurrence.removingOccurrence(remaining[0], from: remaining, calendar: calendar).isEmpty)
+        event.repeatUntilCount = 1
+        let counted = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)
+        XCTAssertTrue(Recurrence.removingOccurrence(counted[0], from: counted, calendar: calendar).isEmpty)
+        let single = Event(title: "Single", date: event.date, color: CodableColor(color: .blue))
+        XCTAssertTrue(Recurrence.removingOccurrence(single, from: [single], calendar: calendar).isEmpty)
+    }
+
     func testEditingEndCountChangesSeriesWithoutChangingSurvivingIDs() {
         let event = seed(.daily, date(2030, 1, 1))
         let events = Recurrence.generate(event, rule: RecurrenceRule(event: event, end: .after), calendar: calendar)

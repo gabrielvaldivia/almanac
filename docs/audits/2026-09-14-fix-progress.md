@@ -80,6 +80,10 @@ New recurring occurrences derive UUID v5 identifiers from the persisted series I
 
 Added target-specific manifests for existing preference access: app-only settings (`CA92.1`) and App Group storage (`1C8F.1`) in the app, and App Group storage in the widget. Reasons were checked against [Apple's reference](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons?language=objc). Plist/project validation and the Release build passed; both packaged manifests and their reason sets were inspected. No runtime logic changed. F12 was pushed as `a123cbd`.
 
+### 18. F03 — Deleting one sparse occurrence retains its future schedule
+
+Deleting the last loaded occurrence now retains the next valid occurrence beyond the normal horizon when the rule still has future dates. Exclusions and finite endings are respected, and unrelated events remain unchanged. The existing occurrence-based storage format is preserved. All 42 recurrence/regression/birthday tests passed across the initial run and corrected recurrence rerun; the new persistence fixture now consistently supplies its explicit calendar when creating and decoding the rule. App/widget Release build passed. F20 was pushed as `e0473e0`.
+
 ## Remaining
 
-F03–F04, F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F04, F13, F18–F19, and F21 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
