@@ -237,28 +237,7 @@ struct CodableColor: Codable, Equatable {
         red = Double(r); green = Double(g); blue = Double(b); opacity = Double(a)
     }
 
-    // Custom decoding for CodableColor
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        red = try container.decode(Double.self, forKey: .red)
-        green = try container.decode(Double.self, forKey: .green)
-        blue = try container.decode(Double.self, forKey: .blue)
-        opacity = try container.decode(Double.self, forKey: .opacity)
-    }
 
-    // Custom encoding for CodableColor
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(red, forKey: .red)
-        try container.encode(green, forKey: .green)
-        try container.encode(blue, forKey: .blue)
-        try container.encode(opacity, forKey: .opacity)
-    }
-
-    // Coding keys for encoding and decoding
-    enum CodingKeys: String, CodingKey {
-        case red, green, blue, opacity
-    }
 }
 
 

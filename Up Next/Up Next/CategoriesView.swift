@@ -8,8 +8,6 @@
 import Foundation
 import SwiftUI
 import UIKit
-import UserNotifications
-import WidgetKit
 
 struct CategoriesView: View {
     @EnvironmentObject var appData: AppData

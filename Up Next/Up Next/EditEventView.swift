@@ -7,8 +7,6 @@
 
 import Foundation
 import SwiftUI
-import UserNotifications
-import WidgetKit
 
 // Enum for delete options
 enum DeleteOption {

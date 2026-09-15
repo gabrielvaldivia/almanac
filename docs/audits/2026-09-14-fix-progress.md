@@ -120,6 +120,10 @@ Removed the unreferenced Past Events view/font modifier, unused AppData and colo
 
 Medium and large widgets share their rendering path while retaining their respective event limits and spacing. Snapshots are filtered/sorted once, groups use calendar dates directly, and ongoing events still appear under Today. Removed repeated remaining-count filtering, the relative-label parsing round trip, unused formatter/preview code, and the undeclared accessory-family branch. The separate Next Event widget remains unchanged. All 29 targeted widget/storage/calendar tests and the signed app/widget Release build passed. Unused-code cleanup was pushed as `1f9d61e`.
 
+### 28. Cleanup — Simplify color coding without changing its schema
+
+Replaced color's redundant Codable methods with synthesis and removed additional unused notification/widget imports from UI files. A literal legacy fixture verifies identical encoded keys/values and rejection of missing color components. All 146 unit tests passed, followed by the final 14 storage tests after preserving the existing category test's actor annotation. The signed app/widget Release build passed. Widget cleanup was pushed as `42d3f4a`.
+
 ## Remaining
 
 All 23 main findings have delivered fixes. The unused/redundant-code inventory and final verification remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

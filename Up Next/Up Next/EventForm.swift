@@ -1,5 +1,4 @@
 import SwiftUI
-import WidgetKit
 
 struct EventForm: View {
     @EnvironmentObject var appData: AppData

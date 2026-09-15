@@ -7,8 +7,6 @@
 
 import Foundation
 import SwiftUI
-import UserNotifications
-import WidgetKit
 
 struct ContentView: View {
 

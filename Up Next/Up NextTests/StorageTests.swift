@@ -18,6 +18,24 @@ final class StorageTests: XCTestCase {
         try result.get()
     }
 
+    func testColorCodingPreservesLegacyPayloadsAndRequiresAllComponents() throws {
+        let legacy = Data(#"{"red":0.15,"green":0.45,"blue":0.95,"opacity":0.35}"#.utf8)
+        let color = try JSONDecoder().decode(CodableColor.self, from: legacy)
+        XCTAssertEqual(color.red, 0.15)
+        XCTAssertEqual(color.green, 0.45)
+        XCTAssertEqual(color.blue, 0.95)
+        XCTAssertEqual(color.opacity, 0.35)
+        let encoded = try JSONEncoder().encode(color)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSDictionary,
+                       try JSONSerialization.jsonObject(with: legacy) as? NSDictionary)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: legacy) as? [String: Double])
+        for key in object.keys {
+            var incomplete = object
+            incomplete.removeValue(forKey: key)
+            XCTAssertThrowsError(try JSONDecoder().decode(CodableColor.self, from: JSONSerialization.data(withJSONObject: incomplete)))
+        }
+    }
+
     @MainActor
     func testCategoryMetadataAndColorEditsPreserveEventOverrides() async throws {
         try await withIsolatedAppData { data in
