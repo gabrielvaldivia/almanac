@@ -1013,4 +1013,48 @@ final class EventFlowTests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5)); row.tap()
         XCTAssertTrue(app.buttons["Work"].waitForExistence(timeout: 5), "Canceling category creation must not remove Work when the event is saved")
     }
+
+    func testTimelineFollowsVisibleRowsWithoutRevealingEarlierRowsWhenItShrinks() throws {
+        continueAfterFailure = false
+        let app = makeApp()
+        let fixtures = [("Quiet", 0)] + (1...4).map { ("Crowded \($0)", 15) } +
+            (1...10).map { ("Later \($0)", 15 + $0 * 15) }
+        try seedEvents(fixtures, in: app)
+        app.launch()
+        let list = app.scrollViews["eventList"]
+        let timeline = app.scrollViews["eventTimeline"]
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        let originalFrame = list.frame
+        func drag(_ distance: CGFloat) {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.7))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: distance)),
+                        withVelocity: .slow, thenHoldForDuration: 0.1)
+        }
+        func expectFocus(offset: Int) {
+            let date = Calendar.current.date(byAdding: .day, value: offset, to: Date())!
+            let prefix = "Days view, \(date.formatted(date: .abbreviated, time: .omitted))"
+            let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", prefix), object: timeline)
+            XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 5), .completed)
+        }
+        for _ in 0..<9 { drag(-55) }
+        let crowded = list.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Crowded")).allElementsBoundByIndex
+        XCTAssertTrue(crowded.allSatisfy { $0.frame.maxY < timeline.frame.maxY })
+        XCTAssertGreaterThan(list.staticTexts["Later 1"].frame.minY, timeline.frame.maxY)
+        expectFocus(offset: 30)
+        let expandedHeight = timeline.frame.height
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Timeline follows the first visible October card"; screenshot.lifetime = .keepAlways; add(screenshot)
+        drag(-55)
+        expectFocus(offset: 30)
+        XCTAssertLessThan(timeline.frame.height, expandedHeight)
+        drag(55)
+        expectFocus(offset: 30)
+        for _ in 0..<3 { drag(55) }
+        expectFocus(offset: 15)
+        let finalFrame = list.frame
+        XCTAssertEqual(finalFrame.minX, originalFrame.minX, accuracy: 0.5)
+        XCTAssertEqual(finalFrame.minY, originalFrame.minY, accuracy: 0.5)
+        XCTAssertEqual(finalFrame.width, originalFrame.width, accuracy: 0.5)
+        XCTAssertEqual(finalFrame.height, originalFrame.height, accuracy: 0.5)
+    }
 }

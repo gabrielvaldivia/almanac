@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var eventListWindow = EventListWindow()
     @State private var timelineShowsToday = true
     @State private var timelineHeight: CGFloat = 100
+    @State private var requestedTimelineHeight: CGFloat = 100
     @State private var timelineInsetHeight: CGFloat = 100
     @State private var timelineMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var timelineUsesYearHeading = false
@@ -218,7 +219,9 @@ struct ContentView: View {
         return GeometryReader { geometry in
             let headerHeight = min(timelineHeight, max(80, geometry.size.height * 0.5))
             let insetHeight = min(timelineInsetHeight, max(80, geometry.size.height * 0.5))
-            eventList(days: days, insetHeight: insetHeight, headerOffset: headerHeight - insetHeight) {
+            let proposedHeight = min(requestedTimelineHeight, max(80, geometry.size.height * 0.5))
+            eventList(days: days, insetHeight: insetHeight, headerOffset: headerHeight - insetHeight,
+                      proposedHeaderOffset: proposedHeight - insetHeight) {
                 EventTimelineView(
                     events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
                     scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
@@ -327,6 +330,7 @@ struct ContentView: View {
     }
 
     private func eventList<Header: View>(days: [EventListDay], insetHeight: CGFloat, headerOffset: CGFloat,
+                                      proposedHeaderOffset: CGFloat,
                                       @ViewBuilder header: @escaping () -> Header) -> some View {
         VStack(spacing: 0) {
             if days.isEmpty && !hasMoreListEvents {
@@ -359,8 +363,11 @@ struct ContentView: View {
                                     .background {
                                         GeometryReader { geometry in
                                             let frame = geometry.frame(in: .named("eventList"))
-                                            Color.clear.preference(key: EventSheetTopDateKey.self,
-                                                value: frame.maxY > 1 ? day.date : nil)
+                                            Color.clear.preference(key: EventListTopDatesKey.self,
+                                                value: EventListTopDates(
+                                                    visible: frame.maxY > headerOffset + 1 ? day.date : nil,
+                                                    afterResize: frame.maxY > proposedHeaderOffset + 1 ? day.date : nil,
+                                                    requestedHeight: requestedTimelineHeight))
                                         }
                                     }
                                     // The gap between days must not keep an offscreen
@@ -397,10 +404,14 @@ struct ContentView: View {
                     .safeAreaInset(edge: .top, spacing: 0) {
                         Color.clear.frame(height: insetHeight).allowsHitTesting(false)
                     }
-                    .onPreferenceChange(EventSheetTopDateKey.self) { date in
-                        guard let date, date != eventListPosition else { return }
-                        eventListPosition = date
-                        synchronizeTimeline(to: date)
+                    .onPreferenceChange(EventListTopDatesKey.self) { dates in
+                        if let date = dates.visible, date != eventListPosition {
+                            eventListPosition = date
+                            synchronizeTimeline(to: date)
+                        }
+                        if dates.requestedHeight == requestedTimelineHeight, dates.visible == dates.afterResize {
+                            applyTimelineHeight(requestedTimelineHeight)
+                        }
                     }
                     .onChange(of: eventSheetScrollRequest) { _, request in
                         guard let request, scrollSynchronization.source == .timeline else { return }
@@ -424,10 +435,19 @@ struct ContentView: View {
     private func beginTimelineInteraction() {
         scrollSynchronization.begin(.timeline)
         timelineScrollRequest = nil
-        updateTimelineHeight(timelineHeight)
+        updateTimelineHeight(requestedTimelineHeight)
     }
 
     private func updateTimelineHeight(_ height: CGFloat) {
+        requestedTimelineHeight = height
+        if scrollSynchronization.source == .timeline || height >= timelineHeight || eventListDays.isEmpty {
+            applyTimelineHeight(height)
+        }
+        // While browsing the list, the row preferences approve a smaller
+        // overlay only after it no longer reveals an earlier event group.
+    }
+
+    private func applyTimelineHeight(_ height: CGFloat) {
         let updatesInset = scrollSynchronization.source == .timeline
         guard timelineHeight != height || (updatesInset && timelineInsetHeight != height) else { return }
         withAnimation(reduceMotion ? nil : .interactiveSpring(response: 0.2, dampingFraction: 1, blendDuration: 0)) {

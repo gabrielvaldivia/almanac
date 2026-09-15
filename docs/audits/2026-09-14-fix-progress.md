@@ -34,6 +34,10 @@ Existing occurrence indices that still satisfy the edited rule are retained inde
 
 Series dates are recalculated by occurrence index instead of uniformly shifting month-end dates. Moving a middle occurrence retains its requested day even when deriving the anchor crosses a shorter month; an optional backward-compatible rule field preserves that day. Explicit date exceptions keep their date offset, metadata-only exceptions follow the rule, and equivalent custom intervals keep the anchor. The common edit path now uses one traversal. All 119 unit tests passed, followed by 36 focused tests after adding the short-month/date-exception edge case (120 unit tests now exist). Signed phone build passed.
 
+### 7. F06 — Timeline focus follows uncovered rows
+
+Row tracking now uses the actual timeline overlay edge. Before shrinking the overlay while scrolling the list, it also checks that the proposed height would not reveal an earlier event group and send focus backward. Only date crossings reach the parent, and the native scroll inset stays stable. All 32 timeline unit tests and four timeline UI regressions passed, including forward/reverse scrolling through crowded dates; the new regression also passed on iOS 18.5. The successful screenshot was inspected. A test-only exact-frame assertion was adjusted for floating point rounding. Signed phone build passed. F02 was pushed as `324340f` and installed before starting this change.
+
 ## Remaining
 
-F03–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F05, F07–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

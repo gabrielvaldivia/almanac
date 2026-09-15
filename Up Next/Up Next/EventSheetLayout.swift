@@ -30,14 +30,22 @@ struct EventListWindow {
     }
 }
 
-/// Rows are chronological, so the earliest date still below the top edge is
-/// the focused date. Pixel-by-pixel geometry stays local to each row instead
-/// of invalidating the whole list with an array of changing frames.
-struct EventSheetTopDateKey: PreferenceKey {
-    static var defaultValue: Date?
-    static func reduce(value: inout Date?, nextValue: () -> Date?) {
-        guard let next = nextValue() else { return }
-        value = value.map { min($0, next) } ?? next
+struct EventListTopDates: Equatable {
+    var visible: Date?
+    var afterResize: Date?
+    var requestedHeight: CGFloat?
+}
+
+/// Only calendar-date crossings reach the parent, not per-pixel row frames.
+/// Check both the visible overlay and its proposed size so shrinking it cannot
+/// reveal an earlier row and immediately move the timeline backward again.
+struct EventListTopDatesKey: PreferenceKey {
+    static var defaultValue = EventListTopDates()
+    static func reduce(value: inout EventListTopDates, nextValue: () -> EventListTopDates) {
+        let next = nextValue()
+        if let date = next.visible { value.visible = value.visible.map { min($0, date) } ?? date }
+        if let date = next.afterResize { value.afterResize = value.afterResize.map { min($0, date) } ?? date }
+        value.requestedHeight = next.requestedHeight ?? value.requestedHeight
     }
 }
 
