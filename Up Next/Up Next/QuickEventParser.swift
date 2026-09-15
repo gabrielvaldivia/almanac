@@ -31,8 +31,7 @@ enum QuickEventParser {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         // Parse a recurrence before a trailing date, so "until December 15"
         // can never accidentally become a one-off event on December 15.
-        let marker = #"(?:^|\s)(every\b|(?:daily|weekly|monthly|yearly|annually)(?=\s*(?:$|until\b|through\b|starting\b|from\b)))"#
-        if let recurrence = match(marker, in: text) {
+        if let recurrence = match(recurrenceMarker, in: text) {
             return parseRecurrence(text, marker: recurrence, now: now, calendar: calendar)
         }
         return parseDatedEvent(text, now: now, calendar: calendar)
@@ -139,6 +138,12 @@ enum QuickEventParser {
     private static let weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
     private static let weekdayPattern = #"(sun(?:day)?|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?)s?"#
     private static let intervalPattern = #"(?:(other|\d{1,4}|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s+)?"#
+    private static let recurrenceMarker = #"(?:^|\s)(every\b(?=\s*(?:$|\d|(?:other|one|two|three|four|five|six|seven|eight|nine|ten|twelve|days?|weeks?|months?|years?)\b|"# + weekdayPattern + #"\b))|(?:daily|weekly|monthly|yearly|annually)(?=\s*(?:$|until\b|through\b|starting\b|from\b)))"#
+
+    static func containsRecurrenceHint(_ text: String) -> Bool {
+        match(recurrenceMarker, in: text) != nil ||
+            match(#"\S+\s+(?:until|through|starting)\s*$"#, in: text) != nil
+    }
 
     static func inferredRecurrence(for title: String) -> ParsedEventRecurrence? {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -102,11 +102,10 @@ struct QuickEventOverrides {
         // Invalid text stays in the composer until its schedule is corrected
         // either in the text itself or through the relevant pill.
         let rangeHint = QuickEventParser.containsDateRange(text)
-        let repeatHint = #"\b(?:every|until|through|starting)\b"#
         let dateNeedsReview = date == nil && (parsed?.requiresDateReview == true ||
             (parsed == nil && QuickEventParser.containsDateHint(text)))
-        let repeatNeedsReview = parsed == nil && repeatOptions == nil && !rangeHint && text.range(
-            of: repeatHint, options: [.regularExpression, .caseInsensitive]) != nil
+        let repeatNeedsReview = parsed == nil && repeatOptions == nil && !rangeHint &&
+            QuickEventParser.containsRecurrenceHint(text)
         if dateNeedsReview && repeatNeedsReview {
             draft.scheduleReviewMessage = "Choose a date and repeat setting, or update the text."
         } else if dateNeedsReview {

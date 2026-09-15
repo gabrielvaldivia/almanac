@@ -619,6 +619,30 @@ final class QuickEventTests: XCTestCase {
         }
     }
 
+    func testOrdinaryTitlesContainingScheduleWordsRemainTitles() {
+        let data = AppData()
+        let now = date(2026, 9, 13)
+        for title in ["Until Dawn", "Through the Looking Glass", "Every Breath You Take", "Starting Over",
+                      "Watch Every Breath You Take", "Think through the details", "The Daily Show"] {
+            let plain = QuickEventOverrides().resolve(title, category: nil, appData: data, now: now, calendar: calendar)
+            XCTAssertFalse(plain.requiresScheduleReview, title)
+            XCTAssertEqual(plain.title, title)
+            XCTAssertEqual(plain.dateOptions.repeatOption, .never)
+            let dated = QuickEventOverrides().resolve(title + " tomorrow", category: nil, appData: data, now: now, calendar: calendar)
+            XCTAssertFalse(dated.requiresScheduleReview, title)
+            XCTAssertEqual(dated.title, title)
+            XCTAssertEqual(dated.dateOptions.date, date(2026, 9, 14))
+            let recurring = QuickEventOverrides().resolve(title + " every year", category: nil, appData: data, now: now, calendar: calendar)
+            XCTAssertFalse(recurring.requiresScheduleReview, title)
+            XCTAssertEqual(recurring.title, title)
+            XCTAssertEqual(recurring.dateOptions.repeatOption, .yearly)
+        }
+        for input in ["Event every", "Event every other", "Event every 0 days", "Event every Monday and Wednesday",
+                      "Event daily starting unknown", "Event until", "Event weekly until"] {
+            XCTAssertTrue(QuickEventOverrides().resolve(input, category: nil, appData: data, now: now, calendar: calendar).requiresScheduleReview, input)
+        }
+    }
+
     func testQuickAndManualCreationPreserveEditableDetails() {
         var dates = DateOptions(date: date(2026, 12, 18), endDate: date(2026, 12, 20), showEndDate: true,
                                 repeatOption: .never, repeatUntil: date(2027, 12, 18),

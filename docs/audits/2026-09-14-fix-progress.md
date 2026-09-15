@@ -52,6 +52,10 @@ The list refreshes its calendar anchor on foregrounding and significant time cha
 
 Named-date detection now covers the parser's day-first, abbreviated, and ordinal forms. A successfully parsed cadence carries an unresolved-start-date flag, so it cannot suppress date correction. Choosing a date resolves only that issue and retains the cadence. All 39 quick-entry tests passed, including 15 invalid date/cadence combinations and valid counterparts. App/widget Release build passed. F23 was pushed as `a20992b`.
 
+### 11. F08 — Ordinary titles are not mistaken for schedules
+
+Recurrence recognition now requires a cadence-like phrase, and incomplete-ending hints require a preceding title. Titles containing Every, Until, Through, Starting, or Daily retain their text, including when a real date or cadence follows them. Malformed supported schedules still request correction. All 40 quick-entry tests and the composer correction UI test passed. App/widget Release build passed. F07 was pushed as `7740d8b`.
+
 ## Remaining
 
-F03–F04, F08–F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
