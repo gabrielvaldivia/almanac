@@ -492,6 +492,25 @@ final class TimelineTests: XCTestCase {
         XCTAssertEqual(window.dayCount, 1095, "Revealing a loaded event does not collapse earlier pages")
     }
 
+    func testListWindowRefreshKeepsLoadedPagesAndReanchorsAfterMidnightOrTravel() {
+        let start = calendar.date(from: DateComponents(year: 2027, month: 3, day: 7, hour: 23, minute: 59))!
+        var window = EventListWindow(today: start, calendar: calendar)
+        window.loadMore()
+        let nextMorning = start.addingTimeInterval(120)
+        XCTAssertTrue(window.refresh(today: nextMorning, calendar: calendar))
+        XCTAssertEqual(window.dayCount, 730)
+        XCTAssertEqual(window.end, calendar.date(byAdding: .day, value: 730, to: calendar.startOfDay(for: nextMorning)))
+        XCTAssertTrue(window.contains(calendar.startOfDay(for: start)), "Refreshing must retain accessible history")
+        XCTAssertFalse(window.refresh(today: nextMorning.addingTimeInterval(60), calendar: calendar))
+        var destination = calendar; destination.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        XCTAssertTrue(window.refresh(today: nextMorning, calendar: destination))
+        XCTAssertEqual(window.dayCount, 730)
+        XCTAssertEqual(window.end, destination.date(byAdding: .day, value: 730, to: destination.startOfDay(for: nextMorning)))
+        let afterDST = destination.date(from: DateComponents(year: 2027, month: 3, day: 15))!
+        XCTAssertTrue(window.refresh(today: afterDST, calendar: destination))
+        XCTAssertEqual(window.end, destination.date(byAdding: .day, value: 730, to: afterDST))
+    }
+
     @MainActor
     func testFollowingSheetDatesPreservesZoomAndCalendarFocusAcrossRecycledWindows() {
         let timeline = TimelineScrollView(frame: CGRect(x: 0, y: 0, width: 393, height: 550))

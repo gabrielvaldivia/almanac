@@ -296,6 +296,13 @@ struct ContentView: View {
         .onAppear {
             appData.loadEvents()
             appData.loadCategories()
+            refreshListWindow()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshListWindow() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            refreshListWindow()
         }
         .onChange(of: appData.categories.map(\.name)) { _, names in
             if let selectedCategoryFilter, !names.contains(selectedCategoryFilter) { self.selectedCategoryFilter = nil }
@@ -589,6 +596,13 @@ struct ContentView: View {
     private var eventListDays: [EventListDay] {
         let end = eventListWindow.end
         return EventListDay.group(events: timelineEvents.filter { $0.date < end })
+    }
+
+    private func refreshListWindow() {
+        var refreshed = eventListWindow
+        if refreshed.refresh(), appData.extendRecurrences(before: refreshed.end) {
+            eventListWindow = refreshed
+        }
     }
 
     private var hasMoreListEvents: Bool {

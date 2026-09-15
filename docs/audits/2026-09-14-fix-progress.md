@@ -44,6 +44,10 @@ Row tracking now uses the actual timeline overlay edge. Before shrinking the ove
 
 Explicit page boundaries now extend recurrence generation before advancing the list window. Existing occurrences and IDs remain unchanged, and a failed save does not publish unsaved events or advance the page. Future availability checks the rule's ending/exclusions and uses the series category rather than an exception's category. All 125 unit tests and three paging UI tests passed, including sparse recurrence across an empty year, persistence, and stable scroll position. App/widget Release build passed.
 
+### 9. F23 — Loaded pages stay relative to the current day
+
+The list refreshes its calendar anchor on foregrounding and significant time changes while retaining the number of pages already loaded. Recurrences are extended before publishing the refreshed boundary. Tests cover midnight, time-zone travel, daylight saving, preserved history, and unchanged sparse paging/scroll behavior: 49 unit tests and the paging UI regression passed. App/widget Release build passed. F05 was pushed as `96f1885`.
+
 ## Remaining
 
-F03–F04, F07–F09, F12–F14, F16, and F18–F23 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.
+F03–F04, F07–F09, F12–F14, F16, and F18–F22 remain open until explicitly recorded below. The rare long-inactivity boundary and the unused/redundant-code inventory remain part of the work. The original audit is retained as historical evidence; its reproduction probes intentionally assert the old defects and are not shipping regression tests.

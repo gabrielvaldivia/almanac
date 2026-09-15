@@ -8,8 +8,8 @@ struct EventSheetScrollRequest: Equatable {
 
 /// Page future events in calendar days while keeping existing history reachable.
 struct EventListWindow {
-    private let calendar: Calendar
-    private let start: Date
+    private var calendar: Calendar
+    private var start: Date
     private(set) var dayCount = 365
 
     init(today: Date = Date(), calendar: Calendar = .current) {
@@ -22,6 +22,14 @@ struct EventListWindow {
     func contains(_ date: Date) -> Bool { date < end }
 
     mutating func loadMore() { dayCount += 365 }
+
+    mutating func refresh(today: Date = Date(), calendar: Calendar = .current) -> Bool {
+        let today = calendar.startOfDay(for: today)
+        guard start != today || self.calendar != calendar else { return false }
+        self.calendar = calendar
+        start = today
+        return true
+    }
 
     mutating func include(_ date: Date) {
         guard !contains(date) else { return }
