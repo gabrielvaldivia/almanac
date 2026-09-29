@@ -63,3 +63,4 @@ jobs:
         with:
           name: iOS-${{ matrix.suite.name }}-test-results
           path: ${{ runner.temp }}/Almanac*Tests.xcresult
+          retention-days: 3
