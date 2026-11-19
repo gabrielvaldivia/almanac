@@ -344,6 +344,27 @@ private struct QuickRepeatEditor: View {
     }
 }
 
+/// Limits the width of the quick-entry composer, which grows out of the add
+/// button at the trailing edge.
+enum FloatingComposerLayout {
+    static let centerGap: CGFloat = 12
+    static let minimumWidth: CGFloat = 320
+
+    /// A regular-width window that is wider than it is tall, such as iPhone Duo
+    /// opened like a book or a large iPhone in landscape, keeps the composer on
+    /// one side of the window's center. The open inner display folds down that
+    /// center, and a text field across the fold is hard to read and use.
+    /// Compact windows and taller-than-wide windows keep the full-width composer.
+    static func maxWidth(controls: ClosedRange<CGFloat>, window: CGRect, isRegularWidth: Bool) -> CGFloat {
+        let available = controls.upperBound - controls.lowerBound
+        guard isRegularWidth, window.width > window.height, available > 0 else { return .infinity }
+        // Use the nearer side, so the composer clears the center whichever edge
+        // anchors it and however side bars shift the safe area.
+        let side = min(controls.upperBound - window.midX, window.midX - controls.lowerBound) - centerGap
+        return min(available, max(minimumWidth, side))
+    }
+}
+
 struct FloatingControlSurface: ViewModifier {
     let id: String
     let namespace: Namespace.ID

@@ -57,7 +57,7 @@ struct CategoryForm: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 0) {
@@ -133,12 +133,14 @@ struct CategoryForm: View {
             .navigationTitle(isEditing ? "Edit Category" : "Add Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                // Semantic placements let vertical bars on iPhone Duo put Cancel
+                // first and Save next, matching the event editor.
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         showingSheet = false
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         onSave(
                             (

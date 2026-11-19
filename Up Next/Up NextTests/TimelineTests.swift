@@ -650,6 +650,59 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testResizingKeepsTheFocusedDayOnScreenAtTheSameRelativePosition() {
+        // Opening or closing iPhone Duo, Split View, and rotation all resize the
+        // timeline, possibly after a pinch left the focused date near an edge.
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 890, height: 200))
+        canvas.layoutIfNeeded()
+        let timeline = canvas.timeline
+        timeline.layoutIfNeeded()
+        timeline.setDayPosition(30)
+        timeline.beginZoom(at: 840)
+        timeline.changeZoom(scale: 0.5, at: 840)
+        timeline.endZoom()
+        let focusedDay = timeline.focusedDayPosition
+        let startRatio = (focusedDay - timeline.dayPosition) * timeline.pointsPerDay / 890
+        XCTAssertEqual(focusedDay, 30, accuracy: 0.001)
+        XCTAssertGreaterThan(startRatio, 0.25, "The pinch moved the focused date away from the leading edge")
+        var reportedDay: CGFloat?
+        canvas.onPositionChange = { day, _, _ in reportedDay = day }
+        for width: CGFloat in [402, 626, 320, 890] {
+            canvas.frame.size.width = width
+            canvas.layoutIfNeeded()
+            timeline.layoutIfNeeded()
+            let referenceX = (timeline.focusedDayPosition - timeline.dayPosition) * timeline.pointsPerDay
+            XCTAssertEqual(timeline.focusedDayPosition, focusedDay, accuracy: 0.0001)
+            XCTAssertEqual(reportedDay ?? .nan, focusedDay, accuracy: 0.0001,
+                           "The heading and list follow the same date after resizing")
+            XCTAssertGreaterThanOrEqual(referenceX, 0)
+            XCTAssertLessThanOrEqual(referenceX, width, "The focused date stays inside the viewport")
+            XCTAssertEqual(referenceX / width, startRatio, accuracy: 0.001)
+        }
+    }
+
+    func testFloatingComposerStaysOnOneSideOfTheCenterInWideRegularWindows() {
+        // iPhone Duo opened like a book, with a vertical bar along the trailing edge.
+        let book = CGRect(x: 0, y: 0, width: 890, height: 626)
+        let controls: ClosedRange<CGFloat> = 16...(890 - 70 - 16)
+        let width = FloatingComposerLayout.maxWidth(controls: controls, window: book, isRegularWidth: true)
+        XCTAssertGreaterThanOrEqual(width, FloatingComposerLayout.minimumWidth)
+        XCTAssertGreaterThanOrEqual(controls.upperBound - width, book.midX, "A trailing composer starts past the fold")
+        XCTAssertLessThanOrEqual(controls.lowerBound + width, book.midX, "A leading composer ends before the fold")
+
+        // A large iPhone in landscape keeps a composer close to its portrait width.
+        let landscape = CGRect(x: 0, y: 0, width: 956, height: 440)
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: 78...878, window: landscape, isRegularWidth: true), 388)
+
+        // Compact and taller-than-wide windows keep the full-width composer.
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: controls, window: book, isRegularWidth: false), .infinity)
+        let tall = CGRect(x: 0, y: 0, width: 626, height: 890)
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: 16...610, window: tall, isRegularWidth: true), .infinity)
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: 0...0, window: .zero, isRegularWidth: true), .infinity,
+                       "Unmeasured geometry falls back to the full width")
+    }
+
+    @MainActor
     func testPinchCanTakeOverAnExistingPanAndRestoresScrollingAfterward() throws {
         let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 108))
         canvas.layoutIfNeeded()

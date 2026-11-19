@@ -213,7 +213,7 @@ struct SettingsView: View {
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingCategoryManagementSheet) {
-            NavigationView {
+            NavigationStack {
                 CategoriesView()
                     .environmentObject(appData)
             }

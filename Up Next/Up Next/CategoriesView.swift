@@ -65,8 +65,11 @@ struct CategoriesView: View {
             }
         }
         .formStyle(GroupedFormStyle())
-        .navigationBarTitle("Manage Categories", displayMode: .inline)
-        .navigationBarItems(trailing: EditButton())
+        .navigationTitle("Manage Categories")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { EditButton() }
+        }
         .alert("Restore category backup?", isPresented: $showingBackupConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Restore Backup") { appData.restoreCategoryBackup() }

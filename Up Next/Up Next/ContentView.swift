@@ -36,9 +36,13 @@ struct ContentView: View {
     @State private var timelineScrollRequest: EventSheetScrollRequest?
     @State private var scrollSynchronization = EventScrollSynchronization()
     @State private var scrollToTodayRequest: UUID?
+    @State private var showingSettings = false
+    @State private var windowFrame: CGRect = .zero
+    @State private var floatingControlsSpan: ClosedRange<CGFloat> = 0...0
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -71,7 +75,10 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationView {
+        // NavigationView turns into a sidebar with an empty detail column in
+        // regular widths, such as the open inner display of iPhone Duo or a large
+        // iPhone in landscape. A stack keeps one screen at every size.
+        NavigationStack {
             ZStack(alignment: .bottom) {
                 mainContent
                     // Keep the list underneath the keyboard throughout its
@@ -86,10 +93,26 @@ struct ContentView: View {
                         .accessibilityAddTraits(.isButton)
                 }
                 floatingControls
+                    .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
+                        let frame = proxy.frame(in: .global)
+                        return frame.minX...frame.maxX
+                    } action: { span in
+                        floatingControlsSpan = span
+                    }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
             }
-            .background(eventListBackground.ignoresSafeArea())
+            .background {
+                eventListBackground
+                    .ignoresSafeArea()
+                    // Measure the whole window, including bars and the camera
+                    // area, so the composer can stay clear of its center.
+                    .onGeometryChange(for: CGRect.self) { proxy in
+                        proxy.frame(in: .global)
+                    } action: { frame in
+                        windowFrame = frame
+                    }
+            }
         }
         .sheet(item: $selectedEvent) { event in
             EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
@@ -134,6 +157,7 @@ struct ContentView: View {
                     validationMessage: attemptedQuickSubmit ? quickEventDraft.scheduleReviewMessage ?? quickEventDraft.dateOptions.validationMessage : nil,
                     onDismiss: dismissQuickEntry
                 )
+                .frame(maxWidth: composerMaxWidth)
                 .disabled(appData.storageError != nil)
                 .simultaneousGesture(quickEntryDismissGesture)
                 .transition(.opacity)
@@ -223,12 +247,16 @@ struct ContentView: View {
                 // Keep the list usable on crowded dates; overflowing event
                 // lanes can scroll inside the timeline.
                 .frame(height: headerHeight)
-                .background(timelineBackground)
-                .overlay(alignment: .bottom) { Divider().allowsHitTesting(false) }
+                // The band is background content: it reaches under side bars and
+                // beside the camera, while dates and markers stay in the safe area.
+                .background(timelineBackground.ignoresSafeArea(edges: .horizontal))
+                .overlay(alignment: .bottom) {
+                    Divider().ignoresSafeArea(edges: .horizontal).allowsHitTesting(false)
+                }
             }
             .background(eventListBackground)
             .frame(height: geometry.size.height, alignment: .top)
-            .clipped()
+            .clipShape(VerticalClip())
             .transaction { if reduceMotion { $0.animation = nil } }
         }
         .safeAreaInset(edge: .top) {
@@ -268,6 +296,7 @@ struct ContentView: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showingSettings) { SettingsView() }
         .onAppear {
             appData.loadEvents()
             appData.loadCategories()
@@ -455,23 +484,26 @@ struct ContentView: View {
         timelineScrollRequest = EventSheetScrollRequest(date: date, animated: true)
     }
 
+    // Bar items carry both a title and a symbol. On iPhone Duo the system can
+    // move them into a vertical bar, which shows symbols, or the overflow
+    // menu, which shows titles. Other iPhones keep showing the symbol.
     private var settingsButton: some View {
-        NavigationLink(destination: SettingsView()) {
-            Image(systemName: "gearshape.fill")
-                .accessibilityLabel("Settings")
-                .foregroundStyle(.primary)
+        Button {
+            dismissQuickEntry()
+            showingSettings = true
+        } label: {
+            Label("Settings", systemImage: "gearshape.fill")
                 .imageScale(.large)
         }
-        .simultaneousGesture(TapGesture().onEnded { dismissQuickEntry() })
+        .foregroundStyle(.primary)
     }
 
     private var todayButton: some View {
         Button(action: scrollToToday) {
-            Image(systemName: "calendar.day.timeline.left")
+            Label("Today", systemImage: "calendar.day.timeline.left")
                 .imageScale(.large)
         }
         .foregroundStyle(.primary)
-        .accessibilityLabel("Today")
         .accessibilityHint("Return to today in the timeline and event list")
         .accessibilityIdentifier("scrollToToday")
     }
@@ -562,6 +594,11 @@ struct ContentView: View {
 
     private var quickEventDraft: NewEventDraft {
         quickEventOverrides.resolve(quickEventInput, category: selectedCategoryFilter, appData: appData)
+    }
+
+    private var composerMaxWidth: CGFloat {
+        FloatingComposerLayout.maxWidth(controls: floatingControlsSpan, window: windowFrame,
+                                        isRegularWidth: horizontalSizeClass == .regular)
     }
 
     private var timelineEvents: [Event] {
@@ -730,5 +767,13 @@ struct EventListDay: Identifiable {
     static func initialDate(in days: [EventListDay], today: Date = Date(), calendar: Calendar = .current) -> Date? {
         let today = calendar.startOfDay(for: today)
         return days.first { $0.date >= today }?.date ?? days.last?.date
+    }
+}
+
+/// Clips above and below a frame only, so background content can still extend
+/// sideways into the safe area beside vertical bars and the camera.
+private struct VerticalClip: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(rect.insetBy(dx: -rect.width, dy: 0))
     }
 }
