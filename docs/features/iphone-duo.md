@@ -13,7 +13,14 @@ affected large iPhones in landscape.
 
 Settings and Today are plain bar buttons, each with a title and a symbol. The
 system can place them in a vertical bar on the side of the display, which shows
-the symbol, or in the overflow menu, which shows the title. Sheet toolbars use
+the symbol, or in the overflow menu, which shows the title. Wherever the system
+uses a vertical bar (the closed outer display, and the open inner display in
+landscape), Filter and Add move out of their floating buttons into the same bar
+as bottom-bar items, after a gap below Settings and Today. The composer then
+opens on the bar's side. Where bars stay horizontal, including every other
+iPhone, the floating buttons remain. This uses `toolbarVerticalEdge`, which
+needs Xcode 27.1. Builds from older Xcode versions keep the floating buttons
+everywhere. Sheet toolbars use
 semantic placements (`cancellationAction` and `confirmationAction`), so vertical
 bars order Cancel or Close first and Save next. Manage Categories uses the
 toolbar API instead of the deprecated `navigationBarItems`.

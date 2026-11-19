@@ -39,6 +39,9 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var windowFrame: CGRect = .zero
     @State private var floatingControlsSpan: ClosedRange<CGFloat> = 0...0
+    /// The side where iPhone Duo places bars vertically, or nil while bars are
+    /// horizontal. Filter and Add then move into that bar below Settings.
+    @State private var toolbarVerticalEdge: HorizontalEdge?
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
@@ -113,6 +116,7 @@ struct ContentView: View {
                         windowFrame = frame
                     }
             }
+            .modifier(ToolbarVerticalEdgeReader(edge: $toolbarVerticalEdge))
         }
         .sheet(item: $selectedEvent) { event in
             EditEventView(events: $appData.events, selectedEvent: $selectedEvent,
@@ -124,15 +128,19 @@ struct ContentView: View {
 
     private var floatingControls: some View {
         ZStack(alignment: .bottomTrailing) {
-            if !showingQuickEntry {
+            if !showingQuickEntry && toolbarVerticalEdge == nil {
                 filterMenu
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .transition(.opacity)
             }
             // Keep the filter outside the morphing glass container. The plus
             // and composer share a stable slot anchored to the trailing edge.
-            composerControls
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            // With a vertical bar, the plus lives in the bar and the composer
+            // opens on the bar's side.
+            if showingQuickEntry || toolbarVerticalEdge == nil {
+                composerControls
+                    .frame(maxWidth: .infinity, alignment: toolbarVerticalEdge == .leading ? .leading : .trailing)
+            }
         }
     }
 
@@ -163,9 +171,7 @@ struct ContentView: View {
                 .transition(.opacity)
                 .task { isQuickEntryFocused = true }
             } else {
-                Button {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
-                } label: {
+                Button(action: showQuickEntry) {
                     Image(systemName: "plus")
                         .font(.system(size: 22, weight: .medium))
                         .frame(width: 56, height: 56)
@@ -293,6 +299,14 @@ struct ContentView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if !timelineShowsToday {
                     todayButton
+                }
+            }
+            // On iPhone Duo, the system stacks top and bottom bar items in one
+            // vertical bar. Bottom items follow Settings and Today after a gap.
+            if toolbarVerticalEdge != nil {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    barFilterMenu
+                    barAddButton
                 }
             }
         }
@@ -521,34 +535,58 @@ struct ContentView: View {
         }
     }
 
-    private var filterMenu: some View {
-        Menu {
+    @ViewBuilder private var filterMenuItems: some View {
+        Button {
+            selectedCategoryFilter = nil
+        } label: {
+            HStack {
+                Text("All Events")
+                if selectedCategoryFilter == nil {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
+
+        ForEach(appData.categories, id: \.name) { category in
             Button {
-                selectedCategoryFilter = nil
+                selectedCategoryFilter = category.name
             } label: {
                 HStack {
-                    Text("All Events")
-                    if selectedCategoryFilter == nil {
+                    Circle()
+                        .fill(category.color)
+                        .frame(width: 8, height: 8)
+                    Text(category.name)
+                    if selectedCategoryFilter == category.name {
                         Image(systemName: "checkmark")
                     }
                 }
             }
+        }
+    }
 
-            ForEach(appData.categories, id: \.name) { category in
-                Button {
-                    selectedCategoryFilter = category.name
-                } label: {
-                    HStack {
-                        Circle()
-                            .fill(category.color)
-                            .frame(width: 8, height: 8)
-                        Text(category.name)
-                        if selectedCategoryFilter == category.name {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
+    private var barFilterMenu: some View {
+        Menu {
+            filterMenuItems
+        } label: {
+            Label("Filter", systemImage: "line.horizontal.3.decrease")
+        }
+        .accessibilityLabel("Filter events")
+        .accessibilityValue(selectedCategoryFilter ?? "All Events")
+        .accessibilityIdentifier("eventFilter")
+    }
+
+    private var barAddButton: some View {
+        Button(action: showQuickEntry) {
+            Label("Add Event", systemImage: "plus")
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(appData.storageError != nil)
+        .accessibilityIdentifier("quickAddButton")
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            filterMenuItems
         } label: {
             Image(systemName: "line.horizontal.3.decrease")
                 .foregroundStyle(.tint)
@@ -582,6 +620,10 @@ struct ContentView: View {
         quickEventOverrides = QuickEventOverrides()
         attemptedQuickSubmit = false
         dismissQuickEntry()
+    }
+
+    private func showQuickEntry() {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
     }
 
     private func dismissQuickEntry() {
@@ -769,6 +811,42 @@ struct EventListDay: Identifiable {
         return days.first { $0.date >= today }?.date ?? days.last?.date
     }
 }
+
+/// Reports the edge where the system places vertical bars, or nil wherever bars
+/// stay horizontal, including every iPhone other than iPhone Duo.
+/// `toolbarVerticalEdge` needs the iOS 27.1 SDK in Xcode 27.1 (Swift 6.4). With
+/// older Xcode versions the edge stays nil and the controls keep floating.
+#if compiler(>=6.4)
+private struct ToolbarVerticalEdgeReader: ViewModifier {
+    @Binding var edge: HorizontalEdge?
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 27.1, *) {
+            content.modifier(VerticalEdgeObserver(edge: $edge))
+        } else {
+            content
+        }
+    }
+}
+
+@available(iOS 27.1, *)
+private struct VerticalEdgeObserver: ViewModifier {
+    @Binding var edge: HorizontalEdge?
+    @Environment(\.toolbarVerticalEdge) private var verticalEdge
+
+    func body(content: Content) -> some View {
+        content.onChange(of: verticalEdge, initial: true) { _, newEdge in
+            edge = newEdge
+        }
+    }
+}
+#else
+private struct ToolbarVerticalEdgeReader: ViewModifier {
+    @Binding var edge: HorizontalEdge?
+
+    func body(content: Content) -> some View { content }
+}
+#endif
 
 /// Clips above and below a frame only, so background content can still extend
 /// sideways into the safe area beside vertical bars and the camera.
