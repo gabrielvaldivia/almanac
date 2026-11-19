@@ -58,7 +58,7 @@ struct QuickAddEventField: View {
                 .fill(Color(uiColor: .tertiaryLabel))
                 .frame(width: 32, height: 4)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: 12)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onDismiss)
                 .accessibilityAddTraits(.isButton)
@@ -344,24 +344,30 @@ private struct QuickRepeatEditor: View {
     }
 }
 
-/// Limits the width of the quick-entry composer, which grows out of the add
-/// button at the trailing edge.
+/// Sizes and centers the quick-entry composer, which grows out of the add
+/// button.
 enum FloatingComposerLayout {
-    static let centerGap: CGFloat = 12
-    static let minimumWidth: CGFloat = 320
+    static let centeredWidth: CGFloat = 500
 
     /// A regular-width window that is wider than it is tall, such as iPhone Duo
-    /// opened like a book or a large iPhone in landscape, keeps the composer on
-    /// one side of the window's center. The open inner display folds down that
-    /// center, and a text field across the fold is hard to read and use.
-    /// Compact windows and taller-than-wide windows keep the full-width composer.
+    /// opened like a book or a large iPhone in landscape, gets a composer of a
+    /// comfortable width instead of one stretched across the window. Compact
+    /// and taller-than-wide windows keep the full-width composer.
     static func maxWidth(controls: ClosedRange<CGFloat>, window: CGRect, isRegularWidth: Bool) -> CGFloat {
         let available = controls.upperBound - controls.lowerBound
         guard isRegularWidth, window.width > window.height, available > 0 else { return .infinity }
-        // Use the nearer side, so the composer clears the center whichever edge
-        // anchors it and however side bars shift the safe area.
-        let side = min(controls.upperBound - window.midX, window.midX - controls.lowerBound) - centerGap
-        return min(available, max(minimumWidth, side))
+        return min(available, centeredWidth)
+    }
+
+    /// How far to move a composer narrower than the controls so it centers on
+    /// the window rather than between a side bar and the far edge. It never
+    /// moves past the controls' edges.
+    static func centerShift(composerWidth: CGFloat, controls: ClosedRange<CGFloat>, window: CGRect) -> CGFloat {
+        let available = controls.upperBound - controls.lowerBound
+        guard composerWidth < available, window.width > 0 else { return 0 }
+        let slack = (available - composerWidth) / 2
+        let shift = window.midX - (controls.lowerBound + controls.upperBound) / 2
+        return min(slack, max(-slack, shift))
     }
 }
 
@@ -394,5 +400,92 @@ struct FloatingControlSurface: ViewModifier {
                 .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 6)
                 .matchedGeometryEffect(id: id, in: namespace, anchor: .bottomTrailing)
         }
+    }
+}
+
+/// Reads a view's frame in its window. Inside a bar, SwiftUI's global
+/// coordinates belong to the bar's own hosting view, not the window.
+final class WindowFrameProbe {
+    fileprivate weak var view: UIView?
+
+    var frame: CGRect? {
+        guard let view, view.window != nil else { return nil }
+        return view.convert(view.bounds, to: nil)
+    }
+}
+
+struct WindowFrameProbeView: UIViewRepresentable {
+    let probe: WindowFrameProbe
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        probe.view = view
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        probe.view = view
+    }
+}
+
+extension AnyTransition {
+    /// Grows a view out of `source`, a rectangle in window coordinates, and
+    /// shrinks it back. It starts tinted with a plus, like the add button in
+    /// iPhone Duo's vertical bar, and turns into the composer as it grows.
+    static func composerMorph(from source: CGRect, tint: Color) -> AnyTransition {
+        .modifier(active: ComposerMorph(progress: 0, source: source, tint: tint),
+                  identity: ComposerMorph(progress: 1, source: source, tint: tint))
+    }
+}
+
+private struct ComposerMorph: ViewModifier, Animatable {
+    var progress: Double
+    let source: CGRect
+    let tint: Color
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let progress = progress
+        let source = source
+        content
+            .overlay {
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(tint)
+                    .opacity(1 - progress)
+                    .allowsHitTesting(false)
+            }
+            // Scale and move the drawing only, so layout and the keyboard
+            // see the composer at its final frame throughout.
+            .visualEffect { content, proxy in
+                let frame = proxy.frame(in: .global)
+                let scaleX = frame.width > 0 ? source.width / frame.width : 1
+                let scaleY = frame.height > 0 ? source.height / frame.height : 1
+                return content
+                    .scaleEffect(x: scaleX + (1 - scaleX) * progress, y: scaleY + (1 - scaleY) * progress,
+                                 anchor: .topLeading)
+                    .offset(x: (source.minX - frame.minX) * (1 - progress),
+                            y: (source.minY - frame.minY) * (1 - progress))
+            }
+            // The plus keeps its shape while the surface stretches.
+            .overlay {
+                Image(systemName: "plus")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .opacity(max(0, 1 - progress * 2))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .visualEffect { content, proxy in
+                        let frame = proxy.frame(in: .global)
+                        return content.offset(x: (source.midX - frame.midX) * (1 - progress),
+                                              y: (source.midY - frame.midY) * (1 - progress))
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }

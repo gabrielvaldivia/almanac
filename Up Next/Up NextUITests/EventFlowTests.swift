@@ -492,7 +492,7 @@ final class EventFlowTests: XCTestCase {
         XCTAssertFalse(app.buttons["manualEventInput"].exists)
         let handle = app.buttons["quickEntryDragHandle"]
         XCTAssertTrue(handle.isHittable)
-        XCTAssertGreaterThanOrEqual(handle.frame.height, 44)
+        XCTAssertLessThanOrEqual(handle.frame.height, 12, "The handle stays compact above the input")
         XCTAssertLessThan(handle.frame.maxY, input.frame.minY)
         let handleCenter = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let restingInputFrame = input.frame

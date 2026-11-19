@@ -42,6 +42,23 @@ struct ContentView: View {
     /// The side where iPhone Duo places bars vertically, or nil while bars are
     /// horizontal. Filter and Add then move into that bar below Settings.
     @State private var toolbarVerticalEdge: HorizontalEdge?
+    /// Locates Add in the vertical bar, so the composer can grow out of it.
+    @State private var barAddButtonProbe = WindowFrameProbe()
+    /// Where the composer grows from and shrinks back into, in window
+    /// coordinates, while Add sits in the vertical bar.
+    @State private var composerMorphSource: CGRect?
+    /// The vertical fold of iPhone Duo's inner display opened like a book, in
+    /// global coordinates, or nil. The month grid and the list then sit on
+    /// either side of it.
+    @State private var foldDivision: CGRect?
+    @State private var contentFrame: CGRect = .zero
+    @State private var monthGridScrollRequest: EventSheetScrollRequest?
+    /// The months column's share of the content width after dragging its edge,
+    /// or 0 to keep the edge at the fold.
+    @AppStorage("monthColumnFraction", store: AppPreferences.shared) private var monthColumnFraction = 0.0
+    @State private var monthColumnDragStart: CGFloat?
+    /// The months were scrolled by hand, so the list follows the top month.
+    @State private var monthGridDrivesList = false
     // Environment objects and properties
     @EnvironmentObject var appData: AppData
     @Environment(\.colorScheme) var colorScheme
@@ -49,15 +66,17 @@ struct ContentView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.displayScale) private var displayScale
 
     @FocusState private var isQuickEntryFocused: Bool
 
     private var timelineTitle: String {
-        TimelineHeading.text(first: timelineMonth, last: timelineMonth, yearOnly: timelineUsesYearHeading)
+        TimelineHeading.text(first: timelineMonth, last: timelineMonth,
+                             yearOnly: timelineUsesYearHeading && !showsMonthGrid)
     }
 
     private var compactTimelineTitle: String {
-        if timelineUsesYearHeading { return timelineTitle }
+        if timelineUsesYearHeading && !showsMonthGrid { return timelineTitle }
         return Calendar.current.isDate(timelineMonth, equalTo: Date(), toGranularity: .year)
             ? timelineMonth.formatted(.dateTime.month(.abbreviated))
             : timelineMonth.formatted(.dateTime.month(.abbreviated).year())
@@ -68,6 +87,14 @@ struct ContentView: View {
             (name: category.name, color: category.color)
         }
     }
+
+    private var foldColumns: FoldColumns? {
+        FoldColumns(content: contentFrame, division: foldDivision)
+    }
+
+    /// iPhone Duo's inner display in landscape shows a month grid on one side
+    /// of the fold and the event list on the other, in place of the timeline.
+    private var showsMonthGrid: Bool { foldColumns != nil }
 
     private var eventListBackground: Color {
         Color(uiColor: .systemBackground)
@@ -86,7 +113,9 @@ struct ContentView: View {
                 mainContent
                     // Keep the list underneath the keyboard throughout its
                     // animation; only the floating composer moves above it.
-                    .ignoresSafeArea(.all, edges: .bottom)
+                    // The month grid stays above the Home indicator, so its
+                    // column extends the list itself to the bottom edge.
+                    .ignoresSafeArea(showsMonthGrid ? .keyboard : .all, edges: .bottom)
                 if showingQuickEntry {
                     Color.clear
                         .contentShape(Rectangle())
@@ -115,6 +144,7 @@ struct ContentView: View {
                     } action: { frame in
                         windowFrame = frame
                     }
+                    .modifier(FoldDivisionReader(division: $foldDivision))
             }
             .modifier(ToolbarVerticalEdgeReader(edge: $toolbarVerticalEdge))
         }
@@ -134,14 +164,27 @@ struct ContentView: View {
                     .transition(.opacity)
             }
             // Keep the filter outside the morphing glass container. The plus
-            // and composer share a stable slot anchored to the trailing edge.
-            // With a vertical bar, the plus lives in the bar and the composer
-            // opens on the bar's side.
+            // and composer share one surface: the plus at the trailing edge,
+            // the composer centered on the window. With a vertical bar, the
+            // plus lives in the bar and the composer grows out of it.
             if showingQuickEntry || toolbarVerticalEdge == nil {
+                let shift = showingQuickEntry ? composerCenterShift : 0
                 composerControls
-                    .frame(maxWidth: .infinity, alignment: toolbarVerticalEdge == .leading ? .leading : .trailing)
+                    .frame(maxWidth: .infinity, alignment: showingQuickEntry ? .center : .trailing)
+                    .padding(.leading, max(0, shift * 2))
+                    .padding(.trailing, max(0, -shift * 2))
+                    .transition(composerBarTransition)
             }
         }
+        // Span the full width even while empty, so the composer's width and
+        // centering are measured before it first appears.
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Grows the composer out of Add in the vertical bar and back into it.
+    private var composerBarTransition: AnyTransition {
+        guard let source = composerMorphSource, !reduceMotion else { return .opacity }
+        return .composerMorph(from: source, tint: categoryTint)
     }
 
     @ViewBuilder
@@ -222,48 +265,73 @@ struct ContentView: View {
         let days = eventListDays
 
         return GeometryReader { geometry in
+            let columns = foldColumns
             let headerHeight = min(timelineHeight, max(80, geometry.size.height * 0.5))
-            let insetHeight = min(timelineInsetHeight, max(80, geometry.size.height * 0.5))
+            let insetHeight = columns == nil ? min(timelineInsetHeight, max(80, geometry.size.height * 0.5)) : 0
             let proposedHeight = min(requestedTimelineHeight, max(80, geometry.size.height * 0.5))
-            eventList(days: days, insetHeight: insetHeight, headerOffset: headerHeight - insetHeight,
-                      proposedHeaderOffset: proposedHeight - insetHeight) {
-                EventTimelineView(
-                    events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
-                    scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
-                    animateScrolling: !reduceMotion,
-                    onHeightChange: updateTimelineHeight,
-                    onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
-                    onInteractionBegan: beginTimelineInteraction,
-                    onPositionChange: { day, anchor, visibleDayCount in
-                        let calendar = Calendar.current
-                        guard let focusedDate = calendar.date(byAdding: .day, value: Int(floor(day)), to: anchor),
-                              let month = calendar.dateInterval(of: .month, for: focusedDate)?.start else { return }
-                        let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date))
-                        let usesYear = TimelineHeading.showsYear(visibleDayCount: visibleDayCount)
-                        DispatchQueue.main.async {
-                            if timelineMonth != month { timelineMonth = month }
-                            // Update SwiftUI only when the heading changes, not on every pinch frame.
-                            if timelineUsesYearHeading != usesYear { timelineUsesYearHeading = usesYear }
-                            if let date, scrollSynchronization.timelineMoved(to: date) {
-                                eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+            // One list serves both layouts, so it keeps its scroll position when
+            // the month grid appears beside it or gives way to the timeline.
+            HStack(spacing: 0) {
+                if let columns {
+                    let width = monthColumnWidth(columns)
+                    monthGrid(width: width)
+                    monthColumnEdge(width: width, columns: columns)
+                        .frame(width: monthColumnLane(columns))
+                        .zIndex(1)
+                }
+                eventList(days: days, insetHeight: insetHeight,
+                          headerOffset: columns == nil ? headerHeight - insetHeight : 0,
+                          proposedHeaderOffset: columns == nil ? proposedHeight - insetHeight : 0,
+                          // The months follow the first day fully in view.
+                          visibilityInset: columns == nil ? 0 : eventListTopMargin) {
+                    if columns == nil {
+                        EventTimelineView(
+                            events: timelineEvents, tint: categoryTint, highlightedEventID: highlightedEventID,
+                            scrollToTodayRequest: scrollToTodayRequest, scrollToDateRequest: timelineScrollRequest,
+                            animateScrolling: !reduceMotion,
+                            onHeightChange: updateTimelineHeight,
+                            onTodayVisibilityChange: { timelineShowsToday = $0 }, onSelectEvent: selectTimelineEvent,
+                            onInteractionBegan: beginTimelineInteraction,
+                            onPositionChange: { day, anchor, visibleDayCount in
+                                let calendar = Calendar.current
+                                guard let focusedDate = calendar.date(byAdding: .day, value: Int(floor(day)), to: anchor),
+                                      let month = calendar.dateInterval(of: .month, for: focusedDate)?.start else { return }
+                                let date = EventSheetSelection.nearestDate(to: day, anchor: anchor, dates: days.map(\.date))
+                                let usesYear = TimelineHeading.showsYear(visibleDayCount: visibleDayCount)
+                                DispatchQueue.main.async {
+                                    if timelineMonth != month { timelineMonth = month }
+                                    // Update SwiftUI only when the heading changes, not on every pinch frame.
+                                    if timelineUsesYearHeading != usesYear { timelineUsesYearHeading = usesYear }
+                                    if let date, scrollSynchronization.timelineMoved(to: date) {
+                                        eventSheetScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+                                    }
+                                }
                             }
+                        )
+                        // Keep the list usable on crowded dates; overflowing event
+                        // lanes can scroll inside the timeline.
+                        .frame(height: headerHeight)
+                        // The band is background content: it reaches under side bars and
+                        // beside the camera, while dates and markers stay in the safe area.
+                        .background(timelineBackground.ignoresSafeArea(edges: .horizontal))
+                        .overlay(alignment: .bottom) {
+                            Divider().ignoresSafeArea(edges: .horizontal).allowsHitTesting(false)
                         }
                     }
-                )
-                // Keep the list usable on crowded dates; overflowing event
-                // lanes can scroll inside the timeline.
-                .frame(height: headerHeight)
-                // The band is background content: it reaches under side bars and
-                // beside the camera, while dates and markers stay in the safe area.
-                .background(timelineBackground.ignoresSafeArea(edges: .horizontal))
-                .overlay(alignment: .bottom) {
-                    Divider().ignoresSafeArea(edges: .horizontal).allowsHitTesting(false)
                 }
+                .background(eventListBackground)
+                // Beside the month grid, the list reaches under the Home
+                // indicator while the grid stays above it.
+                .frame(height: columns == nil ? geometry.size.height : nil, alignment: .top)
+                .clipShape(VerticalClip())
+                .ignoresSafeArea(.container, edges: .bottom)
             }
-            .background(eventListBackground)
-            .frame(height: geometry.size.height, alignment: .top)
-            .clipShape(VerticalClip())
             .transaction { if reduceMotion { $0.animation = nil } }
+        }
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { frame in
+            contentFrame = frame
         }
         .safeAreaInset(edge: .top) {
             if let error = appData.storageError {
@@ -273,40 +341,53 @@ struct ContentView: View {
                 }.padding().frame(maxWidth: .infinity).background(.regularMaterial)
             }
         }
-        .navigationTitle(timelineTitle)
+        // The month grid shows its own month heading. An empty principal item
+        // would show this title in the bar instead.
+        .navigationTitle(showsMonthGrid ? "" : timelineTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(timelineBackground, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        // Beside the month grid, each column's color reaches the top edge.
+        .toolbarBackground(showsMonthGrid ? .hidden : .visible, for: .navigationBar)
         .toolbarColorScheme(colorScheme, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                ViewThatFits(in: .horizontal) {
-                    Text(timelineTitle).fixedSize()
-                    Text(compactTimelineTitle).fixedSize()
+                if !showsMonthGrid {
+                    ViewThatFits(in: .horizontal) {
+                        Text(timelineTitle).fixedSize()
+                        Text(compactTimelineTitle).fixedSize()
+                    }
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: dismissQuickEntry)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("appTitle")
                 }
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: dismissQuickEntry)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("appTitle")
             }
             ToolbarItem(placement: .topBarLeading) {
                 settingsButton
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if !timelineShowsToday {
+                if showsMonthGrid ? !monthGridShowsToday : !timelineShowsToday {
                     todayButton
                 }
             }
             // On iPhone Duo, the system stacks top and bottom bar items in one
             // vertical bar. Bottom items follow Settings and Today after a gap.
             if toolbarVerticalEdge != nil {
-                ToolbarItemGroup(placement: .bottomBar) {
+                ToolbarItem(placement: .bottomBar) {
                     barFilterMenu
-                    barAddButton
+                }
+                // Vertical bars need iOS 27.1. Add leaves the bar while the
+                // composer, which grows out of it, is open. It comes last, so
+                // the filter keeps its place.
+                if #available(iOS 26.4, *) {
+                    ToolbarItem(placement: .bottomBar) {
+                        barAddButton
+                    }
+                    .hidden(showingQuickEntry)
                 }
             }
         }
@@ -331,6 +412,18 @@ struct ContentView: View {
         .onOpenURL { url in
             handleOpenURL(url)
         }
+        .onChange(of: showsMonthGrid) { _, showsGrid in
+            guard let date = eventListPosition else { return }
+            if showsGrid {
+                if let month = Calendar.current.dateInterval(of: .month, for: date)?.start { timelineMonth = month }
+                monthGridScrollRequest = EventSheetScrollRequest(date: date)
+            } else {
+                // The timeline starts over at today. Move it to the list's
+                // date without letting it move the list.
+                scrollSynchronization.begin(.sheet)
+                timelineScrollRequest = EventSheetScrollRequest(date: date)
+            }
+        }
         .onChange(of: selectedCategoryFilter) {
             eventListWindow = EventListWindow()
             beginTimelineInteraction()
@@ -354,8 +447,15 @@ struct ContentView: View {
         }
     }
 
+    /// Space above the first row. Naked rows have no inset card background to
+    /// hide behind. Keep their scroll inset within the 10-point interday gap so
+    /// returning to Today fully clears the preceding row.
+    private var eventListTopMargin: CGFloat { appData.eventStyle == "naked" ? 10 : 16 }
+
+    /// `visibilityInset` ignores rows that only show in that much space at the
+    /// top, such as the end of the previous group above the first one.
     private func eventList<Header: View>(days: [EventListDay], insetHeight: CGFloat, headerOffset: CGFloat,
-                                      proposedHeaderOffset: CGFloat,
+                                      proposedHeaderOffset: CGFloat, visibilityInset: CGFloat = 0,
                                       @ViewBuilder header: @escaping () -> Header) -> some View {
         VStack(spacing: 0) {
             if days.isEmpty && !hasMoreListEvents {
@@ -390,8 +490,9 @@ struct ContentView: View {
                                             let frame = geometry.frame(in: .named("eventList"))
                                             Color.clear.preference(key: EventListTopDatesKey.self,
                                                 value: EventListTopDates(
-                                                    visible: frame.maxY > headerOffset + 1 ? day.date : nil,
-                                                    afterResize: frame.maxY > proposedHeaderOffset + 1 ? day.date : nil,
+                                                    visible: frame.maxY > headerOffset + visibilityInset + 1 ? day.date : nil,
+                                                    afterResize: frame.maxY > proposedHeaderOffset + visibilityInset + 1
+                                                        ? day.date : nil,
                                                     requestedHeight: requestedTimelineHeight))
                                         }
                                     }
@@ -421,10 +522,7 @@ struct ContentView: View {
                             Spacer(minLength: 100)
                         }
                     }
-                    // Naked rows have no inset card background to hide behind.
-                    // Keep their scroll inset within the 10-point interday gap
-                    // so returning to Today fully clears the preceding row.
-                    .contentMargins(.top, appData.eventStyle == "naked" ? 10 : 16, for: .scrollContent)
+                    .contentMargins(.top, eventListTopMargin, for: .scrollContent)
                     .accessibilityIdentifier("eventList")
                     .coordinateSpace(name: "eventList")
                     .scrollDismissesKeyboard(.interactively)
@@ -462,6 +560,156 @@ struct ContentView: View {
         .overlay(alignment: .top, content: header)
     }
 
+    private func monthGrid(width: CGFloat) -> some View {
+        MonthGridView(
+            months: monthGridMonths, initialMonth: timelineMonth, events: timelineEvents,
+            scrollRequest: monthGridScrollRequest,
+            bottomInset: toolbarVerticalEdge == nil ? 80 : 16,
+            onInteraction: beginMonthGridScroll, onTopMonthChange: monthGridTopChanged,
+            onReachEnd: loadMoreMonths, onTapDate: showGridDate
+        )
+        .frame(width: width)
+        .frame(maxHeight: .infinity)
+        // The grid shares the timeline's band color, reaching under side bars
+        // and beside the camera.
+        .background(timelineBackground.ignoresSafeArea(edges: [.top, .bottom, .leading]))
+        .overlay(alignment: .trailing) {
+            Color(uiColor: .separator)
+                .frame(width: 1 / displayScale)
+                .ignoresSafeArea(edges: .vertical)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// The months column's width: at the fold, or where its edge was dragged.
+    private func monthColumnWidth(_ columns: FoldColumns) -> CGFloat {
+        guard monthColumnFraction > 0 else { return columns.leading }
+        return MonthColumnResize.width(proposed: monthColumnFraction * contentFrame.width,
+                                       contentWidth: contentFrame.width - monthColumnLane(columns),
+                                       fold: columns.leading)
+    }
+
+    /// The space between the months and the list that holds the resize handle:
+    /// the hinge at the fold, and the same wherever the edge is dragged, so the
+    /// handle keeps the same room around it.
+    private func monthColumnLane(_ columns: FoldColumns) -> CGFloat {
+        max(columns.gap, 16)
+    }
+
+    /// A handle centered in the lane between the months and the list. Drag it
+    /// to resize the months; near the fold it snaps back.
+    private func monthColumnEdge(width: CGFloat, columns: FoldColumns) -> some View {
+        Color.clear
+            .overlay {
+                Capsule()
+                    .fill(Color(uiColor: .tertiaryLabel))
+                    .frame(width: 4, height: 36)
+                    .frame(width: 24)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 2, coordinateSpace: .global)
+                            .onChanged { value in
+                                let start = monthColumnDragStart ?? width
+                                if monthColumnDragStart == nil { monthColumnDragStart = width }
+                                resizeMonthColumn(to: start + value.translation.width, columns: columns)
+                            }
+                            .onEnded { _ in monthColumnDragStart = nil }
+                    )
+                    .accessibilityElement()
+                    .accessibilityLabel("Months width")
+                    .accessibilityValue("\(Int(width.rounded())) points")
+                    .accessibilityHint("Swipe up or down to resize the months beside the event list")
+                    .accessibilityAdjustableAction { direction in
+                        let step: CGFloat = direction == .increment ? 40 : -40
+                        resizeMonthColumn(to: width + step, columns: columns)
+                    }
+                    .accessibilityIdentifier("monthColumnEdge")
+            }
+    }
+
+    private func resizeMonthColumn(to proposed: CGFloat, columns: FoldColumns) {
+        let contentWidth = contentFrame.width
+        guard contentWidth > 0 else { return }
+        let width = MonthColumnResize.width(proposed: proposed, contentWidth: contentWidth - monthColumnLane(columns),
+                                            fold: columns.leading)
+        let fraction = width == columns.leading ? 0 : Double(width / contentWidth)
+        guard fraction != monthColumnFraction else { return }
+        // A tick when the edge settles on the fold.
+        if fraction == 0 { UISelectionFeedbackGenerator().selectionChanged() }
+        monthColumnFraction = fraction
+    }
+
+    private var monthGridShowsToday: Bool {
+        Calendar.current.isDate(timelineMonth, equalTo: Date(), toGranularity: .month)
+    }
+
+    /// Every month from the earliest listed day, or this month, through the
+    /// end of the loaded list.
+    private var monthGridMonths: [Date] {
+        let calendar = Calendar.current
+        let today = Date()
+        let first = min(eventListDays.first?.date ?? today, today)
+        let last = calendar.date(byAdding: .day, value: -1, to: eventListWindow.end) ?? today
+        return MonthGrid.months(from: first, through: last, calendar: calendar)
+    }
+
+    private func beginMonthGridScroll() {
+        guard !monthGridDrivesList || scrollSynchronization.source != .timeline else { return }
+        beginTimelineInteraction()
+        monthGridDrivesList = true
+    }
+
+    private func monthGridTopChanged(_ month: Date) {
+        if timelineMonth != month { timelineMonth = month }
+        // Only scrolling the months by hand moves the list. Following the list
+        // or returning to today scrolls the months without moving it back.
+        guard monthGridDrivesList, scrollSynchronization.source == .timeline else { return }
+        loadListEvents(showing: month)
+        scrollList(toFirstDayOnOrAfter: month)
+    }
+
+    /// Adds a year of months when the last one comes into view, as Show More
+    /// does for the list.
+    private func loadMoreMonths() {
+        guard hasMoreListEvents else { return }
+        var expanded = eventListWindow
+        expanded.loadMore()
+        if appData.extendRecurrences(before: expanded.end) {
+            eventListWindow = expanded
+        }
+    }
+
+    private func showGridDate(_ date: Date) {
+        let day = Calendar.current.startOfDay(for: date)
+        beginTimelineInteraction()
+        dismissQuickEntry()
+        monthGridDrivesList = false
+        loadListEvents(showing: day)
+        scrollList(toFirstDayOnOrAfter: day)
+    }
+
+    /// Shows the first listed day on or after `date`, or the last one when
+    /// nothing follows it.
+    private func scrollList(toFirstDayOnOrAfter date: Date) {
+        let days = eventListDays
+        guard let target = days.first(where: { $0.date >= date })?.date ?? days.last?.date else { return }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            eventSheetScrollRequest = EventSheetScrollRequest(date: target, animated: true)
+        }
+    }
+
+    /// Pages the list, and the occurrences of repeating events, through the
+    /// last day the grid shows for `date`'s month.
+    private func loadListEvents(showing date: Date) {
+        guard let lastDay = MonthGrid.weeks(for: date).last?.last, !eventListWindow.contains(lastDay) else { return }
+        var expanded = eventListWindow
+        expanded.include(lastDay)
+        if appData.extendRecurrences(before: expanded.end) {
+            eventListWindow = expanded
+        }
+    }
+
     private func beginTimelineInteraction() {
         scrollSynchronization.begin(.timeline)
         timelineScrollRequest = nil
@@ -489,6 +737,7 @@ struct ContentView: View {
     private func beginSheetInteraction() {
         guard scrollSynchronization.source != .sheet else { return }
         scrollSynchronization.begin(.sheet)
+        monthGridDrivesList = false
         eventSheetScrollRequest = nil
         if let date = eventListPosition { synchronizeTimeline(to: date) }
     }
@@ -496,6 +745,10 @@ struct ContentView: View {
     private func synchronizeTimeline(to date: Date) {
         guard scrollSynchronization.sheetMoved(to: date) else { return }
         timelineScrollRequest = EventSheetScrollRequest(date: date, animated: true)
+        // The months follow the list, bringing the month at its top to the top.
+        if showsMonthGrid {
+            monthGridScrollRequest = EventSheetScrollRequest(date: date, animated: !reduceMotion)
+        }
     }
 
     // Bar items carry both a title and a symbol. On iPhone Duo the system can
@@ -527,7 +780,11 @@ struct ContentView: View {
         dismissQuickEntry()
         highlightedEventID = nil
         highlightRequestID = nil
+        monthGridDrivesList = false
         scrollToTodayRequest = UUID()
+        if showsMonthGrid {
+            monthGridScrollRequest = EventSheetScrollRequest(date: Date(), animated: !reduceMotion)
+        }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
             if let date = EventListDay.initialDate(in: eventListDays) {
                 eventSheetScrollRequest = EventSheetScrollRequest(date: date)
@@ -580,6 +837,7 @@ struct ContentView: View {
             Label("Add Event", systemImage: "plus")
         }
         .buttonStyle(.borderedProminent)
+        .background(WindowFrameProbeView(probe: barAddButtonProbe))
         .disabled(appData.storageError != nil)
         .accessibilityIdentifier("quickAddButton")
     }
@@ -623,15 +881,25 @@ struct ContentView: View {
     }
 
     private func showQuickEntry() {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingQuickEntry = true }
+        composerMorphSource = toolbarVerticalEdge == nil ? nil : barAddButtonProbe.frame
+        withAnimation(composerAnimation) { showingQuickEntry = true }
     }
 
     private func dismissQuickEntry() {
         isQuickEntryFocused = false
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+        // Shrink back to where Add returns. It is out of the bar while the
+        // composer is open, so keep its last frame unless bars turned horizontal.
+        if showingQuickEntry, toolbarVerticalEdge == nil { composerMorphSource = nil }
+        withAnimation(composerAnimation) {
             showingQuickEntry = false
             quickEntryDragOffset = 0
         }
+    }
+
+    private var composerAnimation: Animation? {
+        if reduceMotion { return nil }
+        // Growing out of the bar covers more ground than the floating plus.
+        return composerMorphSource == nil ? .easeInOut(duration: 0.2) : .snappy(duration: 0.32)
     }
 
     private var quickEventDraft: NewEventDraft {
@@ -641,6 +909,11 @@ struct ContentView: View {
     private var composerMaxWidth: CGFloat {
         FloatingComposerLayout.maxWidth(controls: floatingControlsSpan, window: windowFrame,
                                         isRegularWidth: horizontalSizeClass == .regular)
+    }
+
+    private var composerCenterShift: CGFloat {
+        FloatingComposerLayout.centerShift(composerWidth: composerMaxWidth, controls: floatingControlsSpan,
+                                           window: windowFrame)
     }
 
     private var timelineEvents: [Event] {
@@ -843,6 +1116,37 @@ private struct VerticalEdgeObserver: ViewModifier {
 #else
 private struct ToolbarVerticalEdgeReader: ViewModifier {
     @Binding var edge: HorizontalEdge?
+
+    func body(content: Content) -> some View { content }
+}
+#endif
+
+/// Reports iPhone Duo's fold while the inner display is open like a book, as a
+/// vertical division in global coordinates, including while the display is
+/// flat. Elsewhere, including with Xcode versions before 27.1, it stays nil.
+#if compiler(>=6.4)
+private struct FoldDivisionReader: ViewModifier {
+    @Binding var division: CGRect?
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 27.1, *) {
+            content.onGeometryChange(for: CGRect?.self) { proxy in
+                let origin = proxy.frame(in: .global).origin
+                return proxy.reservedRegions(kind: .division, options: .includeInactive)
+                    .map(\.frame)
+                    .first { $0.height > $0.width }
+                    .map { $0.offsetBy(dx: origin.x, dy: origin.y) }
+            } action: { newDivision in
+                division = newDivision
+            }
+        } else {
+            content
+        }
+    }
+}
+#else
+private struct FoldDivisionReader: ViewModifier {
+    @Binding var division: CGRect?
 
     func body(content: Content) -> some View { content }
 }
