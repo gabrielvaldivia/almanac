@@ -274,9 +274,13 @@ final class TimelineCanvasView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let widthChanged = timeline.bounds.width != bounds.width
+        let oldWidth = timeline.bounds.width
+        let widthChanged = oldWidth != bounds.width
         if timeline.frame != bounds { timeline.frame = bounds }
-        if widthChanged { reportPosition() }
+        if widthChanged {
+            timeline.keepFocusedDayVisible(resizingFrom: oldWidth)
+            reportPosition()
+        }
     }
 
     private func reportPosition() {
@@ -450,6 +454,27 @@ final class TimelineScrollView: UIScrollView, UIScrollViewDelegate, UIGestureRec
         // so landing on the first of a month cannot report the previous month.
         focusReferenceX = (day - dayPosition) * pointsPerDay
         onScrollPositionChange?(focusedDayPosition)
+    }
+
+    /// Keep the focused date on screen, at the same relative position, when the
+    /// viewport width changes. Opening or closing iPhone Duo, Split View, and
+    /// rotation can change the width by hundreds of points. Without this, a date
+    /// focused near the trailing edge of a wide timeline would fall offscreen,
+    /// while the heading and the list kept following it.
+    func keepFocusedDayVisible(resizingFrom oldWidth: CGFloat) {
+        let width = bounds.width
+        guard oldWidth > 0, width > 0, oldWidth != width, pinch == nil else { return }
+        if scrollTargetDay != nil {
+            // Land an in-flight programmatic scroll so the focus is its target date.
+            setContentOffset(contentOffset, animated: false)
+            finishProgrammaticScroll()
+        }
+        let focusedDay = focusedDayPosition
+        // Set the new reference first, so the scroll callback from moving the
+        // offset already reports the same focused date.
+        focusReferenceX = min(width, max(0, focusReferenceX * width / oldWidth))
+        setDayPosition(focusedDay - focusReferenceX / pointsPerDay)
+        focusReferenceX = (focusedDay - dayPosition) * pointsPerDay
     }
 
     func beginZoom(at viewportX: CGFloat) {

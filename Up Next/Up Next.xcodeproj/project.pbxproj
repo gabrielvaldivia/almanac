@@ -78,6 +78,7 @@
 		D31E01000000000000000002 /* EventTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000001 /* EventTimelineView.swift */; };
 		D31E01000000000000000004 /* TimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000003 /* TimelineTests.swift */; };
 		D31E01000000000000000006 /* EventSheetLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000005 /* EventSheetLayout.swift */; };
+		D31E01000000000000000102 /* MonthGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31E01000000000000000101 /* MonthGridView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +186,7 @@
 		D31E01000000000000000001 /* EventTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/EventTimelineView.swift"; sourceTree = SOURCE_ROOT; };
 		D31E01000000000000000003 /* TimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up NextTests/TimelineTests.swift"; sourceTree = SOURCE_ROOT; };
 		D31E01000000000000000005 /* EventSheetLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/EventSheetLayout.swift"; sourceTree = SOURCE_ROOT; };
+		D31E01000000000000000101 /* MonthGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Up Next/MonthGridView.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -307,6 +309,7 @@
 				40790D732C23286B005DDC65 /* ContentView.swift */,
 				D31E01000000000000000001 /* EventTimelineView.swift */,
 				D31E01000000000000000005 /* EventSheetLayout.swift */,
+				D31E01000000000000000101 /* MonthGridView.swift */,
 				405F66782C33A5C4003C9DC4 /* AddEventButton.swift */,
 				40FEEC4C2C291BA0008AA61D /* EventRow.swift */,
 				4011A1512C3CE97D00F275DE /* EventForm.swift */,
@@ -552,6 +555,7 @@
 				40790D742C23286B005DDC65 /* ContentView.swift in Sources */,
 				D31E01000000000000000002 /* EventTimelineView.swift in Sources */,
 				D31E01000000000000000006 /* EventSheetLayout.swift in Sources */,
+				D31E01000000000000000102 /* MonthGridView.swift in Sources */,
 				40FEEC532C292617008AA61D /* EditEventView.swift in Sources */,
 				40FEEC4D2C291BA0008AA61D /* EventRow.swift in Sources */,
 				409726482C2DE2CB0050988E /* CategoryPillsView.swift in Sources */,
@@ -810,7 +814,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -848,7 +852,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

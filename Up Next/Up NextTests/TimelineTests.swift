@@ -650,6 +650,183 @@ final class TimelineTests: XCTestCase {
     }
 
     @MainActor
+    func testResizingKeepsTheFocusedDayOnScreenAtTheSameRelativePosition() {
+        // Opening or closing iPhone Duo, Split View, and rotation all resize the
+        // timeline, possibly after a pinch left the focused date near an edge.
+        let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 890, height: 200))
+        canvas.layoutIfNeeded()
+        let timeline = canvas.timeline
+        timeline.layoutIfNeeded()
+        timeline.setDayPosition(30)
+        timeline.beginZoom(at: 840)
+        timeline.changeZoom(scale: 0.5, at: 840)
+        timeline.endZoom()
+        let focusedDay = timeline.focusedDayPosition
+        let startRatio = (focusedDay - timeline.dayPosition) * timeline.pointsPerDay / 890
+        XCTAssertEqual(focusedDay, 30, accuracy: 0.001)
+        XCTAssertGreaterThan(startRatio, 0.25, "The pinch moved the focused date away from the leading edge")
+        var reportedDay: CGFloat?
+        canvas.onPositionChange = { day, _, _ in reportedDay = day }
+        for width: CGFloat in [402, 626, 320, 890] {
+            canvas.frame.size.width = width
+            canvas.layoutIfNeeded()
+            timeline.layoutIfNeeded()
+            let referenceX = (timeline.focusedDayPosition - timeline.dayPosition) * timeline.pointsPerDay
+            XCTAssertEqual(timeline.focusedDayPosition, focusedDay, accuracy: 0.0001)
+            XCTAssertEqual(reportedDay ?? .nan, focusedDay, accuracy: 0.0001,
+                           "The heading and list follow the same date after resizing")
+            XCTAssertGreaterThanOrEqual(referenceX, 0)
+            XCTAssertLessThanOrEqual(referenceX, width, "The focused date stays inside the viewport")
+            XCTAssertEqual(referenceX / width, startRatio, accuracy: 0.001)
+        }
+    }
+
+    func testFloatingComposerIsCenteredOnWideRegularWindows() {
+        // iPhone Duo opened like a book, with a vertical bar along the leading edge.
+        let book = CGRect(x: 0, y: 0, width: 890, height: 626)
+        let controls: ClosedRange<CGFloat> = (70 + 16)...(890 - 16)
+        let width = FloatingComposerLayout.maxWidth(controls: controls, window: book, isRegularWidth: true)
+        XCTAssertEqual(width, FloatingComposerLayout.centeredWidth)
+        // It centers on the window, not between the bar and the far edge.
+        let shift = FloatingComposerLayout.centerShift(composerWidth: width, controls: controls, window: book)
+        XCTAssertEqual((controls.lowerBound + controls.upperBound) / 2 + shift, book.midX)
+
+        // A narrow window keeps the composer inside the controls.
+        let narrow = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let narrowControls: ClosedRange<CGFloat> = 86...584
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: narrowControls, window: narrow, isRegularWidth: true), 498)
+        XCTAssertEqual(FloatingComposerLayout.centerShift(composerWidth: 498, controls: narrowControls, window: narrow), 0)
+
+        // Compact and taller-than-wide windows keep the full-width composer.
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: controls, window: book, isRegularWidth: false), .infinity)
+        let tall = CGRect(x: 0, y: 0, width: 626, height: 890)
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: 16...610, window: tall, isRegularWidth: true), .infinity)
+        XCTAssertEqual(FloatingComposerLayout.centerShift(composerWidth: .infinity, controls: 16...610, window: tall), 0)
+        XCTAssertEqual(FloatingComposerLayout.maxWidth(controls: 0...0, window: .zero, isRegularWidth: true), .infinity,
+                       "Unmeasured geometry falls back to the full width")
+    }
+
+    func testVerticalFoldSplitsTheContentIntoColumns() throws {
+        // iPhone Duo opened like a book, with a vertical bar along the leading edge.
+        let content = CGRect(x: 70, y: 0, width: 820, height: 626)
+        let fold = CGRect(x: 445, y: 0, width: 0, height: 626)
+        let columns = try XCTUnwrap(FoldColumns(content: content, division: fold))
+        XCTAssertEqual(columns.leading, 375)
+        XCTAssertEqual(columns.trailing, 445)
+        XCTAssertEqual(columns.gap, 0)
+
+        // A hinge with width keeps both columns off it.
+        let hinge = try XCTUnwrap(FoldColumns(content: content, division: fold.insetBy(dx: -6, dy: 0)))
+        XCTAssertEqual(hinge.leading + hinge.gap + hinge.trailing, content.width)
+
+        // The inner display in portrait folds horizontally, like a laptop.
+        let tall = CGRect(x: 0, y: 0, width: 626, height: 890)
+        XCTAssertNil(FoldColumns(content: tall, division: CGRect(x: 0, y: 445, width: 626, height: 0)))
+        // The outer display and every other iPhone report no fold.
+        XCTAssertNil(FoldColumns(content: content, division: nil))
+        // In Split View the fold is outside this app's window.
+        let half = CGRect(x: 0, y: 0, width: 445, height: 626)
+        XCTAssertNil(FoldColumns(content: half, division: fold))
+        // A side too narrow for a column keeps the single-column layout.
+        XCTAssertNil(FoldColumns(content: CGRect(x: 200, y: 0, width: 690, height: 626), division: fold))
+    }
+
+    func testMonthColumnResizesWithinLimitsAndSnapsToTheFold() {
+        let contentWidth: CGFloat = 820
+        let fold: CGFloat = 375
+        XCTAssertEqual(MonthColumnResize.width(proposed: 450, contentWidth: contentWidth, fold: fold), 450)
+        XCTAssertEqual(MonthColumnResize.width(proposed: fold + 20, contentWidth: contentWidth, fold: fold), fold,
+                       "Near the fold, the edge snaps to it")
+        XCTAssertEqual(MonthColumnResize.width(proposed: 100, contentWidth: contentWidth, fold: fold),
+                       MonthColumnResize.minimumMonthsWidth)
+        XCTAssertEqual(MonthColumnResize.width(proposed: 800, contentWidth: contentWidth, fold: fold),
+                       contentWidth - MonthColumnResize.minimumListWidth, "The list keeps a usable width")
+    }
+
+    func testMonthGridWeeksStartOnTheCalendarsFirstWeekday() throws {
+        var sundayFirst = calendar
+        sundayFirst.firstWeekday = 1
+        let november = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18))!
+        let weeks = MonthGrid.weeks(for: november, calendar: sundayFirst)
+        XCTAssertEqual(weeks.count, 5)
+        XCTAssertTrue(weeks.allSatisfy { $0.count == 7 })
+        XCTAssertEqual(weeks.first?.first, calendar.date(from: DateComponents(year: 2026, month: 11, day: 1)))
+        XCTAssertEqual(weeks.last?.last, calendar.date(from: DateComponents(year: 2026, month: 12, day: 5)))
+
+        // Starting on Monday, October's last days fill the first week, and
+        // November 30 needs a sixth week.
+        var mondayFirst = calendar
+        mondayFirst.firstWeekday = 2
+        let mondayWeeks = MonthGrid.weeks(for: november, calendar: mondayFirst)
+        XCTAssertEqual(mondayWeeks.count, 6)
+        XCTAssertEqual(mondayWeeks.first?.first, calendar.date(from: DateComponents(year: 2026, month: 10, day: 26)))
+        XCTAssertEqual(mondayWeeks.last?.first, calendar.date(from: DateComponents(year: 2026, month: 11, day: 30)))
+
+        // Consecutive days stay one calendar day apart across the DST change.
+        let days = weeks.flatMap { $0 }
+        for (day, next) in zip(days, days.dropFirst()) {
+            XCTAssertEqual(calendar.dateComponents([.day], from: day, to: next).day, 1)
+        }
+    }
+
+    func testMonthGridStacksEveryMonthBetweenTwoDates() {
+        let start = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18))!
+        let end = calendar.date(from: DateComponents(year: 2027, month: 2, day: 3))!
+        let months = MonthGrid.months(from: start, through: end, calendar: calendar)
+        XCTAssertEqual(months.map { calendar.component(.month, from: $0) }, [11, 12, 1, 2])
+        XCTAssertTrue(months.allSatisfy { calendar.component(.day, from: $0) == 1 })
+        XCTAssertEqual(MonthGrid.months(from: end, through: start, calendar: calendar), months,
+                       "The order of the bounds does not matter")
+        XCTAssertEqual(MonthGrid.months(from: start, through: start, calendar: calendar).count, 1)
+    }
+
+    func testMonthGridDrawsAMultiDayEventAsOneBarPerWeek() {
+        func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: anchor)! }
+        // A trip from the week before through the middle of this week, and a
+        // party during it.
+        let trip = event("Trip", start: -2, end: 2)
+        let party = event("Party", start: 1)
+        let dinner = event("Dinner", start: 4)
+        let week: [Date?] = (0..<7).map { day($0) }
+        let byDay = MonthGrid.eventsByDay([trip, party, dinner], from: day(0), through: day(6), calendar: calendar)
+        let segments = MonthGrid.segments(for: week, eventsByDay: byDay, calendar: calendar)
+        let tripBar = segments.first { $0.event.id == trip.id }
+        XCTAssertEqual(segments.filter { $0.event.id == trip.id }.count, 1, "One bar, not one per day")
+        XCTAssertEqual(tripBar?.firstColumn, 0)
+        XCTAssertEqual(tripBar?.lastColumn, 2)
+        XCTAssertEqual(tripBar?.continuesBefore, true)
+        XCTAssertEqual(tripBar?.continuesAfter, false)
+        XCTAssertEqual(tripBar?.lane, 0)
+        XCTAssertEqual(segments.first { $0.event.id == party.id }?.lane, 1, "Overlapping bars take separate lanes")
+        XCTAssertEqual(segments.first { $0.event.id == dinner.id }?.lane, 0, "A free lane is reused")
+
+        // Blank days of the neighboring month cut the bar at the month's edge.
+        let clipped = MonthGrid.segments(for: [day(0), day(1), nil, nil, nil, nil, nil],
+                                         eventsByDay: byDay, calendar: calendar)
+        let clippedTrip = clipped.first { $0.event.id == trip.id }
+        XCTAssertEqual(clippedTrip?.lastColumn, 1)
+        XCTAssertEqual(clippedTrip?.continuesAfter, true)
+        XCTAssertFalse(clipped.contains { $0.event.id == dinner.id })
+    }
+
+    func testMonthGridPlacesEventsOnEveryDayTheyCover() {
+        let trip = event("Trip", start: 2, end: 4)
+        let party = event("Party", start: 3)
+        let early = event("Early", start: -10)
+        let first = calendar.date(byAdding: .day, value: 3, to: anchor)!
+        let last = calendar.date(byAdding: .day, value: 6, to: anchor)!
+        let byDay = MonthGrid.eventsByDay([party, trip, early], from: first, through: last, calendar: calendar)
+
+        func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: anchor)! }
+        // The trip starts before the range, so it appears from the first day shown.
+        XCTAssertNil(byDay[day(2)])
+        XCTAssertEqual(byDay[day(3)]?.map(\.title), ["Trip", "Party"], "Earlier starts come first")
+        XCTAssertEqual(byDay[day(4)]?.map(\.title), ["Trip"])
+        XCTAssertNil(byDay[day(5)])
+        XCTAssertFalse(byDay.values.joined().contains { $0.title == "Early" })
+    }
+
+    @MainActor
     func testPinchCanTakeOverAnExistingPanAndRestoresScrollingAfterward() throws {
         let canvas = TimelineCanvasView(frame: CGRect(x: 0, y: 0, width: 393, height: 108))
         canvas.layoutIfNeeded()

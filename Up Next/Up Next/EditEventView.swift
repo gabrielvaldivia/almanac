@@ -114,7 +114,7 @@ struct EditEventView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             EventForm(
                 eventDetails: $eventDetails,
                 dateOptions: $dateOptions,

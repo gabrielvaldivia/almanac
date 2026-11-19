@@ -66,7 +66,7 @@ struct CustomColorPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 Capsule()
                     .fill(Color.gray.opacity(0.4))
